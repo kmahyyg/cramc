@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "CRAMC": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}
