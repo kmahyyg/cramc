@@ -1,0 +1,11 @@
+{
+    "cleanup_path": ["C:\\Users\\"],
+    "ignore_remote_file": true,
+    "force_action": true,
+    "bak_files_dir": "fbak",
+    "always_rename": true,
+    "yar_rule_dir": "yrules",
+    "ipt_filelist": "yrscan.lst",
+    "cleanup_db": "cramc_db.json",
+    "log_file": "cramc.log"
+}
