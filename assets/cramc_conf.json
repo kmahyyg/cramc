@@ -2,6 +2,7 @@
     "scan_and_clean_path": ["C:\\Users\\"],
     "ignore_remote_file": true,
     "force_action": true,
+    "use_hardening_measure": true,
     "bak_files_dir": "fbak",
     "always_rename": true,
     "yar_rule_dir": "yrules",

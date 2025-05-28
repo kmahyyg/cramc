@@ -12,7 +12,7 @@ My Crappy Macro Cleaner - For Sanitizing Malicious Macro in Office Files when AV
 
 # Usage
 
--
+- Make sure at least .NetFX4 installed on your machine.
 
 # Developer Notes
 
