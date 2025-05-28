@@ -1,4 +1,12 @@
 {
     "version": 20250528001,
-    "VirusX97MSlackerF": {"mod": "ThisWorkbook", "action": "clean"}
+    "VirusX97MSlackerF": [
+        {
+            "module": "ThisWorkbook",
+            "action": "sanitize",
+            "mustHarden": true,
+            "hardenMeasure": "clean_setRO",
+            "hardenTarget": ["C:\\Users\\${USERNAME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART"]
+        }
+    ]
 }

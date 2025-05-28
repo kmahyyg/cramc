@@ -33,3 +33,7 @@ For yara rules: Licensed under CC BY-NC-SA 4.0 International
 Thanks to:
 - https://github.com/VirusTotal/yara-x (BSD-3)
 - https://github.com/VirusTotal/yara (BSD-3)
+
+# Privacy Notice
+
+To help us serve you better, we are collecting program crash and error context information using service provided by Sentry.io , their privacy prolicy could be find [here](https://sentry.io/privacy/) . Our team won't collect any information that could link to you.
