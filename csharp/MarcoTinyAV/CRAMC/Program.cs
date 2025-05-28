@@ -49,7 +49,15 @@ internal class Program {
                 Console.Error.WriteLine("Scanner component only works on Windows. Your platform is not supported.");
                 Environment.Exit(2);
             }
+        } else {
+            // TODO
+            // isWindows == true && noScan == false, scan first
+            // matched result with callback for further action
         }
+        // TODO
+        // check output list and proceed further
+        // cleanup and sync log info to disk
+        Log.CloseAndFlush();
     }
 
     private static void HandleArgParseError(IEnumerable<Error> errs) {
