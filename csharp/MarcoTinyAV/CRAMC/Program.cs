@@ -21,6 +21,11 @@ internal class Program {
             opts.Dsn = "https://af1658f8654e2f490466ef093b2d6b7f@o132236.ingest.us.sentry.io/4509401173327872";
             opts.AutoSessionTracking = true;
         });
+        
+        // check updates, if there's a newer version, exit. 
+        var updck = new UpdateChecker();
+        updck.CheckProgramUpdates();
+        
         // parse arguments from cmdline then next
         Parser.Default.ParseArguments<ProcOptions>(args)
             .WithParsed(RunWithOptions)   
@@ -35,29 +40,7 @@ internal class Program {
             .WriteTo.File(options.LogFile)
             .CreateLogger();
         // dealing with operation called by user
-        // check privilege and runtime platform, unfortunately, due to dependency, only Windows is supported.
-        if (options.NotAdmin || !CheckUACElevated()) {
-            _searchMethod = "walkthrough";
-        }
-        // cross-platform handling
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
-            _searchMethod = "walkthrough";
-            options.EnableHardening = false;
-            Log.Warning("Detected non-Windows OS, file search method: walkthrough, no hardening measure will be placed.");
-            Log.Warning("Detected non-Windows OS, no guarantee on clean up actions, try in best-effort.");
-            if (!options.NoScan) {
-                Console.Error.WriteLine("Scanner component only works on Windows. Your platform is not supported. Set --noScan flag to true to continue.");
-                Environment.Exit(2);
-            }
-        } else {
-            // already determined working on Windows
-            if (!options.NoScan) {
-                // yara scan
-            }
-            // TODO
-            // isWindows == true && noScan == false, scan first
-            // matched result with callback for further action
-        }
+
         // TODO
         // check output list and proceed further
         // cleanup and sync log info to disk
@@ -127,8 +110,8 @@ internal class Program {
             HelpText = "Scan only, take no action on files, record action to be taken in log.")]
         public bool DryRun { get; set; }
         
-        [Option("noScan", Default = false, HelpText = "Do not scan files. If platform is not Windows x86_64, yara won't work, you have to set this to true and then run Yara scanner against our rules and save output to ipt_yrscan.lst (default), then provide cleanOnlyFileList with the output file path. Yara-X scanner is not supported yet.")]
-        public bool NoScan { get; set; }
+        [Option("noDiskScan", Default = false, HelpText = "Do not scan files on disk, but supply file list. If platform is not Windows x86_64, yara won't work, you have to set this to true and then run Yara scanner against our rules and save output to ipt_yrscan.lst (default), then provide cleanOnlyFileList with the output file path. Yara-X scanner is not supported yet.")]
+        public bool NoDiskScan { get; set; }
         
         [Option("cleanOnlyFileList", Default = "ipt_yrscan.lst", HelpText = "List of Files to be cleaned. Yara scanner output log filename.")]
         public string CleanOnlyFileList { get; set; }

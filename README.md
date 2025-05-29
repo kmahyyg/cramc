@@ -12,7 +12,11 @@ My Crappy Macro Cleaner - For Sanitizing Malicious Macro in Office Files when AV
 
 # Usage
 
-- Make sure at least .NetFX4 installed on your machine.
+- At Least Windows 10.
+
+# Disclaimer
+
+Backup your data before you use it. No warranty at all.
 
 # Developer Notes
 
