@@ -46,10 +46,14 @@ internal class Program {
             Log.Warning("Detected non-Windows OS, file search method: walkthrough, no hardening measure will be placed.");
             Log.Warning("Detected non-Windows OS, no guarantee on clean up actions, try in best-effort.");
             if (!options.NoScan) {
-                Console.Error.WriteLine("Scanner component only works on Windows. Your platform is not supported.");
+                Console.Error.WriteLine("Scanner component only works on Windows. Your platform is not supported. Set --noScan flag to true to continue.");
                 Environment.Exit(2);
             }
         } else {
+            // already determined working on Windows
+            if (!options.NoScan) {
+                // yara scan
+            }
             // TODO
             // isWindows == true && noScan == false, scan first
             // matched result with callback for further action
