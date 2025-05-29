@@ -65,27 +65,43 @@ internal class UpdateChecker {
         }
     }
     
-    public int CheckProgramUpdates() {
+    public void CheckProgramUpdates() {
         if (_latestVersion == null) {
             try {
                 GetLatestVersionFromGitHub().GetAwaiter().GetResult();
             }
             catch (Exception ex) {
                 Log.Error(ex, "Failed to fetch latest version information");
-                return -1; // Indicates error/unavailable
+                throw;
             }
         }
-        return _latestVersion!.programRevision;
+        int latestProgRev = _latestVersion!.programRevision;
+        if (latestProgRev < _currentProgramRev)
+        {
+            Log.Fatal("Newer version is available, please always use latest version for your data safety.");
+            Environment.Exit(1);
+        }
+        else if (latestProgRev > _currentProgramRev)
+        {
+            Log.Warning("Your local program version is higher than remote, this may indicate you are running a flawed version");
+            Environment.Exit(-1);
+        }
+        return;
     }
 
-    public int CheckDatabaseUpdates() {
-        if (_latestVersion == null) {
-            try {
+    // Database could be dynamic-loaded, return latest version for further check.
+    public int CheckDatabaseUpdates()
+    {
+        if (_latestVersion == null)
+        {
+            try
+            {
                 GetLatestVersionFromGitHub().GetAwaiter().GetResult();
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 Log.Error(ex, "Failed to fetch latest version information");
-                return -1; // Indicates error/unavailable
+                throw;
             }
         }
         return _latestVersion!.databaseVersion;
