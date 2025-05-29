@@ -1,6 +1,5 @@
 using System;
 using Serilog;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -8,7 +7,7 @@ using Newtonsoft.Json;
 namespace CRAMC;
 
 internal class UpdateChecker {
-    private static string _versionCheckUrl =
+    private const string _versionCheckUrl =
         "https://cdn.jsdelivr.net/gh/kmahyyg/cramc@master/assets/latest_version.json";
 
     private static int _currentProgramRev = 1;
@@ -91,7 +90,6 @@ internal class UpdateChecker {
             Log.Warning("Your local program version is higher than remote, this may indicate you are running a flawed version");
             Environment.Exit(-1);
         }
-        return;
     }
 
     // Database could be dynamic-loaded, return latest version for further check.
