@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using CommandLine;
 using Sentry;
 using Serilog;
@@ -9,7 +10,6 @@ namespace CRAMC;
 
 internal class Program {
     private static string _searchMethod = "parseMFT";
-    public static bool isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
     
     // possibly, ".xlt/.xltm" might also get infected, but I haven't observed any of them in my environment
     // same for other extensions (e.g. ".ppt/.docm/.doc/.dot/.dotm/.ppt/.pptm/.pot/.potm/.pps/.ppsm/.ppa/.ppam")
@@ -40,7 +40,7 @@ internal class Program {
             _searchMethod = "walkthrough";
         }
         // cross-platform handling
-        if (!isWindows) {
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
             _searchMethod = "walkthrough";
             options.EnableHardening = false;
             Log.Warning("Detected non-Windows OS, file search method: walkthrough, no hardening measure will be placed.");
@@ -70,8 +70,11 @@ internal class Program {
 
     private static bool CheckUACElevated() {
         // if elevated, return true.
-        if (isWindows) {
-            //TODO
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+            using (var identity = WindowsIdentity.GetCurrent()) {
+                var principal = new WindowsPrincipal(identity);
+                return principal.IsInRole(WindowsBuiltInRole.Administrator);
+            }
         }
         return false;
     }
