@@ -3,32 +3,43 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using CommandLine;
+using CRAMC.Common;
 using Sentry;
 using Serilog;
 
 namespace CRAMC;
 
 internal class Program {
+    private const string _runtimeLogFile = "cramc.log";
+    private const string _cleanOnlyFileLst = "ipt_yrscan.lst";
+    private const string _yaraRuleDir = "yrules/";
+    private const string _cleanupDB = "cramc_db.json";
+    private const string _backupDir = "fbak/";
+
+    private const string _sentryDSN =
+        "https://af1658f8654e2f490466ef093b2d6b7f@o132236.ingest.us.sentry.io/4509401173327872";
+
     private static string _searchMethod = "parseMFT";
-    
+
+
     // possibly, ".xlt/.xltm" might also get infected, but I haven't observed any of them in my environment
     // same for other extensions (e.g. ".ppt/.docm/.doc/.dot/.dotm/.ppt/.pptm/.pot/.potm/.pps/.ppsm/.ppa/.ppam")
-    public string[] operatingExtensions = { ".xls", ".xlsm", ".xlsb" };
-    
+    public static string[] operatingExtensions = { ".xls", ".xlsm", ".xlsb" };
+
     public static void Main(string[] args) {
         // initialize sentry.io sdk for error analysis and APM
         SentrySdk.Init(opts => {
-            opts.Dsn = "https://af1658f8654e2f490466ef093b2d6b7f@o132236.ingest.us.sentry.io/4509401173327872";
+            opts.Dsn = _sentryDSN;
             opts.AutoSessionTracking = true;
         });
-        
+
         // check updates, if there's a newer version, exit. 
         var updck = new UpdateChecker();
         updck.CheckProgramUpdates();
-        
+
         // parse arguments from cmdline then next
         Parser.Default.ParseArguments<ProcOptions>(args)
-            .WithParsed(RunWithOptions)   
+            .WithParsed(RunWithOptions)
             .WithNotParsed(HandleArgParseError);
     }
 
@@ -37,8 +48,15 @@ internal class Program {
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Information()
             .WriteTo.Console()
-            .WriteTo.File(options.LogFile)
+            .WriteTo.File(_runtimeLogFile)
             .CreateLogger();
+        // initialize runtime options
+        RuntimeOpts.DoNotScanDisk = options.NoDiskScan;
+        RuntimeOpts.DryRun = options.DryRun;
+        RuntimeOpts.IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+        if (!RuntimeOpts.IsWindows || !CheckUACElevated() || options.NotAdmin) RuntimeOpts.NoPrivilegedActions = true;
+        if (RuntimeOpts.IsWindows && options.EnableHardening) RuntimeOpts.TryHardening = true;
+        RuntimeOpts.ActionPath = options.ActionPath;
         // dealing with operation called by user
 
         // TODO
@@ -49,23 +67,21 @@ internal class Program {
 
     private static void HandleArgParseError(IEnumerable<Error> errs) {
         Console.Error.WriteLine("Failed to parse arguments");
-        foreach (var err in errs) {
-            Console.Error.WriteLine(err.ToString());
-        }
+        foreach (var err in errs) Console.Error.WriteLine(err.ToString());
         Environment.Exit(1);
     }
 
     private static bool CheckUACElevated() {
         // if elevated, return true.
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             using (var identity = WindowsIdentity.GetCurrent()) {
                 var principal = new WindowsPrincipal(identity);
                 return principal.IsInRole(WindowsBuiltInRole.Administrator);
             }
-        }
+
         return false;
     }
-    
+
     public class ProcOptions {
         [Option("notAdmin", Default = false,
             HelpText =
@@ -74,46 +90,57 @@ internal class Program {
 
         [Option('a', "actionPath", Default = "C:\\Users",
             HelpText =
-                "The path to the files you want to scan. To balance scanning speed and false positive rate, we recommend to scan User profile only. In case there're multiple folders, use | as separator. By default, we use recursive search.")]
+                "The path to the files you want to scan. To balance scanning speed and false positive rate, we recommend to scan User profile only. By default, we use recursive search.")]
         public string ActionPath { get; set; }
-
-        [Option('f', "forceAction", Default = true,
-            HelpText = "Force action to be taken regardless current circumstances.")]
-        public bool ForceAction { get; set; }
-
-        [Option("yaraRuleDir", Default = "yrules/", HelpText = "The directory where compiled yara rules are located.")]
-        public string YaraRuleDir { get; set; }
-
-        [Option("ignoreRemoteFile", Default = true, HelpText = "Ignore remote files that are not on disk.")]
-        public bool IgnoreRemoteFile { get; set; }
 
         [Option('e', "enableHardening", Default = true,
             HelpText = "Enables hardening measure to prevent further infection.")]
         public bool EnableHardening { get; set; }
 
-        [Option('b', "backupFileDir", Default = "fbak/", HelpText = "The directory where original files are saved.")]
-        public string BackupFileDir { get; set; }
-
-        [Option("alwaysRename", Default = true,
-            HelpText =
-                "Always rename remediated file, this is used to prevent server-side state cache in case of file in cloud storage.")]
-        public bool AlwaysRename { get; set; }
-
-        [Option("cleanupDB", Default = "cramc_db.json",
-            HelpText = "Cleanup DB location. If you don't know its meaning, do not touch this option.")]
-        public string CleanupDBLocation { get; set; }
-
-        [Option("logFile", Default = "cramc.log", HelpText = "Log file location.")]
-        public string LogFile { get; set; }
-
         [Option("dryRun", Default = false,
             HelpText = "Scan only, take no action on files, record action to be taken in log.")]
         public bool DryRun { get; set; }
-        
-        [Option("noDiskScan", Default = false, HelpText = "Do not scan files on disk, but supply file list. If platform is not Windows x86_64, yara won't work, you have to set this to true and then run Yara scanner against our rules and save output to ipt_yrscan.lst (default), then provide cleanOnlyFileList with the output file path. Yara-X scanner is not supported yet.")]
+
+        [Option("noDiskScan", Default = false,
+            HelpText =
+                "Do not scan files on disk, but supply file list. If platform is not Windows x86_64, yara won't work, you have to set this to true and then run Yara scanner against our rules and save output to ipt_yrscan.lst. Yara-X scanner is not supported yet.")]
         public bool NoDiskScan { get; set; }
-        
-        [Option("cleanOnlyFileList", Default = "ipt_yrscan.lst", HelpText = "List of Files to be cleaned. Yara scanner output log filename.")]
-        public string CleanOnlyFileList { get; set; }
+
+        // always rename file to prevent any type of cache.
+        //
+        // [Option("alwaysRename", Default = true,
+        //     HelpText =
+        //         "Always rename remediated file, this is used to prevent server-side state cache in case of file in cloud storage.")]
+        // public bool AlwaysRename { get; set; }
+
+        // always take action, regardless of flag set status
+        //
+        // [Option('f', "forceAction", Default = true,
+        //     HelpText = "Force action to be taken regardless current circumstances.")]
+        // public bool ForceAction { get; set; }
+
+        // always ignore remote file, if file is not on disk, no action could be taken and may cause thread hang.
+        //
+        // [Option("ignoreRemoteFile", Default = true, HelpText = "Ignore remote files that are not on disk.")]
+        // public bool IgnoreRemoteFile { get; set; }
+
+        // internal configuration item, should not expose to end-user, just hardcoded, do not remove, leave for ref.
+        //
+        // [Option("cleanOnlyFileList", Default = "ipt_yrscan.lst", HelpText = "List of Files to be cleaned. Yara scanner output log filename.")]
+        // public string CleanOnlyFileList { get; set; }
+        //
+        // [Option("logFile", Default = "cramc.log", HelpText = "Log file location.")]
+        // public string LogFile { get; set; }
+        //
+        // [Option("cleanupDB", Default = "cramc_db.json",
+        //     HelpText = "Cleanup DB location. If you don't know its meaning, do not touch this option.")]
+        // public string CleanupDBLocation { get; set; }
+        //
+        // [Option('b', "backupFileDir", Default = "fbak/", HelpText = "The directory where original files are saved.")]
+        // public string BackupFileDir { get; set; }
+        //
+        // [Option("yaraRuleDir", Default = "yrules/", HelpText = "The directory where compiled yara rules are located.")]
+        // public string YaraRuleDir { get; set; }
+        //
     }
 }
