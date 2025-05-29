@@ -65,12 +65,17 @@ internal class UpdateChecker {
         }
     }
     
-    public void CheckProgramUpdates() {
-        if (_latestVersion == null) {
-            try {
+    // Program revision is statically embedded, if not latest, abort.
+    public void CheckProgramUpdates()
+    {
+        if (_latestVersion == null)
+        {
+            try
+            {
                 GetLatestVersionFromGitHub().GetAwaiter().GetResult();
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 Log.Error(ex, "Failed to fetch latest version information");
                 throw;
             }
