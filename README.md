@@ -13,6 +13,8 @@ My Crappy Macro Cleaner - For Sanitizing Malicious Macro in Office Files when AV
 # Usage
 
 - At Least Windows 10.
+- To ensure availbility, this program is recommended to run under Administrator and in path `%ProgramData%\CRAMC` 
+- Do not put this program in cloud-storage folder.
 
 # Disclaimer
 
