@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 using CommandLine;
 using CRAMC.Common;
+using CRAMC.FileUtils;
 using Sentry;
 using Serilog;
 
@@ -20,12 +21,6 @@ internal class Program {
         "https://af1658f8654e2f490466ef093b2d6b7f@o132236.ingest.us.sentry.io/4509401173327872";
 
     private static string _searchMethod = "parseMFT";
-    
-    // insecure encryption (just too lazy) using hardcoded password
-    // nonce 12 bytes, tag 16 bytes, key 32 bytes, chacha20-poly1305
-    // encrypted file = nonce 12 + tag 16 + ciphertext
-    private static string _encPassword = "5bd67722e744501b8a5403daa793ff58b4dd4598a841bf4fe36e5cf0b67c4a48";
-
 
     // possibly, ".xlt/.xltm" might also get infected, but I haven't observed any of them in my environment
     // same for other extensions (e.g. ".ppt/.docm/.doc/.dot/.dotm/.ppt/.pptm/.pot/.potm/.pps/.ppsm/.ppa/.ppam")
@@ -59,18 +54,19 @@ internal class Program {
         RuntimeOpts.DoNotScanDisk = options.NoDiskScan;
         // if no-disk-scan, check existence of clean only file list
         if (options.NoDiskScan) {
-            
+            if (FileSizeUtils.CheckFileSizeOnLocalDisk(_cleanOnlyFileLst) <= 0) {
+                Log.Fatal("No disk scan set, cannot find clean-only file list.");
+                Environment.Exit(1);
+            }
         }
-        
+        // assign user options to general available location
         RuntimeOpts.DryRun = options.DryRun;
         RuntimeOpts.IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         if (!RuntimeOpts.IsWindows || !CheckUACElevated() || options.NotAdmin) RuntimeOpts.NoPrivilegedActions = true;
         if (RuntimeOpts.IsWindows && options.EnableHardening) RuntimeOpts.TryHardening = true;
         RuntimeOpts.ActionPath = options.ActionPath;
         // dealing with operation called by user
-
-        // TODO
-        // check output list and proceed further
+        //TODO
         // cleanup and sync log info to disk
         Log.CloseAndFlush();
     }

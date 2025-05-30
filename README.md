@@ -27,6 +27,7 @@ Backup your data before you use it. No warranty at all.
 - `cramc_db.json` is k-v store, k should be rule name, v should be operation
 - `cramc_conf.json` is generally for spawning runner and cleaner on the machine.
 - Before remediation, file should always be backed-up.
+- `databaseVersion` is for both cleanup db and yara rules.
 
 # License
 

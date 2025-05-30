@@ -2,9 +2,9 @@ using CRAMC.Common;
 using System.IO;
 using Serilog;
 
-namespace CRAMC;
+namespace CRAMC.FileUtils;
 
-public static class Utilities {
+public static class FileSizeUtils {
     public const FileAttributes FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS = (FileAttributes)0x00400000;
     public const FileAttributes FILE_ATTRIBUTE_UNPINNED = (FileAttributes)0x00100000;
     
