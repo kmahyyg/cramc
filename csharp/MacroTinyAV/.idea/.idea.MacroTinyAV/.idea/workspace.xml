@@ -8,11 +8,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="2a65f4d8-cba0-4f04-85ca-54f414911985" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.idea.MacroTinyAV/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.MacroTinyAV/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CRAMC/FileUtils/TextFormatUtils.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/CRAMC/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CRAMC/Program.cs" afterDir="false" />
-    </list>
+    <list default="true" id="2a65f4d8-cba0-4f04-85ca-54f414911985" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -23,6 +19,7 @@
   </component>
   <component name="HighlightingSettingsPerFile">
     <setting file="mock:///Users/kmahyyg/Developer/GitBins/crappy_macro_cleaner/csharp/MacroTinyAV/CRAMC/CryptoUtils/Crypter.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="mock:///Users/kmahyyg/Developer/GitBins/crappy_macro_cleaner/csharp/MacroTinyAV/CRAMC/Program.cs" root0="SKIP_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/4cce744579a672bc37fa8b8271948c71f2ef6ded70d4f1c17ea35d59165db8/FileName.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/5fc91b3009b997215f7fd146c4a1e567d165966a6f99bea99da9ecac1b2/ExtensionMethods.cs" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/d240eb2652d919b7d88b6d4c9afb656c6e869c34975acec34b4114eff59b0dc/Attribute.cs" root0="FORCE_HIGHLIGHTING" />
@@ -103,7 +100,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1748668434275</updated>
-      <workItem from="1748668435420" duration="14852000" />
+      <workItem from="1748668435420" duration="15730000" />
     </task>
     <task id="LOCAL-00001" summary="update AEAD crypter">
       <option name="closed" value="true" />
@@ -137,7 +134,15 @@
       <option name="project" value="LOCAL" />
       <updated>1748690311668</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="remove privilege-related code as always unprivileged">
+      <option name="closed" value="true" />
+      <created>1748690594624</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1748690594624</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -151,7 +156,8 @@
     <MESSAGE value="update mft search" />
     <MESSAGE value="removed ntfs-related code" />
     <MESSAGE value="add reproducible builds and remove ntfs-related dependencies" />
-    <option name="LAST_COMMIT_MESSAGE" value="add reproducible builds and remove ntfs-related dependencies" />
+    <MESSAGE value="remove privilege-related code as always unprivileged" />
+    <option name="LAST_COMMIT_MESSAGE" value="remove privilege-related code as always unprivileged" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
