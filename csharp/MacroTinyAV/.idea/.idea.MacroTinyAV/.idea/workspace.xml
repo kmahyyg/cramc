@@ -9,13 +9,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2a65f4d8-cba0-4f04-85ca-54f414911985" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/CRAMC/FileUtils/WalkthroughSearcher.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/.idea.MacroTinyAV/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.MacroTinyAV/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CRAMC/Common/RuntimeOpts.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CRAMC/Common/RuntimeOpts.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CRAMC/FileUtils/FileSearcher.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/CRAMC/FileUtils/NTFSMFTSearch.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/CRAMC/FileUtils/WalkthroughSearch.cs" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/CRAMC/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CRAMC/Program.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CRAMC/CRAMC.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/CRAMC/CRAMC.csproj" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -107,7 +102,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1748668434275</updated>
-      <workItem from="1748668435420" duration="14246000" />
+      <workItem from="1748668435420" duration="14545000" />
     </task>
     <task id="LOCAL-00001" summary="update AEAD crypter">
       <option name="closed" value="true" />
@@ -125,7 +120,15 @@
       <option name="project" value="LOCAL" />
       <updated>1748688516218</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="removed ntfs-related code">
+      <option name="closed" value="true" />
+      <created>1748689981766</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1748689981766</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -137,7 +140,8 @@
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
     <MESSAGE value="update AEAD crypter" />
     <MESSAGE value="update mft search" />
-    <option name="LAST_COMMIT_MESSAGE" value="update mft search" />
+    <MESSAGE value="removed ntfs-related code" />
+    <option name="LAST_COMMIT_MESSAGE" value="removed ntfs-related code" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
