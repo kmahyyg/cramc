@@ -62,16 +62,12 @@ internal class Program {
         // assign user options to general available location
         RuntimeOpts.DryRun = options.DryRun;
         RuntimeOpts.IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-        if (!RuntimeOpts.IsWindows || !CheckUACElevated() || options.NotAdmin) RuntimeOpts.NoPrivilegedActions = true;
         if (RuntimeOpts.IsWindows && options.EnableHardening) RuntimeOpts.TryHardening = true;
         RuntimeOpts.ActionPath = options.ActionPath;
         // dealing with operation called by user
         if (!RuntimeOpts.DoNotScanDisk) {
             // start searching, searching output to a buffer/stream
-            IFileSearcher fileSearcher;
-            if (!RuntimeOpts.NoPrivilegedActions) {
 
-            }
         }
         //TODO
         // cleanup and sync log info to disk
@@ -96,11 +92,6 @@ internal class Program {
     }
 
     public class ProcOptions {
-        [Option("notAdmin", Default = false,
-            HelpText =
-                "Assumes current user is unprivileged. This generally skips operation that requires admin privileges and prevent from reading MFT.")]
-        public bool NotAdmin { get; set; }
-
         [Option('a', "actionPath", Default = "C:\\Users",
             HelpText =
                 "The path to the files you want to scan. To balance scanning speed and false positive rate, we recommend to scan User profile only. By default, we use recursive search.")]
@@ -132,6 +123,14 @@ internal class Program {
         //     HelpText = "Force action to be taken regardless current circumstances.")]
         // public bool ForceAction { get; set; }
 
+        // update 2: deprecated as always unprivileged, NTFS-boosted search by utilizing MFT may cause OOM due to unpredicted large MFT file size.
+        // always assume user is unprivileged, this is used to directly fallback to walkthrough disk
+        //
+        // [Option("notAdmin", Default = false,
+        //     HelpText =
+        //         "Assumes current user is unprivileged. This generally skips operation that requires admin privileges and prevent from reading MFT.")]
+        // public bool NotAdmin { get; set; }
+        
         // always ignore remote file, if file is not on disk, no action could be taken and may cause thread hang.
         //
         // [Option("ignoreRemoteFile", Default = true, HelpText = "Ignore remote files that are not on disk.")]
