@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
+    <PackageReference Include="ERZHelpers" Version="1.5.3" />
     <PackageReference Include="MFT" Version="1.5.1" />
     <PackageReference Include="Microsoft.O365.Security.Native.libyara.NET.Core" Version="4.5.1" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />

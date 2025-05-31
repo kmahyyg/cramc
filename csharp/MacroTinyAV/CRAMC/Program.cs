@@ -70,7 +70,7 @@ internal class Program {
             // start searching, searching output to a buffer/stream
             IFileSearcher fileSearcher;
             if (!RuntimeOpts.NoPrivilegedActions) {
-                
+
             }
         }
         //TODO

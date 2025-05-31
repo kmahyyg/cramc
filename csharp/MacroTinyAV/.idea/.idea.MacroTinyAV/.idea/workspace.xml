@@ -9,17 +9,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2a65f4d8-cba0-4f04-85ca-54f414911985" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/../../assets/cramc_db.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../assets/cramc_db.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../assets/latest_version.json" beforeDir="false" afterPath="$PROJECT_DIR$/../../assets/latest_version.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CRAMC/Common/DataModels.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CRAMC/Common/DataModels.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CRAMC/CryptoUtils/Crypter.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CRAMC/CryptoUtils/Crypter.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CRAMC/FileUtils/FileSearcher.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CRAMC/FileUtils/FileSearcher.cs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.MacroTinyAV/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.MacroTinyAV/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/CRAMC/CRAMC.csproj" beforeDir="false" afterPath="$PROJECT_DIR$/CRAMC/CRAMC.csproj" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CRAMC/FileUtils/NTFSMFTSearch.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CRAMC/FileUtils/NTFSMFTSearch.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CRAMC/Hardener.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CRAMC/Hardener.cs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/CRAMC/Program.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CRAMC/Program.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CRAMC/Sanitizer.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CRAMC/Sanitizer.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CRAMC/YaraScanner.cs" beforeDir="false" afterPath="$PROJECT_DIR$/CRAMC/YaraScanner.cs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/MacroTinyAV.sln" beforeDir="false" afterPath="$PROJECT_DIR$/MacroTinyAV.sln" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/MacroTinyAV.sln.DotSettings.user" beforeDir="false" afterPath="$PROJECT_DIR$/MacroTinyAV.sln.DotSettings.user" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,10 +23,19 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../.." />
   </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="mock:///Users/kmahyyg/Developer/GitBins/crappy_macro_cleaner/csharp/MacroTinyAV/CRAMC/CryptoUtils/Crypter.cs" root0="SKIP_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/4cce744579a672bc37fa8b8271948c71f2ef6ded70d4f1c17ea35d59165db8/FileName.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/5fc91b3009b997215f7fd146c4a1e567d165966a6f99bea99da9ecac1b2/ExtensionMethods.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/d240eb2652d919b7d88b6d4c9afb656c6e869c34975acec34b4114eff59b0dc/Attribute.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/e5bb9d6fd1e8ee0f5958a75bdf482908164a21367983e9c69d6eb52eefa54e/Mft.cs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$APPLICATION_CONFIG_DIR$/resharper-host/SourcesCache/f5ae9c2aa963b17259613e33978636dcdc10b0cf818c4a2a442ffcc3fd421881/FileInfo.cs" root0="FORCE_HIGHLIGHTING" />
+  </component>
   <component name="KubernetesApiPersistence"><![CDATA[{}]]></component>
   <component name="KubernetesApiProvider"><![CDATA[{
   "isMigrated": true
 }]]></component>
+  <component name="MetaFilesCheckinStateConfiguration" checkMetaFiles="true" />
   <component name="ProjectColorInfo"><![CDATA[{
   "associatedIndex": 4
 }]]></component>
@@ -102,16 +105,28 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1748668434275</updated>
-      <workItem from="1748668435420" duration="4743000" />
+      <workItem from="1748668435420" duration="13284000" />
     </task>
+    <task id="LOCAL-00001" summary="update AEAD crypter">
+      <option name="closed" value="true" />
+      <created>1748680824467</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1748680824467</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
+  <component name="UnityCheckinConfiguration" checkUnsavedScenes="true" />
   <component name="UnityProjectConfiguration" hasMinimizedUI="false" />
   <component name="VcsManagerConfiguration">
     <option name="CLEAR_INITIAL_COMMIT_MESSAGE" value="true" />
+    <MESSAGE value="update AEAD crypter" />
+    <option name="LAST_COMMIT_MESSAGE" value="update AEAD crypter" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
