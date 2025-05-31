@@ -1,0 +1,64 @@
+{
+  "RT_GROUP_ICON": {
+    "APP": {
+      "0000": [
+        "icon.png",
+        "icon_64.png",
+        "icon_48.png",
+        "icon_32.png",
+        "icon_16.png"
+      ]
+    }
+  },
+  "RT_MANIFEST": {
+    "#1": {
+      "0409": {
+        "identity": {
+          "name": "",
+          "version": ""
+        },
+        "description": "CRAppy Macro Cleaner",
+        "minimum-os": "win10",
+        "execution-level": "highest",
+        "ui-access": false,
+        "auto-elevate": false,
+        "dpi-awareness": "system",
+        "disable-theming": false,
+        "disable-window-filtering": false,
+        "high-resolution-scrolling-aware": true,
+        "ultra-high-resolution-scrolling-aware": true,
+        "long-path-aware": true,
+        "printer-driver-isolation": false,
+        "gdi-scaling": false,
+        "segment-heap": false,
+        "use-common-controls-v6": false
+      }
+    }
+  },
+  "RT_VERSION": {
+    "#1": {
+      "0000": {
+        "fixed": {
+          "file_version": "0.2.0.0",
+          "product_version": "0.2.0.0"
+        },
+        "info": {
+          "0409": {
+            "Comments": "No Comment",
+            "CompanyName": "PatMeow Inc.",
+            "FileDescription": "CRAMC Golang",
+            "FileVersion": "0.2.0.0",
+            "InternalName": "cramc-go",
+            "LegalCopyright": "AGPL v3",
+            "LegalTrademarks": "Patrick Young & PatMeow Inc.",
+            "OriginalFilename": "main.exe",
+            "PrivateBuild": "",
+            "ProductName": "CRAMC",
+            "ProductVersion": "0.2.0.0",
+            "SpecialBuild": "1"
+          }
+        }
+      }
+    }
+  }
+}
