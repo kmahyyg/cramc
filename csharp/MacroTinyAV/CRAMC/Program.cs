@@ -66,6 +66,13 @@ internal class Program {
         if (RuntimeOpts.IsWindows && options.EnableHardening) RuntimeOpts.TryHardening = true;
         RuntimeOpts.ActionPath = options.ActionPath;
         // dealing with operation called by user
+        if (!RuntimeOpts.DoNotScanDisk) {
+            // start searching, searching output to a buffer/stream
+            IFileSearcher fileSearcher;
+            if (!RuntimeOpts.NoPrivilegedActions) {
+                
+            }
+        }
         //TODO
         // cleanup and sync log info to disk
         Log.CloseAndFlush();

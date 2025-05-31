@@ -1,5 +1,5 @@
 namespace CRAMC.FileUtils;
 
-public class NTFSSearchBooster {
+public class NTFSMFTSearch {
     
 }

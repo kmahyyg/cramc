@@ -8,7 +8,7 @@ public static class Crypter {
     private static string _encPassword = "5bd67722e744501b8a5403daa793ff58b4dd4598a841bf4fe36e5cf0b67c4a48";
     
     // we encrypt/decrypt our configuration and tiny database, 
-    // it shouldn't eat too much memory, so it's not necessary to
+    // it shouldn't require too much memory, so it's not necessary to
     // utilize stream for minimum memory footprint
     public static byte[] Chacha20Poly1305AEADEncrypt(string hexPassword, byte[] plainText) {
 

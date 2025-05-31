@@ -1,10 +1,11 @@
 {
-    "version": 20250528001,
+    "version": 20250531001,
     "VirusX97MSlackerF": [
         {
             "module": "ThisWorkbook",
             "action": "sanitize",
             "mustHarden": true,
+            "allowRepeatedHarden": false,
             "hardenMeasure": [
                 {"action": "clean_setRO", "type": "file", "dest": "C:\\Users\\${USERNAME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1"},
                 {"action": "setRO", "type": "dir", "dest": "C:\\Users\\${USERNAME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART"}

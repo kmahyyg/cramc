@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.36121.58 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CRAMC", "CRAMC\CRAMC.csproj", "{10FC6C73-CF78-427D-9EBB-59FA7A34430E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CRAMCDevReleaser", "CRAMCDevReleaser\CRAMCDevReleaser.csproj", "{ACCB4A83-0A41-490F-86F3-327AEF0DF892}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{10FC6C73-CF78-427D-9EBB-59FA7A34430E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{10FC6C73-CF78-427D-9EBB-59FA7A34430E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{10FC6C73-CF78-427D-9EBB-59FA7A34430E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ACCB4A83-0A41-490F-86F3-327AEF0DF892}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ACCB4A83-0A41-490F-86F3-327AEF0DF892}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ACCB4A83-0A41-490F-86F3-327AEF0DF892}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ACCB4A83-0A41-490F-86F3-327AEF0DF892}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,5 +1,5 @@
 namespace CRAMC;
 
-public class Remediater {
+public class Sanitizer {
     
 }
