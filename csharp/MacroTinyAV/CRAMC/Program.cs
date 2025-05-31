@@ -80,17 +80,6 @@ internal class Program {
         Environment.Exit(1);
     }
 
-    private static bool CheckUACElevated() {
-        // if elevated, return true.
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            using (var identity = WindowsIdentity.GetCurrent()) {
-                var principal = new WindowsPrincipal(identity);
-                return principal.IsInRole(WindowsBuiltInRole.Administrator);
-            }
-
-        return false;
-    }
-
     public class ProcOptions {
         [Option('a', "actionPath", Default = "C:\\Users",
             HelpText =
@@ -122,9 +111,9 @@ internal class Program {
         // [Option('f', "forceAction", Default = true,
         //     HelpText = "Force action to be taken regardless current circumstances.")]
         // public bool ForceAction { get; set; }
-
-        // update 2: deprecated as always unprivileged, NTFS-boosted search by utilizing MFT may cause OOM due to unpredicted large MFT file size.
+        
         // always assume user is unprivileged, this is used to directly fallback to walkthrough disk
+        // update 2: deprecated as always unprivileged, NTFS-boosted search by utilizing MFT may cause OOM due to unpredicted large MFT file size.
         //
         // [Option("notAdmin", Default = false,
         //     HelpText =
@@ -153,6 +142,6 @@ internal class Program {
         //
         // [Option("yaraRuleDir", Default = "yrules/", HelpText = "The directory where compiled yara rules are located.")]
         // public string YaraRuleDir { get; set; }
-        //
+
     }
 }
