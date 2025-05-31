@@ -16,6 +16,8 @@ My Crappy Macro Cleaner - For Sanitizing Malicious Macro in Office Files when AV
 - To ensure availbility, this program is recommended to run under Administrator and in path `%ProgramData%\CRAMC` 
 - Do not put this program in cloud-storage folder.
 
+I'm trying to build golang version for everything, using GRPC to communicate with csharp to interact with proprietary office files. This would greatly reduce my workload and better for maintenance.
+
 # Disclaimer
 
 Backup your data before you use it. No warranty at all.
