@@ -12,7 +12,7 @@ func IsDriveFileSystemNTFS(actionPath string) (bool, error) {
 	return false, customerrs.ErrUnsupportedPlatform
 }
 
-func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outputChan chan string) (int64, error) {
+func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outputChan chan string) (int, error) {
 	return -1, customerrs.ErrUnsupportedPlatform
 }
 
