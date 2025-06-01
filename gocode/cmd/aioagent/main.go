@@ -6,13 +6,16 @@ import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
 	"cramc_go/logging"
+	"cramc_go/updchecker"
 	"flag"
 	"github.com/getsentry/sentry-go"
 	"os"
 )
 
 const (
-	SentryDSN = "https://af1658f8654e2f490466ef093b2d6b7f@o132236.ingest.us.sentry.io/4509401173327872"
+	SentryDSN    = "https://af1658f8654e2f490466ef093b2d6b7f@o132236.ingest.us.sentry.io/4509401173327872"
+	databasePath = "cramc_db.bin"
+	yaraRulesDir = "yrules/"
 )
 
 var (
@@ -46,5 +49,14 @@ func main() {
 	// startup behavior
 	if finfo, err := os.Stat(*flActionPath); err != nil || !finfo.IsDir() {
 		logger.Fatalln(customerrs.ErrActionPathMustBeDir)
+	}
+	// update checker
+	latestV, err := updchecker.CheckUpdateFromInternet()
+	if err != nil {
+		logger.Errorln("Update Checker Error: ", err.Error())
+	} else {
+		if latestV.ProgramRevision != common.ProgramRev {
+			logger.Fatalln("Not latest version, refuse to continue, please upgrade from https://github.com/kmahyyg/cramc")
+		}
 	}
 }
