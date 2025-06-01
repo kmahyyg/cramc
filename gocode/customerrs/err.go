@@ -12,4 +12,5 @@ var (
 	ErrDeviceInaccessible           = errors.New("disk device is inaccessible")
 	ErrInvalidInput                 = errors.New("invalid input")
 	ErrFallbackToCompatibleSolution = errors.New("cannot using boosted solution, fallback")
+	ErrActionPathMustBeDir          = errors.New("actionPath must be a path to directory")
 )

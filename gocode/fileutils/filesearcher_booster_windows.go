@@ -9,7 +9,10 @@ import (
 	"golang.org/x/sys/windows"
 	"os"
 	"os/user"
+	"path"
 	"regexp"
+	"slices"
+	"strings"
 	ntfs "www.velocidex.com/golang/go-ntfs/parser"
 )
 
@@ -74,7 +77,8 @@ func IsDriveFileSystemNTFS(actionPath string) (bool, error) {
 	}
 }
 
-func ExtractAndParseMFT(actionPath string, allowedExts []string, outputChan chan string) (int64, error) {
+func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outputChan chan string) (int, error) {
+	defer close(outputChan)
 	// Extract drive letter from the first character
 	volDiskLetter := actionPath[0]
 
@@ -120,17 +124,34 @@ func ExtractAndParseMFT(actionPath string, allowedExts []string, outputChan chan
 	}
 	common.Logger.Debugln("Successfully opened $MFT:$DATA.")
 
+	// check if prefix matched the actionPath
+	residentialPathDir := strings.Split(strings.ReplaceAll(actionPath, "\\", "/"), ":")
+	if len(residentialPathDir) != 2 {
+		// windows filename doesn't allow ':' char
+		// result should be: []string{"C", "/Users"}
+		common.Logger.Warningf("actionPath contains invalid char: %s", customerrs.ErrInvalidInput.Error())
+		return -1, customerrs.ErrInvalidInput
+	}
+
+	// start iterating and filter
+	counter := 0
 	for item := range ntfs.ParseMFTFile(context.Background(), mftReader, ntfs.RangeSize(mftReader),
 		ntfsVolCtx.ClusterSize, ntfsVolCtx.RecordSize) {
 		// filter files here
+		// only include current on-disk ones
 		if !item.InUse {
 			continue
 		}
 		if item.IsDir {
 			continue
 		}
-
+		fPath := item.FullPath()
+		// fPath example: /Users/<username>/<dir>/file.bin
+		// if hasPrefix && intended extensions, all good.
+		if strings.HasPrefix(fPath, residentialPathDir[1]) && slices.Contains(allowedExts, path.Ext(fPath)) {
+			counter += 1
+			outputChan <- string(volDiskLetter) + ":" + fPath
+		}
 	}
-
-	return -1, customerrs.ErrUnknownInternalError
+	return counter, nil
 }

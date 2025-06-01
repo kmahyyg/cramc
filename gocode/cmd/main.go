@@ -4,9 +4,11 @@ package main
 
 import (
 	"cramc_go/common"
+	"cramc_go/customerrs"
 	"cramc_go/logging"
 	"flag"
 	"github.com/getsentry/sentry-go"
+	"os"
 )
 
 const (
@@ -42,5 +44,7 @@ func main() {
 		logger.Fatalf("sentry.init: %s", err)
 	}
 	// startup behavior
-
+	if finfo, err := os.Stat(*flActionPath); err != nil || !finfo.IsDir() {
+		logger.Fatalln(customerrs.ErrActionPathMustBeDir)
+	}
 }
