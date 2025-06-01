@@ -13,4 +13,5 @@ var (
 	ErrInvalidInput                 = errors.New("invalid input")
 	ErrFallbackToCompatibleSolution = errors.New("cannot using boosted solution, fallback")
 	ErrActionPathMustBeDir          = errors.New("actionPath must be a path to directory")
+	ErrFileExistsOnCloudOnly        = errors.New("current file only exists on cloud, not on local disk")
 )
