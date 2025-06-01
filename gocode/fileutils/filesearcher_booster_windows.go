@@ -3,10 +3,14 @@
 package fileutils
 
 import (
+	"context"
 	"cramc_go/common"
 	"cramc_go/customerrs"
 	"golang.org/x/sys/windows"
+	"os"
 	"os/user"
+	"regexp"
+	ntfs "www.velocidex.com/golang/go-ntfs/parser"
 )
 
 func CheckProcessElevated() (bool, error) {
@@ -62,10 +66,71 @@ func IsDriveFileSystemNTFS(actionPath string) (bool, error) {
 
 	// Convert UTF16 buffer to string
 	fileSystemName := windows.UTF16ToString(fileSystemNameBuffer)
-
-	return fileSystemName == "NTFS", customerrs.ErrUnknownInternalError
+	res := fileSystemName == "NTFS"
+	if res {
+		return res, nil
+	} else {
+		return res, customerrs.ErrFallbackToCompatibleSolution
+	}
 }
 
 func ExtractAndParseMFT(actionPath string, allowedExts []string, outputChan chan string) (int64, error) {
+	// Extract drive letter from the first character
+	volDiskLetter := actionPath[0]
+
+	common.Logger.Debugln("Check Drive Letter.")
+	// check user input
+	var IsDiskLetter = regexp.MustCompile(`^[a-zA-Z]$`).MatchString
+	if !IsDiskLetter(string(volDiskLetter)) {
+		return -1, customerrs.ErrInvalidInput
+	}
+
+	common.Logger.Debugln("Open Raw Device Handle.")
+	// use UNC path to access raw device to bypass limitation of file lock, e.g. \\.\C:
+	volFd, err := os.Open("\\\\.\\" + string(volDiskLetter) + ":")
+	if err != nil {
+		return -1, customerrs.ErrDeviceInaccessible
+	}
+	defer volFd.Close()
+
+	common.Logger.Debugln("Create PagedReader with page 4096, cache size 65536.")
+	// build a pagedReader for raw device to feed the NTFSContext initializor
+	ntfsPagedReader, err := ntfs.NewPagedReader(volFd, 0x1000, 0x10000)
+	if err != nil {
+		return -1, err
+	}
+
+	common.Logger.Debugln("Create NTFSContext.")
+	// build NTFS context for root device
+	ntfsVolCtx, err := ntfs.GetNTFSContext(ntfsPagedReader, 0)
+	if err != nil {
+		return -1, err
+	}
+
+	common.Logger.Debugln("Try to get $MFT $DATA stream.")
+	volMFTEntry, err := ntfsVolCtx.GetMFT(0)
+	if err != nil {
+		return -1, err
+	}
+
+	// open $DATA attr of $MFT, https://github.com/Velocidex/go-ntfs/blob/master/bin/mft.go
+	mftReader, err := ntfs.OpenStream(ntfsVolCtx, volMFTEntry, uint64(128), ntfs.WILDCARD_STREAM_ID, ntfs.WILDCARD_STREAM_NAME)
+	if err != nil {
+		return -1, err
+	}
+	common.Logger.Debugln("Successfully opened $MFT:$DATA.")
+
+	for item := range ntfs.ParseMFTFile(context.Background(), mftReader, ntfs.RangeSize(mftReader),
+		ntfsVolCtx.ClusterSize, ntfsVolCtx.RecordSize) {
+		// filter files here
+		if !item.InUse {
+			continue
+		}
+		if item.IsDir {
+			continue
+		}
+
+	}
+
 	return -1, customerrs.ErrUnknownInternalError
 }
