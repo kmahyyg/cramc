@@ -27,6 +27,7 @@ func main() {
 	defer logFd.Close()
 	common.Logger = logger
 	logger.Infoln("DevReleaser for CRAMC, Don't Forget to Bump Database/UpdateChecker Version!")
+	logger.Infoln("Please put this binary with the same folder of yrules/ and cramc_db.json before continue.")
 	if len(*fTarget) == 0 {
 		panic("target is required")
 	}
