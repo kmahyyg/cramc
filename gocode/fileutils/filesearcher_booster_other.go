@@ -8,12 +8,12 @@ func CheckProcessElevated() (bool, error) {
 	return false, customerrs.ErrUnsupportedPlatform
 }
 
-func IsDriveFileSystemNTFS() (bool, error) {
+func IsDriveFileSystemNTFS(actionPath string) (bool, error) {
 	return false, customerrs.ErrUnsupportedPlatform
 }
 
-func ExtractAndParseMFT(actionPath []string, allowedExts []string, outputChan chan string) (bool, error) {
-	return false, customerrs.ErrUnsupportedPlatform
+func ExtractAndParseMFT(actionPath string, allowedExts []string, outputChan chan string) (int64, error) {
+	return -1, customerrs.ErrUnsupportedPlatform
 }
 
 // generally, malicious office macro won't infect non-Windows system.

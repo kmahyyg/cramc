@@ -29,10 +29,11 @@ func CheckProcessElevated() (bool, error) {
 	return false, customerrs.ErrUnknownInternalError
 }
 
-func IsDriveFileSystemNTFS() (bool, error) {
+func IsDriveFileSystemNTFS(actionPath string) (bool, error) {
+
 	return false, customerrs.ErrUnknownInternalError
 }
 
-func ExtractAndParseMFT(actionPath []string, allowedExts []string, outputChan chan string) (bool, error) {
+func ExtractAndParseMFT(actionPath string, allowedExts []string, outputChan chan string) (int64, error) {
 	return false, customerrs.ErrUnknownInternalError
 }
