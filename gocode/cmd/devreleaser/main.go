@@ -48,42 +48,50 @@ func main() {
 		return
 	}
 	if *fDec && *fEnc {
+		common.Logger.Infoln("Conflicted flag supplied. Refuse to continue.")
 		panic(customerrs.ErrInvalidInput)
 	}
 	if *fDec || *fEnc {
 		if !checkFileLogicalExists(*fInFile) {
+			common.Logger.Fatalln("Input file not found", *fInFile)
 			panic(customerrs.ErrInvalidInput)
 		}
 		inData, err := os.ReadFile(*fInFile)
 		if err != nil {
 			panic(err)
 		}
+		common.Logger.Infoln("Input file Read Into Memory:", *fInFile)
 		outFd, err := os.Create(*fOutFile)
 		if err != nil {
 			panic(err)
 		}
 		defer outFd.Close()
+		common.Logger.Infoln("Output file Created:", *fOutFile)
 		passwd, err := hex.DecodeString(common.HexEncryptionPassword)
 		if err != nil {
 			panic(err)
 		}
+		common.Logger.Infoln("Password Prepared.")
 		var outD []byte
 		if *fEnc {
 			outD, err = cryptutils.XChacha20Encrypt(passwd, inData)
 			if err != nil {
 				panic(err)
 			}
+			common.Logger.Infoln("Input file Encrypted.")
 		} else if *fDec {
 			outD, err = cryptutils.XChacha20Decrypt(passwd, inData)
 			if err != nil {
 				panic(err)
 			}
+			common.Logger.Infoln("Input file Decrypted.")
 		}
 		_, err = outFd.Write(outD)
 		if err != nil {
 			panic(err)
 		}
 		outFd.Sync()
+		common.Logger.Infoln("Successfully wrote output binary!")
 		return
 	}
 }

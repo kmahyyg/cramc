@@ -15,4 +15,5 @@ var (
 	ErrActionPathMustBeDir          = errors.New("actionPath must be a path to directory")
 	ErrFileExistsOnCloudOnly        = errors.New("current file only exists on cloud, not on local disk")
 	ErrNoScanSetButNoListProvided   = errors.New("noDiskScan set, but never provided scan result input list")
+	ErrNotLatestVersion             = errors.New("not latest version, refuse to continue, please upgrade from https://github.com/kmahyyg/cramc")
 )

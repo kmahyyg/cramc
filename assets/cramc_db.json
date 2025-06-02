@@ -1,7 +1,8 @@
 {
     "version": 20250531001,
-    "VirusX97MSlackerF": [
+    "solutions":[
         {
+            "name": "VirusX97MSlackerF",
             "module": "ThisWorkbook",
             "action": "sanitize",
             "mustHarden": true,

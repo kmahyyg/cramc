@@ -5,19 +5,21 @@ package main
 import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
+	"cramc_go/fileutils"
 	"cramc_go/logging"
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/updchecker"
 	"flag"
 	"github.com/getsentry/sentry-go"
 	"os"
+	"sync"
 )
 
 const (
-	SentryDSN    = "https://af1658f8654e2f490466ef093b2d6b7f@o132236.ingest.us.sentry.io/4509401173327872"
-	databasePath = "cramc_db.bin"
-	yaraRulesDir = "yrules/"
-	iptFileList  = "ipt_yrscan.lst"
+	SentryDSN     = "https://af1658f8654e2f490466ef093b2d6b7f@o132236.ingest.us.sentry.io/4509401173327872"
+	databasePath  = "cramc_db.bin"
+	yaraRulesPath = "unified.yar.bin"
+	iptFileList   = "ipt_yrscan.lst"
 )
 
 var (
@@ -60,6 +62,8 @@ func main() {
 			logger.Fatalln(customerrs.ErrNoScanSetButNoListProvided)
 		}
 	}
+	// read and decrypt file
+
 	// dry run is always handled by callee to make sure behaviour consistent.
 	common.DryRunOnly = *flDryRun
 	common.EnableHardening = *flEnableHardening
@@ -71,7 +75,23 @@ func main() {
 		logger.Errorln("Update Checker Error: ", err.Error())
 	} else {
 		if latestV.ProgramRevision != common.ProgramRev {
-			logger.Fatalln("Not latest version, refuse to continue, please upgrade from https://github.com/kmahyyg/cramc")
+			logger.Fatalln(customerrs.ErrNotLatestVersion)
 		}
+	}
+	// check privilege
+	isElevated, _ := fileutils.CheckProcessElevated()
+	isNTFS, _ := fileutils.IsDriveFileSystemNTFS(*flActionPath)
+	// if noDiskScan set, directly go for yara scanner
+	var wg = &sync.WaitGroup{}
+	if !*flNoDiskScan {
+		if isElevated && isNTFS {
+			// go for parse MFT
+		} else {
+			// fallback to normal searcher
+		}
+	} else {
+		// 000000b0: 6e0a 5669 7275 7358 3937 4d53 6c61 636b  n.VirusX97MSlack
+		// 000000c0: 6572 4620 2e2f 426f 6f6b 310a            erF ./Book1.
+		// output as above: VirusX97MSlackerF ./Book1\n
 	}
 }
