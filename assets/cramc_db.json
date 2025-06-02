@@ -7,7 +7,7 @@
             "action": "sanitize",
             "mustHarden": true,
             "allowRepeatedHarden": false,
-            "hardenMeasure": [
+            "hardenMeasures": [
                 {"action": "clean_setRO", "type": "file", "dest": "C:\\Users\\${USERNAME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1"},
                 {"action": "setRO", "type": "dir", "dest": "C:\\Users\\${USERNAME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART"}
             ]
