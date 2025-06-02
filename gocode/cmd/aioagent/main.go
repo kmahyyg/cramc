@@ -149,6 +149,7 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
+				common.Logger.Infoln("Start MFTSearcher, BOOSTED!")
 				countedFile, err := fileutils.ExtractAndParseMFTThenSearch(*flActionPath, allowedExts, searcherOptChan)
 				if errors.Is(err, customerrs.ErrInvalidInput) {
 					common.Logger.Fatalln(err)
@@ -168,6 +169,7 @@ func main() {
 			}()
 		} else {
 			if common.IsRunningOnWin {
+				common.Logger.Infoln("Unprivileged scan, fallback.")
 				triggeredErrFallback = true
 			}
 		}
@@ -178,6 +180,7 @@ func main() {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
+				common.Logger.Infoln("GenrealWalkthroughSearcher started.")
 				counted, err := fileutils.GeneralWalkthroughSearch(*flActionPath, allowedExts, searcherOptChan)
 				// should not encounter some unexpected error
 				if err != nil {
@@ -185,6 +188,7 @@ func main() {
 					common.Logger.Fatalln(customerrs.ErrUnknownInternalError)
 				}
 				common.Logger.Infof("Found %d File using GeneralSearcher, proceed to next step.\n", counted)
+				return
 			}()
 		}
 		// wait until iterate finish
@@ -194,7 +198,7 @@ func main() {
 		// 000000c0: 6572 4620 2e2f 426f 6f6b 310a            erF ./Book1.
 		// output as above: VirusX97MSlackerF ./Book1\n
 		// read iptYRList
-		iptFileList
+
 	}
 
 	// read yara rules and decrypt
