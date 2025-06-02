@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 	ntfs "www.velocidex.com/golang/go-ntfs/parser"
 )
 
@@ -77,7 +78,8 @@ func IsDriveFileSystemNTFS(actionPath string) (bool, error) {
 	}
 }
 
-func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outputChan chan string) (int, error) {
+func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outputChan chan string, wg *sync.WaitGroup) (int, error) {
+	defer wg.Done()
 	defer close(outputChan)
 	// Extract drive letter from the first character
 	volDiskLetter := actionPath[0]

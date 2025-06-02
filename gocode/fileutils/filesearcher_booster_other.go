@@ -2,7 +2,10 @@
 
 package fileutils
 
-import "cramc_go/customerrs"
+import (
+	"cramc_go/customerrs"
+	"sync"
+)
 
 func CheckProcessElevated() (bool, error) {
 	return false, customerrs.ErrUnsupportedPlatform
@@ -12,7 +15,9 @@ func IsDriveFileSystemNTFS(actionPath string) (bool, error) {
 	return false, customerrs.ErrUnsupportedPlatform
 }
 
-func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outputChan chan string) (int, error) {
+func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outputChan chan string, wg *sync.WaitGroup) (int, error) {
+	defer wg.Done()
+	defer close(outputChan)
 	return -1, customerrs.ErrUnsupportedPlatform
 }
 

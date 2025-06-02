@@ -4,11 +4,13 @@ package main
 
 import (
 	"cramc_go/common"
+	"cramc_go/cryptutils"
 	"cramc_go/customerrs"
 	"cramc_go/fileutils"
 	"cramc_go/logging"
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/updchecker"
+	"encoding/hex"
 	"flag"
 	"github.com/getsentry/sentry-go"
 	"os"
@@ -63,7 +65,21 @@ func main() {
 		}
 	}
 	// read and decrypt file
-
+	hPwdBytes, err := hex.DecodeString(common.HexEncryptionPassword)
+	if err != nil {
+		logger.Infoln("Cannot prepare password.")
+		logger.Fatalln(err)
+	}
+	databaseEncBin, err := os.ReadFile(databasePath)
+	if err != nil {
+		logger.Infoln("Could not read database from file.")
+		logger.Fatalln(err)
+	}
+	originalCleanupDB, err := cryptutils.XChacha20Decrypt(hPwdBytes, databaseEncBin)
+	if err != nil {
+		logger.Infoln("Could not decrypt database.")
+		logger.Fatalln(err)
+	}
 	// dry run is always handled by callee to make sure behaviour consistent.
 	common.DryRunOnly = *flDryRun
 	common.EnableHardening = *flEnableHardening
@@ -93,5 +109,16 @@ func main() {
 		// 000000b0: 6e0a 5669 7275 7358 3937 4d53 6c61 636b  n.VirusX97MSlack
 		// 000000c0: 6572 4620 2e2f 426f 6f6b 310a            erF ./Book1.
 		// output as above: VirusX97MSlackerF ./Book1\n
+	}
+	// read yara rules and decrypt
+	yrRulesEncBin, err := os.ReadFile(yaraRulesPath)
+	if err != nil {
+		logger.Infoln("Could not read yara rules file.")
+		logger.Fatalln(err)
+	}
+	yrRuleBin, err := cryptutils.XChacha20Decrypt(yrRulesEncBin, hPwdBytes)
+	if err != nil {
+		logger.Infoln("Could not decrypt yara rules file.")
+		logger.Fatalln(err)
 	}
 }
