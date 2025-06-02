@@ -11,6 +11,8 @@ import (
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/updchecker"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
 	"flag"
 	"github.com/getsentry/sentry-go"
 	"os"
@@ -64,7 +66,8 @@ func main() {
 			logger.Fatalln(customerrs.ErrNoScanSetButNoListProvided)
 		}
 	}
-	// read and decrypt file
+	common.Logger.Infoln("Initial args-check passed.")
+	// read and decrypt config file
 	hPwdBytes, err := hex.DecodeString(common.HexEncryptionPassword)
 	if err != nil {
 		logger.Infoln("Cannot prepare password.")
@@ -80,11 +83,19 @@ func main() {
 		logger.Infoln("Could not decrypt database.")
 		logger.Fatalln(err)
 	}
+	var cleanupDBObj = &common.CRAMCCleanupDB{}
+	err = json.Unmarshal(originalCleanupDB, cleanupDBObj)
+	if err != nil {
+		logger.Infoln("Could not deserialize cleanup DB.")
+		logger.Fatalln(err)
+	}
+	common.Logger.Infoln("Successfully loaded cleanup DB.")
 	// dry run is always handled by callee to make sure behaviour consistent.
 	common.DryRunOnly = *flDryRun
 	common.EnableHardening = *flEnableHardening
-	// kill office process on windows
+	// kill M365 office processes on windows
 	_, _ = windoge_utils.KillAllOfficeProcesses()
+	common.Logger.Infoln("Triggered M365 Office processes killer.")
 	// update checker
 	latestV, err := updchecker.CheckUpdateFromInternet()
 	if err != nil {
@@ -94,22 +105,73 @@ func main() {
 			logger.Fatalln(customerrs.ErrNotLatestVersion)
 		}
 	}
+	common.Logger.Infoln("Called update-checker.")
 	// check privilege
 	isElevated, _ := fileutils.CheckProcessElevated()
 	isNTFS, _ := fileutils.IsDriveFileSystemNTFS(*flActionPath)
+	common.Logger.Infoln("Privilege and platform check passed.")
 	// if noDiskScan set, directly go for yara scanner
 	var wg = &sync.WaitGroup{}
+	// searcher output channel
+	var searcherOptChan = make(chan string)
+	// to-process files list
+	var foundDetectionList = map[string][]string{}
+	var foundDetectionListRWLock = &sync.RWMutex{}
 	if !*flNoDiskScan {
+		triggeredErrFallback := false
 		if isElevated && isNTFS {
+			// prepare consumer
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for item := range searcherOptChan {
+					common.Logger.Infoln("Found file: ", item)
+					foundDetectionListRWLock.RLock()
+					_, alreadyExists := foundDetectionList["unknown_detection"]
+					foundDetectionListRWLock.RUnlock()
+					if alreadyExists {
+						foundDetectionListRWLock.Lock()
+						foundDetectionList["unknown_detection"] = append(foundDetectionList["unknown_detection"], item)
+						foundDetectionListRWLock.Unlock()
+					} else {
+						foundDetectionListRWLock.Lock()
+						foundDetectionList["unknown_detection"] = []string{item}
+						foundDetectionListRWLock.Unlock()
+					}
+				}
+			}()
 			// go for parse MFT
-		} else {
-			// fallback to normal searcher
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				countedFile, err := fileutils.ExtractAndParseMFTThenSearch(*flActionPath, allowedExts, searcherOptChan)
+				if errors.Is(err, customerrs.ErrInvalidInput) {
+					common.Logger.Fatalln(err)
+					return
+				}
+				if errors.Is(err, customerrs.ErrFallbackToCompatibleSolution) || errors.Is(err, customerrs.ErrUnsupportedPlatform) {
+					common.Logger.Errorln("Unwanted things happened using MFTSearcher, fallback.")
+					triggeredErrFallback = true
+					return
+				}
+				if err != nil {
+					common.Logger.Errorln("Unknown error happened: ", err)
+					common.Logger.Fatalln(customerrs.ErrUnknownInternalError)
+				}
+				common.Logger.Infof("MFTSearcher found %d applicable files.", countedFile)
+				return
+			}()
 		}
+		// must wait as you don't know when `triggeredErrFallback` will be modified
+		wg.Wait()
+		//
+
 	} else {
 		// 000000b0: 6e0a 5669 7275 7358 3937 4d53 6c61 636b  n.VirusX97MSlack
 		// 000000c0: 6572 4620 2e2f 426f 6f6b 310a            erF ./Book1.
 		// output as above: VirusX97MSlackerF ./Book1\n
 	}
+
 	// read yara rules and decrypt
 	yrRulesEncBin, err := os.ReadFile(yaraRulesPath)
 	if err != nil {
@@ -121,4 +183,5 @@ func main() {
 		logger.Infoln("Could not decrypt yara rules file.")
 		logger.Fatalln(err)
 	}
+	// wait for all process
 }

@@ -13,7 +13,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"sync"
 	ntfs "www.velocidex.com/golang/go-ntfs/parser"
 )
 
@@ -78,8 +77,7 @@ func IsDriveFileSystemNTFS(actionPath string) (bool, error) {
 	}
 }
 
-func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outputChan chan string, wg *sync.WaitGroup) (int, error) {
-	defer wg.Done()
+func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outputChan chan string) (int, error) {
 	defer close(outputChan)
 	// Extract drive letter from the first character
 	volDiskLetter := actionPath[0]
@@ -95,7 +93,8 @@ func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outpu
 	// use UNC path to access raw device to bypass limitation of file lock, e.g. \\.\C:
 	volFd, err := os.Open("\\\\.\\" + string(volDiskLetter) + ":")
 	if err != nil {
-		return -1, customerrs.ErrDeviceInaccessible
+		common.Logger.Errorln("Triggered Fallback Error: ", customerrs.ErrDeviceInaccessible)
+		return -1, customerrs.ErrFallbackToCompatibleSolution
 	}
 	defer volFd.Close()
 
@@ -103,26 +102,30 @@ func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outpu
 	// build a pagedReader for raw device to feed the NTFSContext initializor
 	ntfsPagedReader, err := ntfs.NewPagedReader(volFd, 0x1000, 0x10000)
 	if err != nil {
-		return -1, err
+		common.Logger.Errorln("Triggered Fallback Error: ", err)
+		return -1, customerrs.ErrFallbackToCompatibleSolution
 	}
 
 	common.Logger.Debugln("Create NTFSContext.")
 	// build NTFS context for root device
 	ntfsVolCtx, err := ntfs.GetNTFSContext(ntfsPagedReader, 0)
 	if err != nil {
-		return -1, err
+		common.Logger.Errorln("Triggered Fallback Error: ", err)
+		return -1, customerrs.ErrFallbackToCompatibleSolution
 	}
 
 	common.Logger.Debugln("Try to get $MFT $DATA stream.")
 	volMFTEntry, err := ntfsVolCtx.GetMFT(0)
 	if err != nil {
-		return -1, err
+		common.Logger.Errorln("Triggered Fallback Error: ", err)
+		return -1, customerrs.ErrFallbackToCompatibleSolution
 	}
 
 	// open $DATA attr of $MFT, https://github.com/Velocidex/go-ntfs/blob/master/bin/mft.go
 	mftReader, err := ntfs.OpenStream(ntfsVolCtx, volMFTEntry, uint64(128), ntfs.WILDCARD_STREAM_ID, ntfs.WILDCARD_STREAM_NAME)
 	if err != nil {
-		return -1, err
+		common.Logger.Errorln("Triggered Fallback Error: ", err)
+		return -1, customerrs.ErrFallbackToCompatibleSolution
 	}
 	common.Logger.Debugln("Successfully opened $MFT:$DATA.")
 
