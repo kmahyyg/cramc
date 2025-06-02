@@ -60,6 +60,7 @@ func main() {
 			logger.Fatalln(customerrs.ErrNoScanSetButNoListProvided)
 		}
 	}
+	// dry run is always handled by callee to make sure behaviour consistent.
 	common.DryRunOnly = *flDryRun
 	common.EnableHardening = *flEnableHardening
 	// kill office process on windows
