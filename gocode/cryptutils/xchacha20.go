@@ -36,7 +36,8 @@ func XChacha20Encrypt(key []byte, pt []byte) (ct []byte, err error) {
 	ct = make([]byte, len(pt)+chacha20poly1305.NonceSizeX+chacha20poly1305.Overhead+crc32.Size)
 	copy(ct, iv)
 	copy(ct[len(iv):], assoData)
-	ciph.Seal(ct[chacha20poly1305.NonceSizeX+crc32.Size:], iv, pt, assoData)
+	ctFinal := ciph.Seal(nil, iv, pt, assoData)
+	copy(ct[chacha20poly1305.NonceSizeX+crc32.Size:], ctFinal)
 
 	return ct, nil
 }
@@ -44,19 +45,20 @@ func XChacha20Encrypt(key []byte, pt []byte) (ct []byte, err error) {
 func XChacha20Decrypt(key []byte, mixedct []byte) (pt []byte, err error) {
 	iv := make([]byte, chacha20poly1305.NonceSizeX)
 	assoData := make([]byte, crc32.Size)
-	copy(iv, mixedct)
-	copy(assoData[chacha20poly1305.NonceSizeX:chacha20poly1305.NonceSizeX+crc32.Size], mixedct)
+	copy(iv, mixedct[:chacha20poly1305.NonceSizeX])
+	copy(assoData, mixedct[chacha20poly1305.NonceSizeX:chacha20poly1305.NonceSizeX+crc32.Size])
 
 	ciph, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return nil, err
 	}
 
-	pt = make([]byte, len(mixedct)-chacha20poly1305.NonceSizeX-crc32.Size)
-	_, err = ciph.Open(pt, iv, mixedct[chacha20poly1305.NonceSizeX+crc32.Size:], assoData)
+	pt = make([]byte, len(mixedct)-chacha20poly1305.NonceSizeX-crc32.Size-chacha20poly1305.Overhead)
+	ptFinal, err := ciph.Open(nil, iv, mixedct[chacha20poly1305.NonceSizeX+crc32.Size:], assoData)
 	if err != nil {
 		return nil, err
 	}
+	copy(pt, ptFinal)
 
 	expectedAssoData := KCRC32(pt)
 	if !bytes.Equal(expectedAssoData, assoData) {
