@@ -7,9 +7,9 @@ import (
 )
 
 var (
-	fEnc    = flag.Bool("enc", false, "encrypt")
-	fTarget = flag.String("target", "", "target")
-	fDec    = flag.Bool("dec", false, "decrypt")
+	fEnc  = flag.Bool("enc", false, "encrypt")
+	fComp = flag.Bool("compile", false, "compile yara rules")
+	fDec  = flag.Bool("dec", false, "decrypt")
 )
 
 const (
@@ -27,9 +27,10 @@ func main() {
 	defer logFd.Close()
 	common.Logger = logger
 	logger.Infoln("DevReleaser for CRAMC, Don't Forget to Bump Database/UpdateChecker Version!")
+	logger.Infoln("Current Version: ", common.VersionStr)
 	logger.Infoln("Please put this binary with the same folder of yrules/ and cramc_db.json before continue.")
-	if len(*fTarget) == 0 {
-		panic("target is required")
+	if *fComp {
+
 	}
 	if *fDec {
 

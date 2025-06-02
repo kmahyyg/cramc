@@ -12,5 +12,6 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/shirou/gopsutil/v4 v4.25.5 // indirect
 	golang.org/x/text v0.25.0 // indirect
 )

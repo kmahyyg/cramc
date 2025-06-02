@@ -3,8 +3,10 @@ package common
 import "github.com/sirupsen/logrus"
 
 var (
-	Logger     *logrus.Logger
-	VersionStr string
+	Logger          *logrus.Logger
+	VersionStr      string
+	DryRunOnly      bool
+	EnableHardening bool
 )
 
 const (

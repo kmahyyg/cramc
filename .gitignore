@@ -6,3 +6,5 @@ obj/
 Thumbs.db
 *.syso
 devreleaser.bin
+*.log
+*.bin
