@@ -1,12 +1,16 @@
 package common
 
-import "github.com/sirupsen/logrus"
+import (
+	"github.com/sirupsen/logrus"
+	"runtime"
+)
 
 var (
 	Logger          *logrus.Logger
 	VersionStr      string
 	DryRunOnly      bool
 	EnableHardening bool
+	IsRunningOnWin  = runtime.GOOS == "windows"
 )
 
 const (

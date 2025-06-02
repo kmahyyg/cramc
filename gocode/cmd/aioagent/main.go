@@ -16,6 +16,7 @@ import (
 	"flag"
 	"github.com/getsentry/sentry-go"
 	"os"
+	"runtime"
 	"sync"
 )
 
@@ -119,27 +120,31 @@ func main() {
 	var foundDetectionListRWLock = &sync.RWMutex{}
 	if !*flNoDiskScan {
 		triggeredErrFallback := false
-		if isElevated && isNTFS {
-			// prepare consumer
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for item := range searcherOptChan {
-					common.Logger.Infoln("Found file: ", item)
-					foundDetectionListRWLock.RLock()
-					_, alreadyExists := foundDetectionList["unknown_detection"]
-					foundDetectionListRWLock.RUnlock()
-					if alreadyExists {
-						foundDetectionListRWLock.Lock()
-						foundDetectionList["unknown_detection"] = append(foundDetectionList["unknown_detection"], item)
-						foundDetectionListRWLock.Unlock()
-					} else {
-						foundDetectionListRWLock.Lock()
-						foundDetectionList["unknown_detection"] = []string{item}
-						foundDetectionListRWLock.Unlock()
-					}
+		// prepare consumer, and check physically exists on disk
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for item := range searcherOptChan {
+				common.Logger.Infoln("Found file: ", item)
+				fExistsOnDisk, fSize, _ := fileutils.CheckFileOnDiskSize(item)
+				if !fExistsOnDisk || fSize <= 0 {
+					common.Logger.Infoln("File Not On Local Disk, Ignore: ", item)
 				}
-			}()
+				foundDetectionListRWLock.RLock()
+				_, alreadyExists := foundDetectionList["unknown_detection"]
+				foundDetectionListRWLock.RUnlock()
+				if alreadyExists {
+					foundDetectionListRWLock.Lock()
+					foundDetectionList["unknown_detection"] = append(foundDetectionList["unknown_detection"], item)
+					foundDetectionListRWLock.Unlock()
+				} else {
+					foundDetectionListRWLock.Lock()
+					foundDetectionList["unknown_detection"] = []string{item}
+					foundDetectionListRWLock.Unlock()
+				}
+			}
+		}()
+		if isElevated && isNTFS {
 			// go for parse MFT
 			wg.Add(1)
 			go func() {
@@ -161,15 +166,35 @@ func main() {
 				common.Logger.Infof("MFTSearcher found %d applicable files.", countedFile)
 				return
 			}()
+		} else {
+			if common.IsRunningOnWin {
+				triggeredErrFallback = true
+			}
 		}
 		// must wait as you don't know when `triggeredErrFallback` will be modified
 		wg.Wait()
-		//
-
+		// unsupported platform OR MFTSearcher failed on windows
+		if !common.IsRunningOnWin || triggeredErrFallback {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				counted, err := fileutils.GeneralWalkthroughSearch(*flActionPath, allowedExts, searcherOptChan)
+				// should not encounter some unexpected error
+				if err != nil {
+					common.Logger.Errorln("Unwanted error in GeneralSearcher: ", err)
+					common.Logger.Fatalln(customerrs.ErrUnknownInternalError)
+				}
+				common.Logger.Infof("Found %d File using GeneralSearcher, proceed to next step.\n", counted)
+			}()
+		}
+		// wait until iterate finish
+		wg.Wait()
 	} else {
-		// 000000b0: 6e0a 5669 7275 7358 3937 4d53 6c61 636b  n.VirusX97MSlack
+		// 000000b0: --0a 5669 7275 7358 3937 4d53 6c61 636b  -.VirusX97MSlack
 		// 000000c0: 6572 4620 2e2f 426f 6f6b 310a            erF ./Book1.
 		// output as above: VirusX97MSlackerF ./Book1\n
+		// read iptYRList
+		iptFileList
 	}
 
 	// read yara rules and decrypt

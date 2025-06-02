@@ -4,14 +4,13 @@ import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
 	psutil "github.com/shirou/gopsutil/v4/process"
-	"runtime"
 	"slices"
 )
 
 func KillAllOfficeProcesses() (bool, error) {
 	coveredProcess := []string{"excel.exe"}
 	procKilled := false
-	if runtime.GOOS == "windows" {
+	if common.IsRunningOnWin {
 		common.Logger.Infoln("Trying to kill office processes.")
 		if common.DryRunOnly {
 			common.Logger.Info("DryRun set, return true, no operation.")
