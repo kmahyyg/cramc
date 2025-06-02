@@ -7,10 +7,8 @@ import (
 	"time"
 )
 
-const logFilename = "cramc_go.log"
-
 // NewLogger should only be used in main function, and must defer sync.
-func NewLogger() (*logrus.Logger, *os.File) {
+func NewLogger(logFilename string) (*logrus.Logger, *os.File) {
 	logger := logrus.New()
 	logger.Formatter = &logrus.TextFormatter{
 		DisableColors:   true,

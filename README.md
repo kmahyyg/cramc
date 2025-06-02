@@ -27,11 +27,11 @@ Backup your data before you use it. No warranty at all.
 - Only merged and compiled yara rule should be distributed
 - Yara binary is always bundled
 - `cramc_db.json` is k-v store, k should be rule name, v should be operation
-- `cramc_conf.json` is generally for spawning runner and cleaner on the machine.
 - Before remediation, file should always be backed-up.
 - `databaseVersion` is for both cleanup db and yara rules.
 - [Figma](https://www.figma.com/board/DGvlxo4XXQTZ8skqmJFFUh/CRAMC) link to control flow.
 - Always assume users are unprivileged, auto-request elevation based on sys manifest.
+- On MacOS, `-static` extldflags won't work.
 
 # License
 

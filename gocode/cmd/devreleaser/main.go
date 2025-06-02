@@ -3,7 +3,9 @@ package main
 import (
 	"cramc_go/common"
 	"cramc_go/logging"
+	"cramc_go/yara_scanner"
 	"flag"
+	"os"
 )
 
 var (
@@ -13,8 +15,7 @@ var (
 )
 
 const (
-	databaseName   = "cramc_db.json"
-	mergedYaraName = "merged.yar"
+	databaseName = "cramc_db.json"
 )
 
 func init() {
@@ -22,7 +23,7 @@ func init() {
 }
 
 func main() {
-	logger, logFd := logging.NewLogger()
+	logger, logFd := logging.NewLogger("cramc_go_devrel.log")
 	defer logFd.Sync()
 	defer logFd.Close()
 	common.Logger = logger
@@ -30,7 +31,16 @@ func main() {
 	logger.Infoln("Current Version: ", common.VersionStr)
 	logger.Infoln("Please put this binary with the same folder of yrules/ and cramc_db.json before continue.")
 	if *fComp {
-
+		err := os.MkdirAll("yrules/bin/", 0755)
+		if err != nil {
+			panic(err)
+		}
+		common.Logger.Infoln("Binary rules folder created!")
+		_ = os.Remove("yrules/bin/unified.yar")
+		common.Logger.Infoln("Tried to remove previously compiled rules!")
+		yara_scanner.MergeAndCompile2UnifiedRules("yrules/", "yrules/bin/unified.yar")
+		common.Logger.Infoln("Operation finished.")
+		return
 	}
 	if *fDec {
 

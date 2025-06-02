@@ -34,7 +34,7 @@ func init() {
 
 func main() {
 	// init logging
-	logger, logfd := logging.NewLogger()
+	logger, logfd := logging.NewLogger("cramc_go.log")
 	common.Logger = logger
 	defer logfd.Close()
 	defer logfd.Sync()
