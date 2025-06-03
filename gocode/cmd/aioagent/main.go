@@ -119,8 +119,8 @@ func main() {
 	// searcher output channel
 	var searcherOptChan = make(chan string)
 	// to-process files list
-	var foundDetectionList = []string{}
-	var foundDetectionListRWLock = &sync.Mutex{}
+	var searcherFoundList = []string{}
+	var searcherFoundListRWLock = &sync.Mutex{}
 	var funcConsumer = func() {
 		defer wg.Done()
 		for item := range searcherOptChan {
@@ -129,17 +129,20 @@ func main() {
 			if !fExistsOnDisk || fSize <= 0 {
 				common.Logger.Infoln("File Not On Local Disk, Ignore: ", item)
 			}
-			foundDetectionListRWLock.Lock()
-			foundDetectionList = append(foundDetectionList, item)
-			foundDetectionListRWLock.Unlock()
+			searcherFoundListRWLock.Lock()
+			searcherFoundList = append(searcherFoundList, item)
+			searcherFoundListRWLock.Unlock()
 		}
 	}
+	// matched files , aio output queue
 	var scanMatchedFiles = make(chan *common.YaraScanResult)
+	// searcher procedure
 	if !*flNoDiskScan {
 		triggeredErrFallback := false
 		// prepare consumer, and check physically exists on disk
 		wg.Add(1)
 		go funcConsumer()
+		// check if booster could be used
 		if isElevated && isNTFS {
 			// go for parse MFT
 			wg.Add(1)
@@ -164,6 +167,7 @@ func main() {
 				return
 			}()
 		} else {
+			// unprivileged searcher
 			if common.IsRunningOnWin {
 				common.Logger.Infoln("Unprivileged scan, fallback.")
 				triggeredErrFallback = true
@@ -173,7 +177,7 @@ func main() {
 		wg.Wait()
 		// unsupported platform OR MFTSearcher failed on windows
 		if !common.IsRunningOnWin || triggeredErrFallback {
-			// rebuild writer chan by closing and re-create, to prevent write on closed chan
+			// rebuild writer chan by closing and re-creating, to prevent write on closed chan
 			close(searcherOptChan)
 			searcherOptChan = make(chan string)
 			// init general searcher
@@ -194,8 +198,10 @@ func main() {
 		// wait until iterate finish
 		wg.Wait()
 	} else {
+		// iterate finished, searcher finished, now parse existing result.
+		//
 		// 000000b0: --0a 5669 7275 7358 3937 4d53 6c61 636b  -.VirusX97MSlack
-		// 000000c0: 6572 4620 2e2f 426f 6f6b 310a            erF ./Book1.
+		// 000000c0: 6572 4620 2e2f 426f 6f6b 310a ---- ----  erF ./Book1.
 		// output as above: VirusX97MSlackerF ./Book1\n
 		// read iptYRList
 		err = yara_scanner.ParseYaraScanResultText(iptFileList, scanMatchedFiles)
@@ -204,6 +210,7 @@ func main() {
 			common.Logger.Fatalln(customerrs.ErrUnknownInternalError)
 		}
 	}
+	//TODO: retrieving scanner result async
 
 	// searcher finished, go for yara scanner
 	// read yara rules and decrypt
