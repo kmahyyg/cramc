@@ -5,11 +5,8 @@ import (
 	"bytes"
 	"cramc_go/common"
 	"cramc_go/customerrs"
-	"cramc_go/fileutils"
 	"github.com/hillu/go-yara/v4"
 	"io"
-	"io/fs"
-	"io/ioutil"
 	"os"
 	"path"
 )
@@ -36,9 +33,6 @@ func ScanFilesWithYara(yrr *yara.Scanner, detList []string, outputChan chan *com
 	// files pending for scan should only exist in `unknown_detection` key
 	defer close(outputChan)
 	for _, filep := range detList {
-		yrSR := &common.YaraScanResult{
-			FilePath: filep,
-		}
 		fExt := path.Ext(filep)
 		common.Logger.Infoln("Currently processing: ", filep)
 		var mr yara.MatchRules
