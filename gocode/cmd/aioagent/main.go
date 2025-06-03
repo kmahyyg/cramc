@@ -233,8 +233,20 @@ func main() {
 			logger.Infoln("Unable to create yara scanner with provided rule.")
 			logger.Fatalln(err)
 		}
+		// make sure memory won't leak
 		defer yara_scanner.RecycleYaraResources()
 		common.Logger.Infoln("Yara scanner loaded successfully.")
+		// producer set
+		// go to scan against rules
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err = yara_scanner.ScanFilesWithYara(yrScanner, searcherFoundList, scanMatchedFiles)
+			if err != nil {
+				common.Logger.Fatalln(err)
+			}
+		}()
+
 	}
 
 	// why not JSONRPC! let's abandon GRPC and Protobuf for this simple case.

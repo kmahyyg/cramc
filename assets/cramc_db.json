@@ -1,5 +1,5 @@
 {
-    "version": 20250531001,
+    "version": 20250603002,
     "solutions":[
         {
             "name": "VirusX97MSlackerF",
@@ -9,6 +9,8 @@
             "allowRepeatedHarden": false,
             "hardenMeasures": [
                 {"action": "clean_setRO", "type": "file", "dest": "C:\\Users\\${USERNAME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1"},
+                {"action": "clean_setRO", "type": "file", "dest": "C:\\Users\\${USERNAME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1.xlsm"},
+                {"action": "clean_setRO", "type": "file", "dest": "C:\\Users\\${USERNAME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1.xlsb"},
                 {"action": "setRO", "type": "dir", "dest": "C:\\Users\\${USERNAME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART"}
             ]
         }
