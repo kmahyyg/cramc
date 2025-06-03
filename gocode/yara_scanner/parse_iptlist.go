@@ -9,6 +9,7 @@ import (
 )
 
 func ParseYaraScanResultText(inputfName string, outputChan chan *common.YaraScanResult) error {
+	defer close(outputChan)
 	resLstFd, err := os.OpenFile(inputfName, os.O_RDONLY, 0644)
 	if err != nil {
 		return err
