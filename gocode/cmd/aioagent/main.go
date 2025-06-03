@@ -255,7 +255,7 @@ func main() {
 	//TODO: spawn child process from csharp
 
 	// start hardener server
-	if *flEnableHardening {
+	if *flEnableHardening && common.IsRunningOnWin {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -263,7 +263,7 @@ func main() {
 			//TODO: start and process hardening
 		}()
 	} else {
-		common.Logger.Infoln("Hardening server won't start as disabled by user.")
+		common.Logger.Infoln("Hardening server won't start as disabled by user/running on unsupported platform.")
 	}
 	// retrieving scanner result async, dispatch to hardener and sanitizer queue
 	wg.Add(1)
