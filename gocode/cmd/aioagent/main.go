@@ -236,25 +236,31 @@ func main() {
 		go func() {
 			err := eServ.Start("127.0.0.1:0")
 			if err != nil {
-				common.Logger.Fatalln("Failed to start RPC server: ", err)
+				common.Logger.Errorln("Terminating RPC server: ", err)
 			}
 		}()
 		common.RPCServerListen = eServ.Listener.Addr().String()
+		common.RPCHandlingStatus = "running"
 		<-osSignals
 		ctx := context.Background()
 		log.Println("Signal Received to shutdown server...")
+		common.RPCHandlingStatus = "stopped"
+		time.Sleep(10 * time.Second)
 		if err := eServ.Shutdown(ctx); err != nil {
 			log.Fatalf("Server Shutdown Failed: %v", err)
 		}
 		log.Println("RPC Server exit successfully.")
 	}()
+	// start sanitizer client (rpc-csharp)
+	//TODO: spawn child process from csharp
+
 	// start hardener server
 	if *flEnableHardening {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			// hardener build
-			//TODO
+			//TODO: start and process hardening
 		}()
 	} else {
 		common.Logger.Infoln("Hardening server won't start as disabled by user.")
@@ -263,6 +269,8 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
+		defer close(common.RPCHandlingQueue)
+		defer close(common.HardeningQueue)
 		// handle every ScanMatchedFile
 		for f := range scanMatchedFiles {
 			// unstable processing, if multiple detection happened on the same file
