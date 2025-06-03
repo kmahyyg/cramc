@@ -2,7 +2,7 @@ package common
 
 // fully local items
 type CRAMCCleanupDB struct {
-	Version   int64                  `json:"version"`
+	Version   int                    `json:"version"`
 	Solutions []*SingleVirusSolution `json:"solutions"`
 }
 
@@ -32,6 +32,7 @@ type IPC_SingleDocToBeSanitized struct {
 	Path          string `json:"path"`
 	Action        string `json:"action"`
 	DetectionName string `json:"detectionName"`
+	DestModule    string `json:"module"`
 }
 
 // IPC, general response for /fetchPendingFiles
@@ -58,6 +59,6 @@ type IPC_SanitizedDocsResponse struct {
 }
 
 type HardeningAction struct {
-	Name string `json:"name"`
-	SingleHardenMeasure
+	Name      string                 `json:"name"`
+	ActionLst []*SingleHardenMeasure `json:"actionLst"`
 }

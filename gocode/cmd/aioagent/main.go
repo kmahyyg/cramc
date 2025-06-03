@@ -3,11 +3,13 @@
 package main
 
 import (
+	"context"
 	"cramc_go/common"
 	"cramc_go/cryptutils"
 	"cramc_go/customerrs"
 	"cramc_go/fileutils"
 	"cramc_go/logging"
+	"cramc_go/o365_cleaner_ipc"
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/updchecker"
 	"cramc_go/yara_scanner"
@@ -17,10 +19,12 @@ import (
 	"flag"
 	"github.com/getsentry/sentry-go"
 	"log"
+	mrand "math/rand"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
+	"time"
 )
 
 const (
@@ -95,7 +99,7 @@ func main() {
 	}
 	common.Logger.Infoln("Successfully loaded cleanup DB.")
 	common.CleanupDB = cleanupDBObj
-	// dry run is always handled by callee to make sure behaviour consistent.
+	// dry run is always handled by callee to make sure behavior consistent.
 	common.DryRunOnly = *flDryRun
 	common.EnableHardening = *flEnableHardening
 	// kill M365 office processes on windows
@@ -107,7 +111,10 @@ func main() {
 		logger.Errorln("Update Checker Error: ", err.Error())
 	} else {
 		if latestV.ProgramRevision != common.ProgramRev {
-			logger.Fatalln(customerrs.ErrNotLatestVersion)
+			logger.Fatalln("Program UpdCheck: ", customerrs.ErrNotLatestVersion)
+		}
+		if latestV.DatabaseVersion != common.CleanupDB.Version {
+			logger.Fatalln("Database UpdCheck: ", customerrs.ErrNotLatestVersion)
 		}
 	}
 	common.Logger.Infoln("Called update-checker.")
@@ -186,7 +193,7 @@ func main() {
 				close(searcherOptChan)
 			}
 			searcherOptChan = make(chan string)
-			// had to start consumer again, since channel recreated
+			// had to start consumer again, because that channel got recreated
 			wg.Add(1)
 			go searchConsumer()
 			// init general searcher
@@ -207,15 +214,89 @@ func main() {
 		// wait until iterate finish
 		wg.Wait()
 	}
-	// TODO: start sanitizer rpc server (async)
-
+	// start sanitizer rpc server (async)
+	osSignals := make(chan os.Signal, 1)
+	signal.Notify(osSignals, os.Interrupt, os.Kill, syscall.SIGTERM)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		common.Logger.Infoln("Starting RPC Server.")
+		rRandSrc := mrand.NewSource(time.Now().UnixNano())
+		rRand := mrand.New(rRandSrc)
+		hexAPISecretBytes := make([]byte, 12)
+		_, err := rRand.Read(hexAPISecretBytes)
+		if err != nil {
+			common.Logger.Fatalln("Failed to generate API secret: ", err)
+		}
+		common.RPCServerSecret = hex.EncodeToString(hexAPISecretBytes)
+		eServ, err := o365_cleaner_ipc.CreateNewEchoServer(common.RPCServerSecret)
+		if err != nil {
+			common.Logger.Fatalln("Failed to create RPC server: ", err)
+		}
+		go func() {
+			err := eServ.Start("127.0.0.1:0")
+			if err != nil {
+				common.Logger.Fatalln("Failed to start RPC server: ", err)
+			}
+		}()
+		common.RPCServerListen = eServ.Listener.Addr().String()
+		<-osSignals
+		ctx := context.Background()
+		log.Println("Signal Received to shutdown server...")
+		if err := eServ.Shutdown(ctx); err != nil {
+			log.Fatalf("Server Shutdown Failed: %v", err)
+		}
+		log.Println("RPC Server exit successfully.")
+	}()
+	// start hardener server
+	if *flEnableHardening {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// hardener build
+			//TODO
+		}()
+	} else {
+		common.Logger.Infoln("Hardening server won't start as disabled by user.")
+	}
 	// retrieving scanner result async, dispatch to hardener and sanitizer queue
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		// handle every ScanMatchedFile
 		for f := range scanMatchedFiles {
+			// unstable processing, if multiple detection happened on the same file
+			// this will lead to undetermined processing result, possibly conflict.
+			//
 			// dispatch to hardener and sanitizer
+			foundSolu := false
+			for _, solu := range cleanupDBObj.Solutions {
+				if solu.Name == f.DetectedRule {
+					foundSolu = true
+					tmpSanitz := &common.IPC_SingleDocToBeSanitized{
+						Path:          f.FilePath,
+						Action:        solu.Action,
+						DestModule:    solu.DestModule,
+						DetectionName: f.DetectedRule,
+					}
+					common.RPCHandlingQueue <- tmpSanitz
+					common.Logger.Infoln("Sanitizer Req Sent: ", f.FilePath, " ,Detection: ", f.DetectedRule)
+					if *flEnableHardening {
+						// dry run handled in callee
+						tmpHarden := &common.HardeningAction{
+							Name:      f.DetectedRule,
+							ActionLst: solu.HardenMeasures,
+						}
+						common.HardeningQueue <- tmpHarden
+						common.Logger.Infoln("Hardener Req Sent: ", f.FilePath, " ,Detection: ", f.DetectedRule)
+					}
+				}
+				continue
+			}
+			// if not match, it's abandoned, warn.
+			if !foundSolu {
+				common.Logger.Warnln("Didn't find solution for rule: ", f.DetectedRule)
+			}
 		}
 	}()
 	// searcher finished, go for yara scanner
@@ -271,15 +352,4 @@ func main() {
 	}
 	// wait for all procedures
 	wg.Wait()
-	// handler of user issued system signal
-	{
-		osSignals := make(chan os.Signal, 1)
-		signal.Notify(osSignals, os.Interrupt, os.Kill, syscall.SIGTERM)
-		<-osSignals
-		log.Println("Signal Received to shutdown server...")
-		if err := rpcserv.Shutdown(); err != nil {
-			log.Fatalf("Server Shutdown Failed: %v", err)
-		}
-		log.Println("RPC Server exit successfully.")
-	}
 }

@@ -9,6 +9,7 @@ import (
 
 func CreateNewEchoServer(hexKey string) (*echo.Echo, error) {
 	e := echo.New()
+	e.HideBanner = true
 	e.Use(middleware.Gzip())
 	e.Use(middleware.RemoveTrailingSlash())
 	e.Use(middleware.Recover())
