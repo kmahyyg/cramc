@@ -9,6 +9,8 @@ import (
 )
 
 func MergeAndCompile2UnifiedRules(plainTextRulesDir string, destUnifiedBinRulesPath string) {
+	// DO NOT USE THIS FUNCTION IS MAIN AIOAGENT!
+	// THIS WILL KILL ALL YARA-RELATED ALLOCATED RESOURCES IN PROGRAM!
 	yrCompiler, err := yara.NewCompiler()
 	if err != nil {
 		panic(err)

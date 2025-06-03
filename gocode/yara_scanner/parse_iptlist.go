@@ -8,11 +8,10 @@ import (
 	"strings"
 )
 
-func ParseYaraScanResultText(inputfName string) (map[string][]string, error) {
-	res := make(map[string][]string)
+func ParseYaraScanResultText(inputfName string, outputChan chan *common.YaraScanResult) error {
 	resLstFd, err := os.OpenFile(inputfName, os.O_RDONLY, 0644)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resLstFd.Close()
 	resLstScanner := bufio.NewScanner(resLstFd)
@@ -27,15 +26,14 @@ func ParseYaraScanResultText(inputfName string) (map[string][]string, error) {
 			common.Logger.Errorln(customerrs.ErrInvalidInput)
 			continue
 		}
-		_, ok := res[data[:idx]]
-		if ok {
-			res[data[:idx]] = append(res[data[:idx]], data[idx+1:])
-		} else {
-			res[data[:idx]] = []string{data[idx+1:]}
+		nYRResult := &common.YaraScanResult{
+			DetectedRule: data[:idx],
+			FilePath:     data[idx+1:],
 		}
+		outputChan <- nYRResult
 	}
 	if err = resLstScanner.Err(); err != nil {
-		return nil, err
+		return err
 	}
-	return res, nil
+	return nil
 }

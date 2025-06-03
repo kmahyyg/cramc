@@ -16,8 +16,11 @@ import (
 	"errors"
 	"flag"
 	"github.com/getsentry/sentry-go"
+	"log"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 )
 
 const (
@@ -116,8 +119,8 @@ func main() {
 	// searcher output channel
 	var searcherOptChan = make(chan string)
 	// to-process files list
-	var foundDetectionList = map[string][]string{}
-	var foundDetectionListRWLock = &sync.RWMutex{}
+	var foundDetectionList = []string{}
+	var foundDetectionListRWLock = &sync.Mutex{}
 	var funcConsumer = func() {
 		defer wg.Done()
 		for item := range searcherOptChan {
@@ -126,20 +129,12 @@ func main() {
 			if !fExistsOnDisk || fSize <= 0 {
 				common.Logger.Infoln("File Not On Local Disk, Ignore: ", item)
 			}
-			foundDetectionListRWLock.RLock()
-			_, alreadyExists := foundDetectionList["unknown_detection"]
-			foundDetectionListRWLock.RUnlock()
-			if alreadyExists {
-				foundDetectionListRWLock.Lock()
-				foundDetectionList["unknown_detection"] = append(foundDetectionList["unknown_detection"], item)
-				foundDetectionListRWLock.Unlock()
-			} else {
-				foundDetectionListRWLock.Lock()
-				foundDetectionList["unknown_detection"] = []string{item}
-				foundDetectionListRWLock.Unlock()
-			}
+			foundDetectionListRWLock.Lock()
+			foundDetectionList = append(foundDetectionList, item)
+			foundDetectionListRWLock.Unlock()
 		}
 	}
+	var scanMatchedFiles = make(chan *common.YaraScanResult)
 	if !*flNoDiskScan {
 		triggeredErrFallback := false
 		// prepare consumer, and check physically exists on disk
@@ -203,24 +198,50 @@ func main() {
 		// 000000c0: 6572 4620 2e2f 426f 6f6b 310a            erF ./Book1.
 		// output as above: VirusX97MSlackerF ./Book1\n
 		// read iptYRList
-		foundDetectionList, err = yara_scanner.ParseYaraScanResultText(iptFileList)
+		err = yara_scanner.ParseYaraScanResultText(iptFileList, scanMatchedFiles)
 		if err != nil {
 			common.Logger.Errorln(err)
 			common.Logger.Fatalln(customerrs.ErrUnknownInternalError)
 		}
 	}
+
 	// searcher finished, go for yara scanner
 	// read yara rules and decrypt
-	yrRulesEncBin, err := os.ReadFile(yaraRulesPath)
-	if err != nil {
-		logger.Infoln("Could not read yara rules file.")
-		logger.Fatalln(err)
+	if !*flNoDiskScan {
+		// if no diskscan, supplied output already included necessary detection information, directly go for sanitizer and hardener
+		yrRulesEncBin, err := os.ReadFile(yaraRulesPath)
+		if err != nil {
+			logger.Infoln("Could not read yara compiled rules file.")
+			logger.Fatalln(err)
+		}
+		common.Logger.Infoln("Compiled yara rules read.")
+		yrRuleBin, err := cryptutils.XChacha20Decrypt(yrRulesEncBin, hPwdBytes)
+		if err != nil {
+			logger.Infoln("Could not decrypt yara compiled rules file.")
+			logger.Fatalln(err)
+		}
+		// build scanner instance
+		yrScanner, err := yara_scanner.LoadRuleAndCreateYaraScanner(yrRuleBin)
+		if err != nil {
+			logger.Infoln("Unable to create yara scanner with provided rule.")
+			logger.Fatalln(err)
+		}
+		defer yara_scanner.RecycleYaraResources()
+		common.Logger.Infoln("Yara scanner loaded successfully.")
 	}
-	yrRuleBin, err := cryptutils.XChacha20Decrypt(yrRulesEncBin, hPwdBytes)
-	if err != nil {
-		logger.Infoln("Could not decrypt yara rules file.")
-		logger.Fatalln(err)
-	}
+
 	// why not JSONRPC! let's abandon GRPC and Protobuf for this simple case.
 	// wait for all process
+
+	// handler of user issued system signal
+	{
+		osSignals := make(chan os.Signal, 1)
+		signal.Notify(osSignals, os.Interrupt, os.Kill, syscall.SIGTERM)
+		<-osSignals
+		log.Println("Signal Received to shutdown server...")
+		if err := rpcserv.Shutdown(); err != nil {
+			log.Fatalf("Server Shutdown Failed: %v", err)
+		}
+		log.Println("RPC Server exit successfully.")
+	}
 }
