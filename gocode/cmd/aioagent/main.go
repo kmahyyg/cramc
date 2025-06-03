@@ -10,13 +10,13 @@ import (
 	"cramc_go/logging"
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/updchecker"
+	"cramc_go/yara_scanner"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
 	"github.com/getsentry/sentry-go"
 	"os"
-	"runtime"
 	"sync"
 )
 
@@ -118,32 +118,33 @@ func main() {
 	// to-process files list
 	var foundDetectionList = map[string][]string{}
 	var foundDetectionListRWLock = &sync.RWMutex{}
+	var funcConsumer = func() {
+		defer wg.Done()
+		for item := range searcherOptChan {
+			common.Logger.Infoln("Found file: ", item)
+			fExistsOnDisk, fSize, _ := fileutils.CheckFileOnDiskSize(item)
+			if !fExistsOnDisk || fSize <= 0 {
+				common.Logger.Infoln("File Not On Local Disk, Ignore: ", item)
+			}
+			foundDetectionListRWLock.RLock()
+			_, alreadyExists := foundDetectionList["unknown_detection"]
+			foundDetectionListRWLock.RUnlock()
+			if alreadyExists {
+				foundDetectionListRWLock.Lock()
+				foundDetectionList["unknown_detection"] = append(foundDetectionList["unknown_detection"], item)
+				foundDetectionListRWLock.Unlock()
+			} else {
+				foundDetectionListRWLock.Lock()
+				foundDetectionList["unknown_detection"] = []string{item}
+				foundDetectionListRWLock.Unlock()
+			}
+		}
+	}
 	if !*flNoDiskScan {
 		triggeredErrFallback := false
 		// prepare consumer, and check physically exists on disk
 		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for item := range searcherOptChan {
-				common.Logger.Infoln("Found file: ", item)
-				fExistsOnDisk, fSize, _ := fileutils.CheckFileOnDiskSize(item)
-				if !fExistsOnDisk || fSize <= 0 {
-					common.Logger.Infoln("File Not On Local Disk, Ignore: ", item)
-				}
-				foundDetectionListRWLock.RLock()
-				_, alreadyExists := foundDetectionList["unknown_detection"]
-				foundDetectionListRWLock.RUnlock()
-				if alreadyExists {
-					foundDetectionListRWLock.Lock()
-					foundDetectionList["unknown_detection"] = append(foundDetectionList["unknown_detection"], item)
-					foundDetectionListRWLock.Unlock()
-				} else {
-					foundDetectionListRWLock.Lock()
-					foundDetectionList["unknown_detection"] = []string{item}
-					foundDetectionListRWLock.Unlock()
-				}
-			}
-		}()
+		go funcConsumer()
 		if isElevated && isNTFS {
 			// go for parse MFT
 			wg.Add(1)
@@ -177,6 +178,10 @@ func main() {
 		wg.Wait()
 		// unsupported platform OR MFTSearcher failed on windows
 		if !common.IsRunningOnWin || triggeredErrFallback {
+			// rebuild writer chan by closing and re-create, to prevent write on closed chan
+			close(searcherOptChan)
+			searcherOptChan = make(chan string)
+			// init general searcher
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
@@ -198,9 +203,13 @@ func main() {
 		// 000000c0: 6572 4620 2e2f 426f 6f6b 310a            erF ./Book1.
 		// output as above: VirusX97MSlackerF ./Book1\n
 		// read iptYRList
-
+		foundDetectionList, err = yara_scanner.ParseYaraScanResultText(iptFileList)
+		if err != nil {
+			common.Logger.Errorln(err)
+			common.Logger.Fatalln(customerrs.ErrUnknownInternalError)
+		}
 	}
-
+	// searcher finished, go for yara scanner
 	// read yara rules and decrypt
 	yrRulesEncBin, err := os.ReadFile(yaraRulesPath)
 	if err != nil {
@@ -212,5 +221,6 @@ func main() {
 		logger.Infoln("Could not decrypt yara rules file.")
 		logger.Fatalln(err)
 	}
+	// why not JSONRPC! let's abandon GRPC and Protobuf for this simple case.
 	// wait for all process
 }
