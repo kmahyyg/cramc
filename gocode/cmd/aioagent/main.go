@@ -94,6 +94,7 @@ func main() {
 		logger.Fatalln(err)
 	}
 	common.Logger.Infoln("Successfully loaded cleanup DB.")
+	common.CleanupDB = cleanupDBObj
 	// dry run is always handled by callee to make sure behaviour consistent.
 	common.DryRunOnly = *flDryRun
 	common.EnableHardening = *flEnableHardening
@@ -121,7 +122,8 @@ func main() {
 	// to-process files list
 	var searcherFoundList = []string{}
 	var searcherFoundListRWLock = &sync.Mutex{}
-	var funcConsumer = func() {
+	var searchConsumer = func() {
+		// search result process
 		defer wg.Done()
 		for item := range searcherOptChan {
 			common.Logger.Infoln("Found file: ", item)
@@ -139,11 +141,13 @@ func main() {
 	// searcher procedure
 	if !*flNoDiskScan {
 		triggeredErrFallback := false
+		goesForPrivileged := false
 		// prepare consumer, and check physically exists on disk
 		wg.Add(1)
-		go funcConsumer()
+		go searchConsumer()
 		// check if booster could be used
 		if isElevated && isNTFS {
+			goesForPrivileged = true
 			// go for parse MFT
 			wg.Add(1)
 			go func() {
@@ -177,9 +181,14 @@ func main() {
 		wg.Wait()
 		// unsupported platform OR MFTSearcher failed on windows
 		if !common.IsRunningOnWin || triggeredErrFallback {
-			// rebuild writer chan by closing and re-creating, to prevent write on closed chan
-			close(searcherOptChan)
+			// rebuild writer chan by closing and re-creating, to prevent writing on closed chan
+			if !goesForPrivileged {
+				close(searcherOptChan)
+			}
 			searcherOptChan = make(chan string)
+			// had to start consumer again, since channel recreated
+			wg.Add(1)
+			go searchConsumer()
 			// init general searcher
 			wg.Add(1)
 			go func() {
@@ -197,21 +206,18 @@ func main() {
 		}
 		// wait until iterate finish
 		wg.Wait()
-	} else {
-		// iterate finished, searcher finished, now parse existing result.
-		//
-		// 000000b0: --0a 5669 7275 7358 3937 4d53 6c61 636b  -.VirusX97MSlack
-		// 000000c0: 6572 4620 2e2f 426f 6f6b 310a ---- ----  erF ./Book1.
-		// output as above: VirusX97MSlackerF ./Book1\n
-		// read iptYRList
-		err = yara_scanner.ParseYaraScanResultText(iptFileList, scanMatchedFiles)
-		if err != nil {
-			common.Logger.Errorln(err)
-			common.Logger.Fatalln(customerrs.ErrUnknownInternalError)
-		}
 	}
-	//TODO: retrieving scanner result async
+	// TODO: start sanitizer rpc server (async)
 
+	// retrieving scanner result async, dispatch to hardener and sanitizer queue
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// handle every ScanMatchedFile
+		for f := range scanMatchedFiles {
+			// dispatch to hardener and sanitizer
+		}
+	}()
 	// searcher finished, go for yara scanner
 	// read yara rules and decrypt
 	if !*flNoDiskScan {
@@ -246,12 +252,25 @@ func main() {
 				common.Logger.Fatalln(err)
 			}
 		}()
-
+	} else {
+		// iterate finished, searcher finished, now parse existing result.
+		//
+		// 000000b0: --0a 5669 7275 7358 3937 4d53 6c61 636b  -.VirusX97MSlack
+		// 000000c0: 6572 4620 2e2f 426f 6f6b 310a ---- ----  erF ./Book1.
+		// output as above: VirusX97MSlackerF ./Book1\n
+		// read iptYRList
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err = yara_scanner.ParseYaraScanResultText(iptFileList, scanMatchedFiles)
+			if err != nil {
+				common.Logger.Errorln(err)
+				common.Logger.Fatalln(customerrs.ErrUnknownInternalError)
+			}
+		}()
 	}
-
-	// why not JSONRPC! let's abandon GRPC and Protobuf for this simple case.
-	// wait for all process
-
+	// wait for all procedures
+	wg.Wait()
 	// handler of user issued system signal
 	{
 		osSignals := make(chan os.Signal, 1)

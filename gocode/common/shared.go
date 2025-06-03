@@ -3,14 +3,28 @@ package common
 import (
 	"github.com/sirupsen/logrus"
 	"runtime"
+	"sync"
 )
 
 var (
-	Logger          *logrus.Logger
-	VersionStr      string
-	DryRunOnly      bool
-	EnableHardening bool
-	IsRunningOnWin  = runtime.GOOS == "windows"
+	Logger *logrus.Logger
+
+	CleanupDB *CRAMCCleanupDB
+
+	IsRunningOnWin = runtime.GOOS == "windows"
+
+	VersionStr string
+	DryRunOnly bool
+
+	RPCHandlingStatus string
+	RPCHandlingQueue  = make(chan *IPC_SingleDocToBeSanitized)
+	RPCServerSecret   string
+	RPCServerListen   string
+
+	EnableHardening            bool
+	HardeningQueue             = make(chan *HardeningAction)
+	HardenedDetectionTypesLock = &sync.Mutex{}
+	HardenedDetectionTypes     []string
 )
 
 const (
