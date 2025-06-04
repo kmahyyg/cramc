@@ -59,6 +59,7 @@ type IPC_SanitizedDocsResponse struct {
 }
 
 type HardeningAction struct {
-	Name      string                 `json:"name"`
-	ActionLst []*SingleHardenMeasure `json:"actionLst"`
+	Name                string                 `json:"name"`
+	AllowRepeatedHarden bool                   `json:"allowRepeatedHarden"`
+	ActionLst           []*SingleHardenMeasure `json:"actionLst"`
 }

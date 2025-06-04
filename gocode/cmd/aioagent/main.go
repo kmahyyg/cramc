@@ -8,6 +8,7 @@ import (
 	"cramc_go/cryptutils"
 	"cramc_go/customerrs"
 	"cramc_go/fileutils"
+	"cramc_go/hardener"
 	"cramc_go/logging"
 	"cramc_go/o365_cleaner_ipc"
 	"cramc_go/platform/windoge_utils"
@@ -264,7 +265,12 @@ func main() {
 		go func() {
 			defer wg.Done()
 			// hardener build
-			//TODO: start and process hardening
+			for tHarden := range common.HardeningQueue {
+				err := hardener.DispatchHardenAction(tHarden)
+				if err != nil {
+					common.Logger.Errorln("While hardening: ", err)
+				}
+			}
 		}()
 	} else {
 		common.Logger.Infoln("Hardening server won't start as disabled by user/running on unsupported platform.")
@@ -296,18 +302,21 @@ func main() {
 					if *flEnableHardening {
 						// dry run handled in callee
 						tmpHarden := &common.HardeningAction{
-							Name:      f.DetectedRule,
-							ActionLst: solu.HardenMeasures,
+							Name:                f.DetectedRule,
+							ActionLst:           solu.HardenMeasures,
+							AllowRepeatedHarden: solu.AllowRepeatedHarden,
 						}
 						common.HardeningQueue <- tmpHarden
 						common.Logger.Infoln("Hardener Req Sent: ", f.FilePath, " ,Detection: ", f.DetectedRule)
+					} else {
+						common.Logger.Infoln("EnableHardening flag had been disabled by user.")
 					}
 				}
 				continue
 			}
 			// if not match, it's abandoned, warn.
 			if !foundSolu {
-				common.Logger.Warnln("Didn't find solution for rule: ", f.DetectedRule)
+				common.Logger.Warnln("Can't find solution for rule: ", f.DetectedRule)
 			}
 		}
 	}()
