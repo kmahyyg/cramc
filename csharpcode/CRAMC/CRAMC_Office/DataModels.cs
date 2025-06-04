@@ -34,10 +34,21 @@ public class DocsToBeSanitized {
 
 public class SingleSanitizedDocResp : SingleDocToBeSanitized {
     [JsonProperty("isSuccess")]
-    public bool IsSuccess;
+    public bool IsSuccess { get; set; }
     
     [JsonProperty("additionalMsg")]
-    public string AdditionalMsg;
+    public string AdditionalMsg { get; set; }
+    
+    public SingleSanitizedDocResp(SingleDocToBeSanitized source)
+    {
+        Path = source.Path;
+        Action = source.Action;
+        DetectionName = source.DetectionName;
+        DestModule = source.DestModule;
+    }
+
+    public SingleSanitizedDocResp() { }
+
 }
 
 

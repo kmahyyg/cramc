@@ -49,7 +49,7 @@ func fileHandledLog(c echo.Context) error {
 	if err := c.Bind(reqBodyObj); err != nil {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
-	common.Logger.Infof("Sanitizer report received, processed %d files.\n", reqBodyObj.Counter)
+	common.Logger.Infof("Sanitizer report received, successfully processed %d files.\n", reqBodyObj.Counter)
 	processedCounter := 0
 	for _, v := range reqBodyObj.Processed {
 		common.Logger.Infof("From Sanitizer: File %s with Detection %s , Action: %s, Success: %v, Additional Info: %s\n",
