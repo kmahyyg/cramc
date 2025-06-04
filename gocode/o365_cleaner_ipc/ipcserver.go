@@ -29,6 +29,7 @@ func progStatusReq(c echo.Context) error {
 }
 
 func fetchPendingFiles(c echo.Context) error {
+	// current supported action: sanitize
 	if len(common.RPCHandlingQueue) == 0 {
 		return c.String(http.StatusNoContent, "{}")
 	} else {
