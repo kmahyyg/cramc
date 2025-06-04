@@ -13,14 +13,15 @@ var (
 
 	IsRunningOnWin = runtime.GOOS == "windows"
 
-	VersionStr string
-	DryRunOnly bool
+	RPCCleanerHash string
+	VersionStr     string
 
 	RPCHandlingStatus string
 	RPCHandlingQueue  = make(chan *IPC_SingleDocToBeSanitized)
 	RPCServerSecret   string
 	RPCServerListen   string
 
+	DryRunOnly                 bool
 	EnableHardening            bool
 	HardeningQueue             = make(chan *HardeningAction)
 	HardenedDetectionTypesLock = &sync.Mutex{}

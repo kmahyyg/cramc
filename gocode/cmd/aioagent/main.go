@@ -252,8 +252,12 @@ func main() {
 		log.Println("RPC Server exit successfully.")
 	}()
 	// start sanitizer client (rpc-csharp)
-	//TODO: spawn child process from csharp
-
+	// spawn child process from csharp
+	err = o365_cleaner_ipc.SpawnSubprocessCleaner()
+	if err != nil {
+		common.Logger.Errorln("Failed to start subprocess (critical component). ")
+		common.Logger.Fatalln(err)
+	}
 	// start hardener server
 	if *flEnableHardening && common.IsRunningOnWin {
 		wg.Add(1)
