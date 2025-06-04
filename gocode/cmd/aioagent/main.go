@@ -132,12 +132,12 @@ func main() {
 	var searcherFoundListRWLock = &sync.Mutex{}
 	var searchConsumer = func() {
 		// search result process
-		defer wg.Done()
 		for item := range searcherOptChan {
 			common.Logger.Infoln("Found file: ", item)
 			fExistsOnDisk, fSize, _ := fileutils.CheckFileOnDiskSize(item)
 			if !fExistsOnDisk || fSize <= 0 {
 				common.Logger.Infoln("File Not On Local Disk, Ignore: ", item)
+				continue
 			}
 			searcherFoundListRWLock.Lock()
 			searcherFoundList = append(searcherFoundList, item)
@@ -152,7 +152,10 @@ func main() {
 		goesForPrivileged := false
 		// prepare consumer, and check physically exists on disk
 		wg.Add(1)
-		go searchConsumer()
+		go func() {
+			defer wg.Done()
+			searchConsumer()
+		}()
 		// check if booster could be used
 		if isElevated && isNTFS {
 			goesForPrivileged = true
@@ -196,7 +199,10 @@ func main() {
 			searcherOptChan = make(chan string)
 			// had to start consumer again, because that channel got recreated
 			wg.Add(1)
-			go searchConsumer()
+			go func() {
+				defer wg.Done()
+				searchConsumer()
+			}()
 			// init general searcher
 			wg.Add(1)
 			go func() {
