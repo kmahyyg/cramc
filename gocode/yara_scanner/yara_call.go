@@ -87,5 +87,6 @@ func decompressMacroBin(fPath string) ([]byte, error) {
 		common.Logger.Infoln("Unable to find vbaProject.bin, ignore.")
 		return nil, err
 	}
-	return io.ReadAll(vbaProjFile)
+	fBytes, err := io.ReadAll(vbaProjFile)
+	return fBytes, err
 }
