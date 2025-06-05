@@ -29,6 +29,11 @@ Backup your data before you use it. No warranty at all.
 - On MacOS, `-static` extldflags won't work.
 - `xl/vbaProject.bin` and `.xls` is OLE compound file (binary and proprietary format), format standard [here](https://learn.microsoft.com/en-us/openspecs/office_file_formats/MS-OFFFFLP/6ae2fd93-51fc-4e75-a54a-1b175c627b51) .
 
+# Compile
+
+- https://github.com/hillu/go-yara/blob/master/README.cross-building.md
+- https://yara.readthedocs.io/en/v4.3.2/gettingstarted.html
+
 # License
 
 For program: GNU AGPL v3
