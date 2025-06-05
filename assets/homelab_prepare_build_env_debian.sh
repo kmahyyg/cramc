@@ -26,3 +26,34 @@ tar -xzvf yara-v${YARA_VER}.tar.gz -C ~/softsrcs
 rm -rf /tmp/*.tar.gz
 cd ~/softsrcs/yara-${YARA_VER}
 ./bootstrap.sh
+# environment
+PROJECT_DEST="/opt/buildtargets"
+PROJECT_NAME="cramc_go_scan"
+export YARA_BUILD_LINUX_MUSL=${PROJECT_DEST}/yara/musl_linux_amd64
+export YARA_SRC=/root/softsrcs/yara-${YARA_VER}
+export PROJ_PREFIX_LINUX_MUSL=${PROJECT_DEST}/${PROJECT_NAME}/musl_linux_amd64
+export YARA_BUILD_WIN64=${PROJECT_DEST}/yara/win64
+export PROJ_PREFIX_WIN64=${PROJECT_DEST}/${PROJECT_NAME}/win64
+mkdir -p ${PROJECT_DEST} ${YARA_BUILD_LINUX_MUSL} ${PROJ_PREFIX_LINUX_MUSL} ${YARA_BUILD_WIN64} ${PROJ_PREFIX_WIN64}
+# cross-compile main program for win64
+( cd ${YARA_BUILD_WIN64} && \
+  ${YARA_SRC}/configure --host=x86_64-w64-mingw32 --prefix=${PROJ_PREFIX_WIN64} )
+make -C ${YARA_BUILD_WIN64} install
+
+GOOS=windows GOARCH=amd64 CGO_ENABLED=1 \
+  CC=x86_64-w64-mingw32-gcc \
+  PKG_CONFIG_PATH=${PROJ_PREFIX_WIN64}/lib/pkgconfig \
+      go build -trimpath \
+      -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static\"" \
+      -tags yara_static -o ../bin/cramc_scanner.exe ./cmd/scanonly/main.go
+# static link in linux for devreleaser
+( cd ${YARA_BUILD_LINUX_MUSL} && \
+  ${YARA_SRC}/configure CC=musl-gcc --prefix=${PROJ_PREFIX_LINUX_MUSL} CFLAGS="-I/usr/include" CPPFLAGS="-I/usr/include")
+make -C ${YARA_BUILD_LINUX_MUSL} install
+
+GOOS=linux GOARCH=amd64 CGO_ENABLED=1 \
+  CC=musl-gcc \
+  PKG_CONFIG_PATH=${PROJ_PREFIX_LINUX_MUSL}/lib/pkgconfig \
+      go build -trimpath \
+      -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static\"" \
+      -tags yara_static -o ../bin/devreleaser ./cmd/devreleaser/main.go
