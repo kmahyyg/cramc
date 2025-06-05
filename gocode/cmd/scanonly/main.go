@@ -19,6 +19,7 @@ var (
 	flActionPath = flag.String("actionPath", "C:\\Users", "The path to the files you want to scan. To balance scanning speed and false positive rate, we recommend to scan User profile only. By default, we use recursive search.")
 	allowedExts  = []string{".xls", ".xlsx", ".xlsm", ".xlsb"}
 	flDryRun     = flag.Bool("dryRun", false, "Scan only, take no action on files, record action to be taken in log.")
+	flHelp       = flag.Bool("help", false, "Show help")
 )
 
 const (
@@ -26,7 +27,15 @@ const (
 	SentryDSN     = "https://af1658f8654e2f490466ef093b2d6b7f@o132236.ingest.us.sentry.io/4509401173327872"
 )
 
+func init() {
+	flag.Parse()
+}
+
 func main() {
+	if *flHelp {
+		flag.PrintDefaults()
+		return
+	}
 	logger, logfd := logging.NewLogger("cramc_go_scanonly.log")
 	common.Logger = logger
 	defer logfd.Close()

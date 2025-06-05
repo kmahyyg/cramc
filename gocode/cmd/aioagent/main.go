@@ -34,6 +34,7 @@ var (
 	flEnableHardening = flag.Bool("enableHardening", true, "Enables hardening measure to prevent further infection. Windows OS only.")
 	flNoDiskScan      = flag.Bool("noDiskScan", false, "Do not scan files on disk, but supply file list. If platform is not Windows x86_64, yara won't work, you have to set this to true and then run Yara scanner against our rules and save output to ipt_yrscan.lst. Yara-X scanner is not supported yet.")
 	allowedExts       = []string{".xls", ".xlsx", ".xlsm", ".xlsb"}
+	flHelp            = flag.Bool("help", false, "Show help")
 )
 
 func init() {
@@ -41,6 +42,10 @@ func init() {
 }
 
 func main() {
+	if *flHelp {
+		flag.PrintDefaults()
+		return
+	}
 	// init logging
 	logger, logfd := logging.NewLogger("cramc_go.log")
 	common.Logger = logger
