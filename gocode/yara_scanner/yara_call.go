@@ -84,5 +84,8 @@ func decompressMacroBin(fPath string) ([]byte, error) {
 	}
 	defer zRd.Close()
 	vbaProjFile, err := zRd.Open("xl/vbaProject.bin")
+	if err != nil {
+		return nil, err
+	}
 	return io.ReadAll(vbaProjFile)
 }
