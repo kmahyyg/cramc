@@ -35,8 +35,8 @@ func ScanFilesWithYara(yrr *yara.Scanner, detList []string, outputChan chan *com
 		fExt := path.Ext(filep)
 		common.Logger.Infoln("Currently processing: ", filep)
 		var mr yara.MatchRules
-		if len(fExt) > 3 {
-			// xlsm,xlsb
+		if len(fExt) > 4 {
+			// .xlsm,.xlsb
 			vbaP, err := decompressMacroBin(filep)
 			if err != nil {
 				common.Logger.Errorln(err)
@@ -49,16 +49,16 @@ func ScanFilesWithYara(yrr *yara.Scanner, detList []string, outputChan chan *com
 				continue
 			}
 		} else {
-			// xls, OLE
+			// .xls, OLE
 			// directly scan
 			common.Logger.Infoln("Processing OLE Object File: ", filep)
 			var mr yara.MatchRules
-			xlFile, err := os.OpenFile(filep, os.O_RDONLY, 0644)
+			xlFile, err := os.ReadFile(filep)
 			if err != nil {
 				common.Logger.Errorln(err)
 				continue
 			}
-			err = yrr.SetCallback(&mr).ScanFileDescriptor(xlFile.Fd())
+			err = yrr.SetCallback(&mr).ScanMem(xlFile)
 			if err != nil {
 				common.Logger.Errorln(err)
 				continue
