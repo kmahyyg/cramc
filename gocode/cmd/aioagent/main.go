@@ -313,7 +313,7 @@ func main() {
 			defer wg.Done()
 			err = yara_scanner.ScanFilesWithYara(yrScanner, searcherFoundList, scanMatchedFiles)
 			if err != nil {
-				common.Logger.Fatalln(err)
+				common.Logger.Errorln("Yara scanner returned err when exit: ", err)
 			}
 		}()
 	} else {

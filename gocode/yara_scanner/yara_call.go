@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"cramc_go/common"
-	"cramc_go/customerrs"
 	"github.com/hillu/go-yara/v4"
 	"io"
 	"os"
@@ -74,7 +73,7 @@ func ScanFilesWithYara(yrr *yara.Scanner, detList []string, outputChan chan *com
 		}
 		common.Logger.Infoln("Finished processing: ", filep)
 	}
-	return customerrs.ErrInvalidInput
+	return nil
 }
 
 func decompressMacroBin(fPath string) ([]byte, error) {
