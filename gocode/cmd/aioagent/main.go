@@ -287,7 +287,7 @@ func main() {
 			logger.Fatalln(err)
 		}
 		common.Logger.Infoln("Compiled yara rules read.")
-		yrRuleBin, err := cryptutils.XChacha20Decrypt(yrRulesEncBin, hPwdBytes)
+		yrRuleBin, err := cryptutils.XChacha20Decrypt(hPwdBytes, yrRulesEncBin)
 		if err != nil {
 			logger.Infoln("Could not decrypt yara compiled rules file.")
 			logger.Fatalln(err)
