@@ -13,13 +13,8 @@ var (
 
 	IsRunningOnWin = runtime.GOOS == "windows"
 
-	RPCCleanerHash string
-	VersionStr     string
-
-	RPCHandlingStatus string
-	RPCHandlingQueue  = make(chan *IPC_SingleDocToBeSanitized)
-	RPCServerSecret   string
-	RPCServerListen   string
+	VersionStr    string
+	SanitizeQueue = make(chan *IPC_SingleDocToBeSanitized)
 
 	DryRunOnly                 bool
 	EnableHardening            bool

@@ -5,11 +5,6 @@ My Crappy Macro Cleaner - For Sanitizing Malicious Macro in Office Files when AV
 > Today is 2025! Why are you still writing such a thing?
 >> Because some "AI-Native" and "Advanced" EDR/NGAV we use can't prevent infection. Then file got blocked by our storage service provider make our operation a disaster.
 
-# Components
-
-- Scanner: Provided by Yara-X/Yara
-- Cleaner: Written by myself using C-Sharp
-
 # Usage
 
 - At Least Windows 10.
@@ -25,7 +20,7 @@ Backup your data before you use it. No warranty at all.
 # Developer Notes
 
 - Only merged and compiled yara rule should be distributed
-- Yara binary is always bundled
+- Yara is always bundled
 - `cramc_db.json` is k-v store, k should be rule name, v should be operation
 - Before remediation, file should always be backed-up.
 - `databaseVersion` is for both cleanup db and yara rules.

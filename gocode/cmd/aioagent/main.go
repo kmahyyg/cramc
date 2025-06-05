@@ -3,14 +3,12 @@
 package main
 
 import (
-	"context"
 	"cramc_go/common"
 	"cramc_go/cryptutils"
 	"cramc_go/customerrs"
 	"cramc_go/fileutils"
 	"cramc_go/hardener"
 	"cramc_go/logging"
-	"cramc_go/o365_cleaner_ipc"
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/updchecker"
 	"cramc_go/yara_scanner"
@@ -19,13 +17,8 @@ import (
 	"errors"
 	"flag"
 	"github.com/getsentry/sentry-go"
-	"log"
-	mrand "math/rand"
 	"os"
-	"os/signal"
 	"sync"
-	"syscall"
-	"time"
 )
 
 const (
@@ -221,50 +214,8 @@ func main() {
 		// wait until iterate finish
 		wg.Wait()
 	}
-	// start sanitizer rpc server (async)
-	osSignals := make(chan os.Signal, 1)
-	signal.Notify(osSignals, os.Interrupt, os.Kill, syscall.SIGTERM)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		common.Logger.Infoln("Starting RPC Server.")
-		rRandSrc := mrand.NewSource(time.Now().UnixNano())
-		rRand := mrand.New(rRandSrc)
-		hexAPISecretBytes := make([]byte, 12)
-		_, err := rRand.Read(hexAPISecretBytes)
-		if err != nil {
-			common.Logger.Fatalln("Failed to generate API secret: ", err)
-		}
-		common.RPCServerSecret = hex.EncodeToString(hexAPISecretBytes)
-		eServ, err := o365_cleaner_ipc.CreateNewEchoServer(common.RPCServerSecret)
-		if err != nil {
-			common.Logger.Fatalln("Failed to create RPC server: ", err)
-		}
-		go func() {
-			err := eServ.Start("127.0.0.1:0")
-			if err != nil {
-				common.Logger.Errorln("Terminating RPC server: ", err)
-			}
-		}()
-		common.RPCServerListen = eServ.Listener.Addr().String()
-		common.RPCHandlingStatus = "running"
-		<-osSignals
-		ctx := context.Background()
-		log.Println("Signal Received to shutdown server...")
-		common.RPCHandlingStatus = "stopped"
-		time.Sleep(10 * time.Second)
-		if err := eServ.Shutdown(ctx); err != nil {
-			log.Fatalf("Server Shutdown Failed: %v", err)
-		}
-		log.Println("RPC Server exit successfully.")
-	}()
-	// start sanitizer client (rpc-csharp)
-	// spawn child process from csharp
-	err = o365_cleaner_ipc.SpawnSubprocessCleaner()
-	if err != nil {
-		common.Logger.Errorln("Failed to start subprocess (critical component). ")
-		common.Logger.Fatalln(err)
-	}
+	//TODO: implement sanitizer
+	//
 	// start hardener server
 	if *flEnableHardening && common.IsRunningOnWin {
 		wg.Add(1)
@@ -285,7 +236,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer close(common.RPCHandlingQueue)
+		defer close(common.SanitizeQueue)
 		defer close(common.HardeningQueue)
 		// handle every ScanMatchedFile
 		for f := range scanMatchedFiles {
@@ -303,7 +254,7 @@ func main() {
 						DestModule:    solu.DestModule,
 						DetectionName: f.DetectedRule,
 					}
-					common.RPCHandlingQueue <- tmpSanitz
+					common.SanitizeQueue <- tmpSanitz
 					common.Logger.Infoln("Sanitizer Req Sent: ", f.FilePath, " ,Detection: ", f.DetectedRule)
 					if *flEnableHardening {
 						// dry run handled in callee
