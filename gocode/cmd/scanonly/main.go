@@ -143,7 +143,10 @@ func main() {
 	// producer set
 	// go to scan against rules
 	wg.Add(1)
-	go yaraResultConsumer()
+	go func() {
+		defer wg.Done()
+		yaraResultConsumer()
+	}()
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -151,7 +154,9 @@ func main() {
 		if err != nil {
 			common.Logger.Errorln("Yara scanner returned err when exit: ", err)
 		}
+		common.Logger.Infoln("Yara scanner task completed.")
 	}()
+	common.Logger.Infoln("Successfully completed, now exit.")
 	// wait all
 	wg.Wait()
 }
