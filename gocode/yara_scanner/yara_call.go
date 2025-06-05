@@ -52,7 +52,6 @@ func ScanFilesWithYara(yrr *yara.Scanner, detList []string, outputChan chan *com
 			// .xls, OLE
 			// directly scan
 			common.Logger.Infoln("Processing OLE Object File: ", filep)
-			var mr yara.MatchRules
 			xlFile, err := os.ReadFile(filep)
 			if err != nil {
 				common.Logger.Errorln(err)
