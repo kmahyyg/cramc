@@ -3,7 +3,7 @@
 My Crappy Macro Cleaner - For Sanitizing Malicious Macro in Office Files when AV not work
 
 > Today is 2025! Why are you still writing such a thing?
->> Because some "AI-Native" and "Advanced" EDR/NGAV we use can't prevent infection. Then file got blocked by our storage service provider make our operation a disaster.
+>> Because some "AI-Native" and "Advanced" EDR/NGAV we use can't prevent infection. Then files got blocked by our storage service provider, which broke our operation.
 
 # Usage
 
@@ -20,7 +20,7 @@ Backup your data before you use it. No warranty at all.
 - Only merged and compiled yara rule should be distributed
 - Yara is always bundled
 - `cramc_db.json` is k-v store, k should be rule name, v should be operation
-- Before remediation, file should always be backed-up.
+- Before remediation, original file should always be backed-up.
 - `databaseVersion` is for both cleanup db and yara rules.
 - [Figma](https://www.figma.com/board/DGvlxo4XXQTZ8skqmJFFUh/CRAMC) link to control flow.
 - Always assume users are unprivileged, auto-request elevation based on sys manifest.
@@ -41,9 +41,8 @@ For yara rules: Licensed under CC BY-NC-SA 4.0 International
 # Credit
 
 Thanks to:
-- https://github.com/VirusTotal/yara-x (BSD-3)
 - https://github.com/VirusTotal/yara (BSD-3)
 
 # Privacy Notice
 
-To help us serve you better, we are collecting program crash and error context information using service provided by Sentry.io , their privacy prolicy could be find [here](https://sentry.io/privacy/) . Our team won't collect any information that could link to you.
+To help us serve you better, we are collecting program crash and error context information using service provided by Sentry.io , their privacy policy could be found [here](https://sentry.io/privacy/) . Our team won't sell your information, collected information is only used for necessary troubleshooting purpose.
