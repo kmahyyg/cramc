@@ -153,7 +153,15 @@ func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outpu
 		fPath := item.FullPath()
 		// fPath example: /Users/<username>/<dir>/file.bin
 		// if hasPrefix && intended extensions, all good.
-		if strings.HasPrefix(fPath, residentialPathDir[1]) && slices.Contains(allowedExts, path.Ext(fPath)) {
+		var matchF = func(fullPath string) bool {
+			fExt := path.Ext(fullPath)
+			if strings.HasPrefix(fullPath, residentialPathDir[1]) && (slices.Contains(allowedExts, fExt) || strings.Contains(fullPath, "AppData/Roaming/Microsoft/Excel/XLSTART")) {
+				return true
+			}
+			return false
+		}
+		// add matchFunc for XLSTART
+		if matchF(fPath) {
 			counter += 1
 			outputChan <- string(volDiskLetter) + ":" + fPath
 		}
