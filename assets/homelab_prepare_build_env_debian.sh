@@ -35,6 +35,7 @@ export PROJ_PREFIX_LINUX_MUSL=${PROJECT_DEST}/${PROJECT_NAME}/musl_linux_amd64
 export YARA_BUILD_WIN64=${PROJECT_DEST}/yara/win64
 export PROJ_PREFIX_WIN64=${PROJECT_DEST}/${PROJECT_NAME}/win64
 mkdir -p ${PROJECT_DEST} ${YARA_BUILD_LINUX_MUSL} ${PROJ_PREFIX_LINUX_MUSL} ${YARA_BUILD_WIN64} ${PROJ_PREFIX_WIN64}
+# For development with delve:  -gcflags "all=-N -l"
 # cross-compile main program for win64
 ( cd ${YARA_BUILD_WIN64} && \
   ${YARA_SRC}/configure --host=x86_64-w64-mingw32 --prefix=${PROJ_PREFIX_WIN64} )

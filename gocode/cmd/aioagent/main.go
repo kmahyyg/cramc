@@ -10,6 +10,7 @@ import (
 	"cramc_go/hardener"
 	"cramc_go/logging"
 	"cramc_go/platform/windoge_utils"
+	"cramc_go/sanitizer_ole"
 	"cramc_go/updchecker"
 	"cramc_go/yara_scanner"
 	"encoding/hex"
@@ -216,11 +217,20 @@ func main() {
 				return
 			}()
 		}
-		// wait until iterate finish
+		// wait until iteration finish
 		wg.Wait()
 	}
-	//TODO: implement sanitizer
-	//
+	// implement sanitizer for windows only
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err = sanitizer_ole.StartSanitizer()
+		if errors.Is(err, customerrs.ErrUnsupportedPlatform) {
+			common.Logger.Infoln("Due to the nature of OLE, we can only support this on Windows. Aborting for sanitization.")
+		} else {
+			common.Logger.Errorln("Unknown Internal Error Happened in Sanitizer: ", err.Error())
+		}
+	}()
 	// start hardener server
 	if *flEnableHardening && common.IsRunningOnWin {
 		wg.Add(1)
