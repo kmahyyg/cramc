@@ -26,6 +26,7 @@ Backup your data before you use it. No warranty at all.
 - Always assume users are unprivileged, auto-request elevation based on sys manifest.
 - On MacOS, `-static` extldflags won't work.
 - `xl/vbaProject.bin` and `.xls` is OLE compound file (binary and proprietary format), format standard [here](https://learn.microsoft.com/en-us/openspecs/office_file_formats/MS-OFFFFLP/6ae2fd93-51fc-4e75-a54a-1b175c627b51) .
+- Unfortunately, due to cost-effectiveness consideration and I'm developing this alone, I had to take COM+ API approach to sanitize infected files, which made this software completely rely on MS Excel executable and broke its cross-platform ability.
 
 # Compile
 
