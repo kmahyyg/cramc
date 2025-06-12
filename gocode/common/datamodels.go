@@ -35,29 +35,6 @@ type IPC_SingleDocToBeSanitized struct {
 	DestModule    string `json:"module"`
 }
 
-// IPC, general response for /fetchPendingFiles
-type IPC_DocsToBeSanitizedResp struct {
-	Counter   int                           `json:"counter"`
-	ToProcess []*IPC_SingleDocToBeSanitized `json:"toProcess"`
-}
-
-// IPC, general response for /getStatus
-type IPC_StatusResponse struct {
-	Status              string `json:"status"`
-	FilesPendingInQueue int    `json:"filesPendingInQueue"`
-}
-
-type IPC_SingleSanitizedDocResponse struct {
-	IPC_SingleDocToBeSanitized
-	IsSuccess     bool   `json:"isSuccess"`
-	AdditionalMsg string `json:"additionalMsg,omitempty"`
-}
-
-type IPC_SanitizedDocsResponse struct {
-	Counter   int                               `json:"counter"`
-	Processed []*IPC_SingleSanitizedDocResponse `json:"processed"`
-}
-
 type HardeningAction struct {
 	Name                string                 `json:"name"`
 	AllowRepeatedHarden bool                   `json:"allowRepeatedHarden"`
