@@ -47,6 +47,13 @@ GOOS=windows GOARCH=amd64 CGO_ENABLED=1 \
       go build -trimpath \
       -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static\"" \
       -tags yara_static -o ../bin/cramc_scanner.exe ./cmd/scanonly/main.go
+
+GOOS=windows GOARCH=amd64 CGO_ENABLED=1 \
+  CC=x86_64-w64-mingw32-gcc \
+  PKG_CONFIG_PATH=${PROJ_PREFIX_WIN64}/lib/pkgconfig \
+      go build -gcflags "all=-N -l" \
+      -ldflags "-X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static\"" \
+      -tags yara_static -o ../bin/cramc_dev_aio.exe ./cmd/aioagent/main.go
 # static link in linux for devreleaser
 ( cd ${YARA_BUILD_LINUX_MUSL} && \
   ${YARA_SRC}/configure CC=musl-gcc --prefix=${PROJ_PREFIX_LINUX_MUSL} CFLAGS="-I/usr/include" CPPFLAGS="-I/usr/include")
