@@ -23,7 +23,6 @@ func KillAllOfficeProcesses() (bool, error) {
 			for _, p := range procs {
 				pName, err := p.Name()
 				if err != nil {
-					common.Logger.Errorln("Loop Process Name:", err)
 					continue
 				}
 				if slices.Contains(coveredProcess, pName) {
