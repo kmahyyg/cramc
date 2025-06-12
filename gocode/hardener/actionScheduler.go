@@ -14,19 +14,27 @@ func DispatchHardenAction(hAction *common.HardeningAction) error {
 		return customerrs.ErrUnsupportedPlatform
 	}
 	common.Logger.Infoln("DEBUG: About to acquire HardenedDetectionTypesLock for: ", hAction.Name)
-	common.HardenedDetectionTypesLock.Lock() //deadlock
+	
+	// Check if already hardened and decide whether to proceed
+	common.HardenedDetectionTypesLock.Lock()
 	common.Logger.Infoln("DEBUG: Successfully acquired HardenedDetectionTypesLock for: ", hAction.Name)
 	_, ok := common.HardenedDetectionTypes[hAction.Name]
-	if ok {
-		if !hAction.AllowRepeatedHarden {
-			common.Logger.Infoln("This detection does NOT allow repeated hardening action. Continue.")
-			return nil
-		}
+	shouldProceed := true
+	if ok && !hAction.AllowRepeatedHarden {
+		shouldProceed = false
+		common.Logger.Infoln("This detection does NOT allow repeated hardening action. Continue.")
+	} else {
+		common.HardenedDetectionTypes[hAction.Name] = true
 	}
-	common.HardenedDetectionTypes[hAction.Name] = true
-	takeProperHardenAction(hAction)
 	common.HardenedDetectionTypesLock.Unlock()
 	common.Logger.Infoln("DEBUG: Released HardenedDetectionTypesLock for: ", hAction.Name)
+	
+	if !shouldProceed {
+		return nil
+	}
+	
+	// Perform hardening action outside of mutex lock
+	takeProperHardenAction(hAction)
 	return nil
 }
 

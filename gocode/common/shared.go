@@ -14,11 +14,11 @@ var (
 	IsRunningOnWin = runtime.GOOS == "windows"
 
 	VersionStr    string
-	SanitizeQueue = make(chan *IPC_SingleDocToBeSanitized)
+	SanitizeQueue = make(chan *IPC_SingleDocToBeSanitized, 100)
 
 	DryRunOnly                 bool
 	EnableHardening            bool
-	HardeningQueue             = make(chan *HardeningAction)
+	HardeningQueue             = make(chan *HardeningAction, 100)
 	HardenedDetectionTypesLock = &sync.Mutex{}
 	HardenedDetectionTypes     = make(map[string]bool)
 )
