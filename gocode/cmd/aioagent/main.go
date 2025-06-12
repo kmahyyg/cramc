@@ -142,6 +142,7 @@ func main() {
 			searcherFoundList = append(searcherFoundList, item)
 			searcherFoundListRWLock.Unlock()
 		}
+		common.Logger.Infoln("searchConsumer finished.")
 	}
 	// matched files , aio output queue
 	var scanMatchedFiles = make(chan *common.YaraScanResult)
@@ -228,9 +229,10 @@ func main() {
 		err = sanitizer_ole.StartSanitizer()
 		if errors.Is(err, customerrs.ErrUnsupportedPlatform) {
 			common.Logger.Infoln("Due to the nature of OLE, we can only support this on Windows. Aborting for sanitization.")
-		} else {
+		} else if err != nil {
 			common.Logger.Errorln("Unknown Internal Error Happened in Sanitizer: ", err.Error())
 		}
+		common.Logger.Infoln("Sanitizer finished.")
 	}()
 	// start hardener server
 	if *flEnableHardening && common.IsRunningOnWin {
@@ -244,6 +246,7 @@ func main() {
 					common.Logger.Errorln("While hardening: ", err)
 				}
 			}
+			common.Logger.Infoln("Hardening finished.")
 		}()
 	} else {
 		common.Logger.Infoln("Hardening server won't start as disabled by user/running on unsupported platform.")
