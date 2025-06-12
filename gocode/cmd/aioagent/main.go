@@ -215,7 +215,7 @@ func main() {
 					common.Logger.Errorln("Unwanted error in GeneralSearcher: ", err)
 					common.Logger.Fatalln(customerrs.ErrUnknownInternalError)
 				}
-				common.Logger.Infof("Found %d File using GeneralSearcher, proceed to next step.\n", counted)
+				common.Logger.Infof("Found %d File using GeneralSearcher, proceed to next step.", counted)
 				return
 			}()
 		}
@@ -295,6 +295,7 @@ func main() {
 				common.Logger.Warnln("Can't find solution for rule: ", f.DetectedRule)
 			}
 		}
+		common.Logger.Infoln("Hardener&Sanitizer Request Sent finished.")
 	}()
 	// searcher finished, go for yara scanner
 	// read yara rules and decrypt
@@ -329,6 +330,7 @@ func main() {
 			if err != nil {
 				common.Logger.Errorln("Yara scanner returned err when exit: ", err)
 			}
+			common.Logger.Infoln("Yara scanner finished.")
 		}()
 	} else {
 		// iterate finished, searcher finished, now parse existing result.
@@ -345,6 +347,7 @@ func main() {
 				common.Logger.Errorln(err)
 				common.Logger.Fatalln(customerrs.ErrUnknownInternalError)
 			}
+			common.Logger.Infoln("Yara Result Processor finished.")
 		}()
 	}
 	// wait for all procedures
