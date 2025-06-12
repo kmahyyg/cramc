@@ -29,7 +29,7 @@ func GeneralWalkthroughSearch(actionPath string, allowedExts []string, outputCha
 		}
 		var matchF = func(fullPath string) bool {
 			fExt := path.Ext(fullPath)
-			if slices.Contains(allowedExts, fExt) || strings.Contains(fullPath, "AppData\\Roaming\\Microsoft\\Excel\\XLSTART") {
+			if slices.Contains(allowedExts, fExt) || strings.Contains(fullPath, "AppData/Roaming/Microsoft/Excel/XLSTART") {
 				return true
 			}
 			return false
