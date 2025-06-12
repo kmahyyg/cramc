@@ -8,12 +8,43 @@ import (
 	"strings"
 )
 
+func f_harden_rmReplaceDirSetRO(aType string, filep string) {
+	switch aType {
+	case "file":
+		err := os.RemoveAll(filep)
+		common.Logger.Infoln("remove file: ", filep, ", err: ", err)
+		err = os.MkdirAll(filep, 0400)
+		common.Logger.Infoln("replace with dir: ", filep, ", err: ", err)
+		f_harden_SetRO(filep, "dir")
+	default:
+		common.Logger.Warnln("unsupported operation for type: ", aType)
+	}
+}
+
+func f_harden_replaceFileSetRO(aType string, filep string) {
+	switch aType {
+	case "dir":
+		err := os.RemoveAll(filep)
+		common.Logger.Infoln("remove dir: ", filep, ", err: ", err)
+		fd, err := os.Create(filep)
+		common.Logger.Infoln("create file: ", filep, ", err: ", err)
+		if err == nil {
+			_ = fd.Close()
+		}
+		f_harden_SetRO(filep, "file")
+	default:
+		common.Logger.Warnln("unsupported operation for type: ", aType)
+	}
+}
+
 func f_harden_CleanSetRO(aType string, filep string) {
 	switch aType {
 	case "file":
 		fd, err := os.Create(filep)
 		common.Logger.Infoln("Recreate File first, Err: ", err)
-		_ = fd.Close()
+		if err == nil {
+			_ = fd.Close()
+		}
 		common.Logger.Infoln("Truncate File Err: ", os.Truncate(filep, 0))
 	case "dir":
 		common.Logger.Infoln("Remove All, Err: ", os.RemoveAll(filep))

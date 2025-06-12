@@ -8,9 +8,9 @@
             "mustHarden": true,
             "allowRepeatedHarden": false,
             "hardenMeasures": [
-                {"action": "clean_setRO", "type": "file", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1"},
-                {"action": "clean_setRO", "type": "file", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1.xlsm"},
-                {"action": "clean_setRO", "type": "file", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1.xlsb"},
+                {"action": "rm_replaceDir_setRO", "type": "file", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1"},
+                {"action": "rm_replaceDir_setRO", "type": "file", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1.xlsm"},
+                {"action": "rm_replaceDir_setRO", "type": "file", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1.xlsb"},
                 {"action": "setRO", "type": "dir", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART"}
             ]
         }

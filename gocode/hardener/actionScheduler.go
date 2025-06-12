@@ -32,7 +32,7 @@ func DispatchHardenAction(hAction *common.HardeningAction) error {
 	if !shouldProceed {
 		return nil
 	}
-	
+
 	// Perform hardening action outside of mutex lock
 	takeProperHardenAction(hAction)
 	return nil
@@ -40,8 +40,9 @@ func DispatchHardenAction(hAction *common.HardeningAction) error {
 
 func takeProperHardenAction(hAction *common.HardeningAction) {
 	// current supported:
-	//    file: clean_setRO
-	//     dir: setRO
+	//    file & dir: clean_setRO, setRO
+	//     file only: rm_replaceDir_setRO
+	//      dir only: replaceFile_setRO
 	// action based on needs.
 	for _, act := range hAction.ActionLst {
 		fStr, err := applyTextTemplate(act.Dest)
@@ -50,6 +51,10 @@ func takeProperHardenAction(hAction *common.HardeningAction) {
 			continue
 		}
 		switch act.Action {
+		case "replaceFile_setRO":
+			f_harden_replaceFileSetRO(act.Type, fStr)
+		case "rm_replaceDir_setRO":
+			f_harden_rmReplaceDirSetRO(act.Type, fStr)
 		case "clean_setRO":
 			f_harden_CleanSetRO(act.Type, fStr)
 		case "setRO":
