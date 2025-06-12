@@ -149,15 +149,15 @@ func main() {
 	if !*flNoDiskScan {
 		triggeredErrFallback := false
 		goesForPrivileged := false
-		// prepare consumer, and check physically exists on disk
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			searchConsumer()
-		}()
 		// check if booster could be used
 		if isElevated && isNTFS {
 			goesForPrivileged = true
+			// prepare consumer, and check physically exists on disk
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				searchConsumer()
+			}()
 			// go for parse MFT
 			wg.Add(1)
 			go func() {
@@ -189,6 +189,7 @@ func main() {
 		}
 		// must wait as you don't know when `triggeredErrFallback` will be modified
 		wg.Wait()
+
 		// unsupported platform OR MFTSearcher failed on windows
 		if !common.IsRunningOnWin || triggeredErrFallback {
 			// rebuild writer chan by closing and re-creating, to prevent writing on closed chan
