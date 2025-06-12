@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	updCheckerUrl = "https://cdn.jsdelivr.net/gh/kmahyyg/cramc@vv3_comapi/assets/latest_version.json"
+	updCheckerUrl = "https://github.com/kmahyyg/cramc/raw/refs/heads/v3_comapi/assets/latest_version.json"
 )
 
 type LatestVersion struct {
