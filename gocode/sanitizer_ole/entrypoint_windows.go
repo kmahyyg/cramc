@@ -87,7 +87,7 @@ func StartSanitizer() error {
 				common.Logger.Infoln("Workbook Opened: ", fPathNonVariant)
 				wbHasVBA := oleutil.MustGetProperty(thisWb, "HasVBProject").Value().(bool)
 				if wbHasVBA {
-					common.Logger.Infoln("Workbook has VBA Project, will be sanitized.")
+					common.Logger.Infoln("Workbook has VBA Project, will be sanitized: ", fPathNonVariant)
 					wbVbaProj := oleutil.MustGetProperty(thisWb, "VBProject").ToIDispatch()
 					vbCompsInProj := oleutil.MustGetProperty(wbVbaProj, "VBComponents").ToIDispatch()
 					vbCompsCount := (int)(oleutil.MustGetProperty(vbCompsInProj, "Count").Value().(int32))
@@ -128,6 +128,7 @@ func StartSanitizer() error {
 			continue
 		}
 	}
+	common.Logger.Infoln("Sanitizer Finished.")
 	return nil
 }
 

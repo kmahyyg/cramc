@@ -54,6 +54,6 @@ func applyTextTemplate(tmpl string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	tRes := strings.ReplaceAll(tmpl, "${USERNAME}", cUser.Username)
+	tRes := strings.ReplaceAll(tmpl, "${HOME}", cUser.HomeDir)
 	return tRes, nil
 }
