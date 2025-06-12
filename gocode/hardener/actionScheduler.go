@@ -13,7 +13,9 @@ func DispatchHardenAction(hAction *common.HardeningAction) error {
 	if !common.IsRunningOnWin {
 		return customerrs.ErrUnsupportedPlatform
 	}
-	common.HardenedDetectionTypesLock.Lock()
+	common.Logger.Infoln("DEBUG: About to acquire HardenedDetectionTypesLock for: ", hAction.Name)
+	common.HardenedDetectionTypesLock.Lock() //deadlock
+	common.Logger.Infoln("DEBUG: Successfully acquired HardenedDetectionTypesLock for: ", hAction.Name)
 	_, ok := common.HardenedDetectionTypes[hAction.Name]
 	if ok {
 		if !hAction.AllowRepeatedHarden {
@@ -24,6 +26,7 @@ func DispatchHardenAction(hAction *common.HardeningAction) error {
 	common.HardenedDetectionTypes[hAction.Name] = true
 	takeProperHardenAction(hAction)
 	common.HardenedDetectionTypesLock.Unlock()
+	common.Logger.Infoln("DEBUG: Released HardenedDetectionTypesLock for: ", hAction.Name)
 	return nil
 }
 

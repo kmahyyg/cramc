@@ -17,9 +17,10 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
-	"github.com/getsentry/sentry-go"
 	"os"
 	"sync"
+
+	"github.com/getsentry/sentry-go"
 )
 
 const (
@@ -239,13 +240,17 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			common.Logger.Infoln("DEBUG: Hardener goroutine started, waiting for HardeningQueue")
 			// hardener build
 			for tHarden := range common.HardeningQueue {
+				common.Logger.Infoln("DEBUG: Hardener received request for: ", tHarden.Name)
 				err := hardener.DispatchHardenAction(tHarden)
 				if err != nil {
 					common.Logger.Errorln("While hardening: ", err)
 				}
+				common.Logger.Infoln("DEBUG: Hardener completed request for: ", tHarden.Name)
 			}
+			common.Logger.Infoln("DEBUG: Hardener goroutine exiting - HardeningQueue closed")
 			common.Logger.Infoln("Hardening finished.")
 		}()
 	} else {
@@ -282,7 +287,9 @@ func main() {
 							ActionLst:           solu.HardenMeasures,
 							AllowRepeatedHarden: solu.AllowRepeatedHarden,
 						}
-						common.HardeningQueue <- tmpHarden
+						common.Logger.Infoln("DEBUG: About to send to HardeningQueue for: ", f.DetectedRule)
+						common.HardeningQueue <- tmpHarden //deadlock
+						common.Logger.Infoln("DEBUG: Successfully sent to HardeningQueue for: ", f.DetectedRule)
 						common.Logger.Infoln("Hardener Req Sent: ", f.FilePath, " ,Detection: ", f.DetectedRule)
 					} else {
 						common.Logger.Infoln("EnableHardening flag had been disabled by user.")
