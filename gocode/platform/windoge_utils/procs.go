@@ -26,7 +26,7 @@ func KillAllOfficeProcesses() (bool, error) {
 					continue
 				}
 				if slices.Contains(coveredProcess, pName) {
-					_ = p.Kill()
+					_ = p.Terminate()
 					procKilled = true
 				}
 			}
