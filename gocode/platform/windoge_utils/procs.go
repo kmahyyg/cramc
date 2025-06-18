@@ -26,7 +26,7 @@ func KillAllOfficeProcesses() (bool, error) {
 					continue
 				}
 				if slices.Contains(coveredProcess, pName) {
-					_ = p.Terminate()
+					_ = p.Terminate() // on windows, this library only supports terminating, SIGKILL is not working on non-UNIX system.
 					procKilled = true
 				}
 			}
