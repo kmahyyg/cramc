@@ -9,7 +9,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	ole "github.com/go-ole/go-ole"
 	"golang.org/x/sys/windows/registry"
-	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -58,7 +58,7 @@ func StartSanitizer() error {
 	// iterate through workbooks
 	for vObj := range common.SanitizeQueue {
 		// change path separator, make sure consistent in os-level
-		fPathNonVariant, err := filepath.Localize(vObj.Path)
+		fPathNonVariant := strings.ReplaceAll(vObj.Path, "/", "\\")
 		// backup file
 		err = gzBakFile(fPathNonVariant)
 		if err != nil {
