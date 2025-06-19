@@ -18,6 +18,7 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -367,4 +368,8 @@ func main() {
 	}
 	// wait for all procedures
 	wg.Wait()
+	// wait for 8 seconds for cleanup
+	time.Sleep(3 * time.Second)
+	runtime.GC()
+	time.Sleep(5 * time.Second)
 }
