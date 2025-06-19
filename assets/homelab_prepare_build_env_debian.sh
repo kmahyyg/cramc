@@ -13,7 +13,7 @@ sed -i 's/main/main contrib non-free/g' ./sources.list
 sed -i 's/deb.debian.org/mirrors.bfsu.edu.cn/g' ./sources.list
 apt update -y
 apt dist-upgrade -y
-apt install gcc-mingw-w64-x86-64 build-essential nano vim pkg-config libyara-dev git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev musl-tools sudo -y
+apt install gcc-mingw-w64-x86-64 build-essential nano vim pkg-config libyara-dev git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev musl-tools upx sudo -y
 cd /tmp
 curl -L -O https://go.dev/dl/go${GO_VER}.linux-amd64.tar.gz
 tar -zxvf go${GO_VER}.linux-amd64.tar.gz -C /opt
