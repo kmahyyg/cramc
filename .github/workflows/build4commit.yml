@@ -51,7 +51,7 @@ jobs:
           cd ${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}
           autoreconf --force --install --verbose || cat config.log
           ( cd ${YARA_BUILD_LINUX_MUSL} && \
-            ${YARA_SRC}/configure CC=musl-gcc --prefix=${PROJ_PREFIX_LINUX_MUSL} CFLAGS="-I/usr/include" CPPFLAGS="-I/usr/include")
+            ${YARA_SRC}/configure CC=musl-gcc --prefix=${PROJ_PREFIX_LINUX_MUSL} )
           make -C ${YARA_BUILD_LINUX_MUSL} install
       - name: Build Golang Program
         run: |
