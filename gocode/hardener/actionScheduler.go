@@ -3,6 +3,7 @@ package hardener
 import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
+	"github.com/getsentry/sentry-go"
 )
 
 func DispatchHardenAction(hAction *common.HardeningAction) error {
@@ -60,6 +61,7 @@ func takeProperHardenAction(hAction *common.HardeningAction) {
 		case "setRO":
 			f_harden_SetRO(act.Type, fStr)
 		default:
+			sentry.CaptureMessage("hardenAction illegal: " + act.Action)
 			common.Logger.Warnln("Unsupported action type: ", act.Action)
 		}
 	}
