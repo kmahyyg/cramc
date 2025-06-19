@@ -3,12 +3,14 @@
 package sanitizer_ole
 
 import (
+	"context"
 	"cramc_go/common"
 	"cramc_go/platform/windoge_utils"
+	"github.com/getsentry/sentry-go"
 	ole "github.com/go-ole/go-ole"
-	"github.com/go-ole/go-ole/oleutil"
 	"golang.org/x/sys/windows/registry"
-	"strings"
+	"path/filepath"
+	"time"
 )
 
 const (
@@ -36,87 +38,81 @@ func StartSanitizer() error {
 	}
 	defer ole.CoUninitialize()
 
-	// init excel, no exit before finish all files
-	unknownObj, _ := oleutil.CreateObject("Excel.Application")
-	excelObj, _ := unknownObj.QueryInterface(ole.IID_IDispatch)
-	defer excelObj.Release()
-	defer excelObj.CallMethod("Quit")
-	// security and ux optimize
-	_, err = oleutil.PutProperty(excelObj, "Visible", false)
+	// new approach: bundled
+	eWorker := &ExcelWorker{}
+	err = eWorker.Init()
 	if err != nil {
-		common.Logger.Errorln(err)
+		sentry.CaptureException(err)
+		common.Logger.Errorln("Failed to initialize excel worker:", err)
+		return err
 	}
-	_, err = oleutil.PutProperty(excelObj, "DisplayAlerts", false)
+	defer eWorker.Quit(false)
+	err = eWorker.GetWorkbooks()
 	if err != nil {
-		common.Logger.Errorln(err)
+		sentry.CaptureException(err)
+		common.Logger.Errorln("Failed to get workbooks:", err)
+		return err
 	}
-	// ignore remote dde update requests
-	_, err = oleutil.PutProperty(excelObj, "IgnoreRemoteRequests", true)
-	if err != nil {
-		common.Logger.Errorln(err)
-	}
-	// boost runtime speed
-	_, err = oleutil.PutProperty(excelObj, "ScreenUpdating", false)
-	if err != nil {
-		common.Logger.Errorln(err)
-	}
-	// avoid any macro to execute
-	_ = oleutil.MustPutProperty(excelObj, "AutomationSecurity", MsoAutomationSecurityForceDisable)
-	if err != nil {
-		common.Logger.Errorln(err)
-	}
-	// workbooks
-	excelWbs := oleutil.MustGetProperty(excelObj, "Workbooks").ToIDispatch()
+	common.Logger.Infoln("Excel.Application worker initialized.")
+
+	// iterate through workbooks
 	for vObj := range common.SanitizeQueue {
 		// change path separator, make sure consistent in os-level
-		fPathNonVariant := strings.ReplaceAll(vObj.Path, "/", "\\")
+		fPathNonVariant, err := filepath.Localize(vObj.Path)
 		// backup file
 		err = gzBakFile(fPathNonVariant)
 		if err != nil {
 			common.Logger.Errorln("Backup file failed:", err.Error())
 		}
+		common.Logger.Infoln("Original file backup succeeded.")
 		switch vObj.Action {
 		case "sanitize":
 			// parse and take action
-			func() {
-				// always defer to save file
-				thisWb := oleutil.MustCallMethod(excelWbs, "Open", fPathNonVariant).ToIDispatch()
-				defer thisWb.Release()
-				defer thisWb.CallMethod("Close", true)
-				defer thisWb.CallMethod("Save")
-				common.Logger.Infoln("Workbook Opened: ", fPathNonVariant)
-				wbHasVBA := oleutil.MustGetProperty(thisWb, "HasVBProject").Value().(bool)
-				if wbHasVBA {
-					common.Logger.Infoln("Workbook has VBA Project, will be sanitized: ", fPathNonVariant)
-					wbVbaProj := oleutil.MustGetProperty(thisWb, "VBProject").ToIDispatch()
-					vbCompsInProj := oleutil.MustGetProperty(wbVbaProj, "VBComponents").ToIDispatch()
-					vbCompsCount := (int)(oleutil.MustGetProperty(vbCompsInProj, "Count").Value().(int32))
-					common.Logger.Debugln("VBComponents Count: ", vbCompsCount)
-					for i := 1; i <= vbCompsCount; i++ {
-						// yes, this bullsh*t index starts from 1...
-						vbComp := oleutil.MustCallMethod(vbCompsInProj, "Item", i).ToIDispatch()
-						vbCompName := oleutil.MustGetProperty(vbComp, "Name").Value().(string)
-						if vbCompName == vObj.DestModule {
-							common.Logger.Infoln("Sanitizing Matched VBA Component: ", vbCompName)
-							// verified in powershell
-							codeMod := oleutil.MustGetProperty(vbComp, "CodeModule").ToIDispatch()
-							codeModLineCnt := (int)(oleutil.MustGetProperty(codeMod, "CountOfLines").Value().(int32))
-							// remove all lines
-							_, err = codeMod.CallMethod("DeleteLines", 1, codeModLineCnt)
-							if err != nil {
-								common.Logger.Errorln(err)
-								continue
-							}
-							_, err = codeMod.CallMethod("AddFromString", cleanupComment)
-							if err != nil {
-								common.Logger.Errorln(err)
-								continue
-							}
-							common.Logger.Infoln("Finished Sanitizing VBA Module: ", vbCompName)
-						}
+			func(eWorker *ExcelWorker) {
+				// 60 seconds should be sufficient for open and sanitize a single doc
+				ctx, cancelF := context.WithTimeout(context.TODO(), 60*time.Second)
+				defer cancelF()
+				// notice if finished earlier
+				doneC := make(chan struct{}, 1)
+				go func() {
+					// open workbook
+					err := eWorker.OpenWorkbook(fPathNonVariant)
+					if err != nil {
+						common.Logger.Errorln("Failed to open workbook:", err)
+						sentry.CaptureMessage("Failed Document: " + fPathNonVariant)
+						doneC <- struct{}{}
+						return
 					}
+					defer eWorker.SaveAndCloseWorkbook()
+					// sanitize
+					err = eWorker.SanitizeWorkbook(vObj.DestModule)
+					if err != nil {
+						common.Logger.Errorln("Failed to sanitize workbook:", err)
+						sentry.CaptureMessage("Failed Document: " + fPathNonVariant)
+						doneC <- struct{}{}
+						return
+					}
+					doneC <- struct{}{}
+				}()
+				select {
+				case <-doneC:
+					// properly remediated
+					// go ahead
+					common.Logger.Debugln("Sanitize workbook finished, doneC returned correctly.")
+				case <-ctx.Done():
+					// timed out or error, send log to sentry
+					err := ctx.Err()
+					if err != nil {
+						sentry.CaptureException(err)
+						common.Logger.Errorln("Failed to sanitize workbook, timed out:", err)
+					}
+					// for GC, cleanup and rebuild excel instance
+					eWorker.Quit(true)
+					// safely ignore errors as it's already built correctly before
+					_ = eWorker.Init()
+					_ = eWorker.GetWorkbooks()
 				}
-			}()
+			}(eWorker)
 			// rename file and save to clean state cache of cloud-storage provider
 			err = renameFileAndSave(fPathNonVariant)
 			if err != nil {
