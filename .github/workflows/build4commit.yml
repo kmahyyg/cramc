@@ -22,9 +22,9 @@ jobs:
   build-linux-amd64:
     runs-on: ubuntu-24.04
     env:
-      YARA_SRC: ${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}
-      PROJ_PREFIX_LINUX_MUSL: ${PROJECT_DEST}/${PROJECT_NAME}/musl_linux_amd64
-      YARA_BUILD_LINUX_MUSL: ${PROJECT_DEST}/yara/musl_linux_amd64
+      YARA_SRC: ${{ env.THIRD_PARTY_SRC }}/yara/yara-${{ env.YARA_VER }}
+      PROJ_PREFIX_LINUX_MUSL: ${{ env.PROJECT_DEST }}/${{ env.PROJECT_NAME }}/musl_linux_amd64
+      YARA_BUILD_LINUX_MUSL: ${{ env.PROJECT_DEST }}/yara/musl_linux_amd64
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
