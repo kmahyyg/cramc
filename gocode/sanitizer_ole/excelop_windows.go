@@ -7,6 +7,7 @@ import (
 	"github.com/getsentry/sentry-go"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
+	"sync"
 )
 
 func createExcelInstance() (*ole.IDispatch, error) {
@@ -59,6 +60,7 @@ type ExcelWorker struct {
 	currentExcelObj *ole.IDispatch
 	workbooksHandle *ole.IDispatch
 	currentWorkbook *ole.IDispatch
+	mu              *sync.Mutex
 }
 
 func (w *ExcelWorker) Init() error {
@@ -71,6 +73,7 @@ func (w *ExcelWorker) Init() error {
 	}
 	excelInstanceStartupConfig(w.currentExcelObj)
 	common.Logger.Infoln("Excel.Application object initialized.")
+	w.mu = &sync.Mutex{}
 	return nil
 }
 
@@ -161,4 +164,12 @@ func (w *ExcelWorker) SanitizeWorkbook(destModuleName string) error {
 		}
 	}
 	return customerrs.ErrExcelNoMacroFound
+}
+
+func (w *ExcelWorker) Lock() {
+	w.mu.Lock()
+}
+
+func (w *ExcelWorker) Unlock() {
+	w.mu.Unlock()
 }

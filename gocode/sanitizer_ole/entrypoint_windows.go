@@ -65,6 +65,8 @@ func StartSanitizer() error {
 			common.Logger.Errorln("Backup file failed:", err.Error())
 		}
 		common.Logger.Infoln("Original file backup succeeded.")
+		// sleep 1 second to leave space for saving
+		time.Sleep(1 * time.Second)
 		switch vObj.Action {
 		case "sanitize":
 			// parse and take action
@@ -75,6 +77,10 @@ func StartSanitizer() error {
 				// notice if finished earlier
 				doneC := make(chan struct{}, 1)
 				go func() {
+					// lock to ensure only single doc at a time
+					eWorker.Lock()
+					// must unlock whatever happened
+					defer eWorker.Unlock()
 					// open workbook
 					err := eWorker.OpenWorkbook(fPathNonVariant)
 					if err != nil {
