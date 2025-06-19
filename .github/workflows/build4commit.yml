@@ -48,8 +48,8 @@ jobs:
           cd ${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}
       - name: Workaround for linux-libc-dev magic.h
         run: |
-          mkdir -p /usr/include/x86_64-linux-musl/linux
-          cp -a /usr/include/linux/magic.h /usr/include/x86_64-linux-musl/linux/magic.h
+          sudo mkdir -p /usr/include/x86_64-linux-musl/linux
+          sudo cp -a /usr/include/linux/magic.h /usr/include/x86_64-linux-musl/linux/magic.h
       - name: Build Yara
         run: |
           cd ${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}
