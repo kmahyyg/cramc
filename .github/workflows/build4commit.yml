@@ -151,3 +151,26 @@ jobs:
           name: cramc_win_aioagent.exe
           retention-days: 30
           path: ${{ github.workspace }}/bin/cramc_aio.exe
+
+  release-to-public:
+    needs:
+      - build-linux-amd64
+      - build-windows-amd64
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Prepare for release
+        run: |
+          mkdir -p /tmp/relbuild/${{ github.repository_owner }}
+      - name: Download artifacts previously generated
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/relbuild/${{ github.repository_owner }}
+      - name: Craft release
+        uses: softprops/action-gh-release@v2
+        with:
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          append_body: We recommend everyone stays on the latest version.
+          make_latest: true
+          files: /tmp/relbuild/${{ github.repository_owner }}/*
