@@ -28,6 +28,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24.4'
+          cache-dependency-path: "gocode/go.sum"
       - name: Introduce Build Envvar
         run: |
           echo "YARA_SRC=${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}" >> $GITHUB_ENV
