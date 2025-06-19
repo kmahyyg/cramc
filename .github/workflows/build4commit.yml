@@ -166,6 +166,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: /tmp/relbuild/${{ github.repository_owner }}
+      - name: List all artifacts downloaded
+        run: |
+          ls -alh /tmp/relbuild/**/*
       - name: Craft release
         uses: ncipollo/release-action@v1
         with:
@@ -174,4 +177,4 @@ jobs:
           body: We recommend everyone stays on the latest version. To use, download `database-updates.zip` and `cramc_win_aioagent.exe` together, then put them under the same new empty folder. Program will try auto-elevate based on your current privileges.
           allowUpdates: true
           makeLatest: true
-          artifacts: /tmp/relbuild/${{ github.repository_owner }}/*
+          artifacts: /tmp/relbuild/${{ github.repository_owner }}/**/*
