@@ -1,0 +1,73 @@
+name: Binary Build
+
+on:
+  push:
+  pull_request:
+    types:
+      - ready_for_review
+      - opened
+
+permissions:
+  contents: write
+
+env:
+  GO_VER: "1.24.4"
+  YARA_VER: "4.3.2"
+  PROJECT_DEST: "/opt/buildtargets"
+  PROJECT_NAME: "cramc_go"
+  THIRD_PARTY_SRC: "/opt/softsrcs"
+  CGO_ENABLED: 1
+
+jobs:
+  build-linux-amd64:
+    runs-on: ubuntu-24.04
+    env:
+      YARA_SRC: ${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}
+      PROJ_PREFIX_LINUX_MUSL: ${PROJECT_DEST}/${PROJECT_NAME}/musl_linux_amd64
+      YARA_BUILD_LINUX_MUSL: ${PROJECT_DEST}/yara/musl_linux_amd64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.4'
+      - name: Install Build Deps
+        run: |
+          apt update -y
+          apt install gcc-mingw-w64-x86-64 build-essential pkg-config libyara-dev git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev musl-tools -y
+          go install github.com/tc-hib/go-winres@latest
+          mkdir -p ${THIRD_PARTY_SRC} ${PROJ_PREFIX_LINUX_MUSL} {YARA_BUILD_LINUX_MUSL} ${PROJECT_DEST}
+      - name: Fetch Yara src
+        run: |
+          mkdir -p ${THIRD_PARTY_SRC}/yara
+          cd ${THIRD_PARTY_SRC}
+          curl -L -O https://github.com/VirusTotal/yara/archive/refs/tags/v${YARA_VER}.tar.gz
+          mv ./v${YARA_VER}.tar.gz ./yara-v${YARA_VER}.tar.gz
+          tar -xzvf yara-v${YARA_VER}.tar.gz -C ${THIRD_PARTY_SRC}/yara
+          rm -rf ./yara-v${YARA_VER}.tar.gz
+          cd ${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}
+      - name: Build Yara
+        run: |
+          cd ${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}
+          ( cd ${YARA_BUILD_LINUX_MUSL} && \
+            ${YARA_SRC}/configure CC=musl-gcc --prefix=${PROJ_PREFIX_LINUX_MUSL} CFLAGS="-I/usr/include" CPPFLAGS="-I/usr/include")
+          make -C ${YARA_BUILD_LINUX_MUSL} install
+      - name: Build Golang Program
+        run: |
+          cd ${GITHUB_WORKSPACE}/gocode
+          mkdir -p ../bin
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=1 CC=musl-gcc PKG_CONFIG_PATH=${PROJ_PREFIX_LINUX_MUSL}/lib/pkgconfig go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static\"" -tags yara_static -o ../bin/devreleaser ./cmd/devreleaser/main.go
+      - name: Autoupdate of Yara Database and Cleanup Database
+        run: |
+          cp -ar ${GITHUB_WORKSPACE}/bin/devreleaser ${GITHUB_WORKSPACE}/assets
+          cd ${GITHUB_WORKSPACE}/assets
+          ./devreleaser -compile
+          ./devreleaser -enc=true -in=./yrules/bin/unified.yar -out=../bin/unified.yar.bin
+          ./devreleaser -enc=true -in=./cramc_db.json -out=../bin/cramc_db.bin
+          rm -f ./devreleaser
+          cd ${GITHUB_WORKSPACE}/bin
+          mv ./devreleaser ./devreleaser_musl_linux_amd64
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          retention-days: 30
+          path: ${GITHUB_WORKSPACE}/bin
