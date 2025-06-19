@@ -48,8 +48,8 @@ jobs:
           cd ${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}
       - name: Build Yara
         run: |
-          ls -alh ${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}
           cd ${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}
+          ./bootstrap.sh
           ( cd ${YARA_BUILD_LINUX_MUSL} && \
             ${YARA_SRC}/configure CC=musl-gcc --prefix=${PROJ_PREFIX_LINUX_MUSL} CFLAGS="-I/usr/include" CPPFLAGS="-I/usr/include")
           make -C ${YARA_BUILD_LINUX_MUSL} install
