@@ -86,7 +86,7 @@ func StartSanitizer() error {
 					err := eWorker.OpenWorkbook(fPathNonVariant)
 					if err != nil {
 						common.Logger.Errorln("Failed to open workbook:", err)
-						sentry.CaptureMessage("Failed Document: " + fPathNonVariant)
+						sentry.CaptureMessage("Failed Open Document: " + fPathNonVariant)
 						doneC <- struct{}{}
 						return
 					}
@@ -107,7 +107,7 @@ func StartSanitizer() error {
 					err = eWorker.SanitizeWorkbook(vObj.DestModule)
 					if err != nil {
 						common.Logger.Errorln("Failed to sanitize workbook:", err)
-						sentry.CaptureMessage("Failed Document: " + fPathNonVariant)
+						sentry.CaptureMessage("Failed Sanitize Document: " + fPathNonVariant)
 						doneC <- struct{}{}
 						return
 					}
