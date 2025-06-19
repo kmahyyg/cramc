@@ -89,7 +89,18 @@ func StartSanitizer() error {
 						doneC <- struct{}{}
 						return
 					}
-					defer eWorker.SaveAndCloseWorkbook()
+					defer func() {
+						err = eWorker.SaveAndCloseWorkbook()
+						if err != nil {
+							common.Logger.Errorln("Failed to save and close workbook:", err)
+						}
+						time.Sleep(1 * time.Second)
+						// rename file and save to clean state cache of cloud-storage provider
+						err = renameFileAndSave(fPathNonVariant)
+						if err != nil {
+							common.Logger.Errorln("Rename file failed:", err.Error())
+						}
+					}()
 					// sanitize
 					err = eWorker.SanitizeWorkbook(vObj.DestModule)
 					if err != nil {
@@ -118,13 +129,8 @@ func StartSanitizer() error {
 					_ = eWorker.Init()
 					_ = eWorker.GetWorkbooks()
 				}
+				common.Logger.Infoln("Workbook Sanitized: ", fPathNonVariant)
 			}(eWorker)
-			// rename file and save to clean state cache of cloud-storage provider
-			err = renameFileAndSave(fPathNonVariant)
-			if err != nil {
-				common.Logger.Errorln("Rename file failed:", err.Error())
-			}
-			common.Logger.Infoln("Workbook Sanitized: ", fPathNonVariant)
 		default:
 			common.Logger.Warnln("Unsupported action type: ", vObj.Action)
 			continue
