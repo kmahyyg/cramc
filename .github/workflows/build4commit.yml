@@ -17,9 +17,6 @@ env:
   PROJECT_NAME: "cramc_go"
   THIRD_PARTY_SRC: "/opt/softsrcs"
   CGO_ENABLED: 1
-  YARA_SRC: ${{ THIRD_PARTY_SRC }}/yara/yara-${{ YARA_VER }}
-  PROJ_PREFIX_LINUX_MUSL: ${{ PROJECT_DEST }}/${{ PROJECT_NAME }}/musl_linux_amd64
-  YARA_BUILD_LINUX_MUSL: ${{ PROJECT_DEST }}/yara/musl_linux_amd64
 
 jobs:
   build-linux-amd64:
@@ -29,6 +26,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24.4'
+      - name: Introduce Build Envvar
+        run: |
+          echo "YARA_SRC=${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}" >> $GITHUB_ENV
+          echo "PROJ_PREFIX_LINUX_MUSL=${PROJECT_DEST}/${PROJECT_NAME}/musl_linux_amd64" >> $GITHUB_ENV
+          echo "YARA_BUILD_LINUX_MUSL=${PROJECT_DEST}/yara/musl_linux_amd64" >> $GITHUB_ENV
       - name: Install Build Deps
         run: |
           sudo apt update -y
