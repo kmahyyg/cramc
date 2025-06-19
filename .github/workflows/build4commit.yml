@@ -77,12 +77,18 @@ jobs:
           mv ./devreleaser ./devreleaser_musl_linux_amd64
           upx ./devreleaser_musl_linux_amd64
           ls -alh ${GITHUB_WORKSPACE}/bin
-      - name: Upload Artifacts
+      - name: Upload Runtime Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: linux-database-and-dev_releaser.zip
+          name: database-updates.zip
           retention-days: 30
-          path: ${{ github.workspace }}/bin
+          path: ${{ github.workspace }}/bin/*.bin
+      - name: Upload DevReleaser Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: devreleaser_musl_linux_amd64
+          retention-days: 30
+          path: ${{ github.workspace }}/bin/devreleaser_musl_linux_amd64
 
   build-windows-amd64:
     runs-on: ubuntu-24.04
@@ -139,9 +145,9 @@ jobs:
           cd ${GITHUB_WORKSPACE}/bin
           upx ./cramc_aio.exe
           ls -alh ${GITHUB_WORKSPACE}/bin
-      - name: Upload Artifacts
+      - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: win-aioagent-exe.zip
+          name: cramc_win_aioagent.exe
           retention-days: 30
-          path: ${{ github.workspace }}/bin
+          path: ${{ github.workspace }}/bin/cramc_aio.exe
