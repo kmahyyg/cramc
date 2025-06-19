@@ -80,13 +80,13 @@ jobs:
       - name: Upload Runtime Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: database-updates.zip
+          name: database_updates
           retention-days: 30
           path: ${{ github.workspace }}/bin/*.bin
       - name: Upload DevReleaser Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: devreleaser_musl_linux_amd64
+          name: devreleaser
           retention-days: 30
           path: ${{ github.workspace }}/bin/devreleaser_musl_linux_amd64
 
@@ -148,7 +148,7 @@ jobs:
       - name: Upload Windows Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cramc_win_aioagent.exe
+          name: cramc_win_aioagent
           retention-days: 30
           path: ${{ github.workspace }}/bin/cramc_aio.exe
 
@@ -166,6 +166,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: /tmp/relbuild/${{ github.repository_owner }}
+          merge-multiple: true
       - name: List all artifacts downloaded
         run: |
           ls -alh /tmp/relbuild/**/*
@@ -174,7 +175,7 @@ jobs:
         with:
           artifactErrorsFailBuild: true
           generateReleaseNotes: true
-          body: We recommend everyone stays on the latest version. To use, download `database-updates.zip` and `cramc_win_aioagent.exe` together, then put them under the same new empty folder. Program will try auto-elevate based on your current privileges.
+          body: We recommend everyone stays on the latest version. To use, download `*.bin` and `cramc_aio.exe` together, then put them under the same new empty folder. Program will try auto-elevate based on your current privileges.
           allowUpdates: true
           makeLatest: true
-          artifacts: /tmp/relbuild/${{ github.repository_owner }}/**/*
+          artifacts: /tmp/relbuild/${{ github.repository_owner }}/*
