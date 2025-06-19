@@ -5,6 +5,7 @@ import (
 	"cramc_go/customerrs"
 	psutil "github.com/shirou/gopsutil/v4/process"
 	"slices"
+	"strings"
 )
 
 func KillAllOfficeProcesses() (bool, error) {
@@ -25,7 +26,8 @@ func KillAllOfficeProcesses() (bool, error) {
 				if err != nil {
 					continue
 				}
-				if slices.Contains(coveredProcess, pName) {
+				pNameInvariant := strings.ToLower(pName)
+				if slices.Contains(coveredProcess, pNameInvariant) {
 					_ = p.Terminate() // on windows, this library only supports terminating, SIGKILL is not working on non-UNIX system.
 					procKilled = true
 				}
