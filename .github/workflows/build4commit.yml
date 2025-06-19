@@ -174,7 +174,6 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifactErrorsFailBuild: true
-          generateReleaseNotes: true
           body: We recommend everyone stays on the latest version. To use, download `*.bin` and `cramc_aio.exe` together, then put them under the same new empty folder. Program will try auto-elevate based on your current privileges.
           allowUpdates: true
           makeLatest: true
