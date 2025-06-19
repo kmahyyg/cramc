@@ -10,6 +10,7 @@ import (
 	ole "github.com/go-ole/go-ole"
 	"golang.org/x/sys/windows/registry"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -55,6 +56,7 @@ func StartSanitizer() error {
 	}
 	common.Logger.Infoln("Excel.Application worker initialized.")
 
+	wg := &sync.WaitGroup{}
 	// iterate through workbooks
 	for vObj := range common.SanitizeQueue {
 		// change path separator, make sure consistent in os-level
@@ -77,6 +79,8 @@ func StartSanitizer() error {
 				// notice if finished earlier
 				doneC := make(chan struct{}, 1)
 				go func() {
+					wg.Add(1)
+					defer wg.Done()
 					// lock to ensure only single doc at a time
 					eWorker.Lock()
 					// must unlock whatever happened
@@ -137,6 +141,7 @@ func StartSanitizer() error {
 			continue
 		}
 	}
+	wg.Wait()
 	common.Logger.Infoln("Sanitizer Finished.")
 	return nil
 }
