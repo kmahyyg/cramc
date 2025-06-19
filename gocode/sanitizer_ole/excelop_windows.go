@@ -162,6 +162,7 @@ func (w *ExcelWorker) SanitizeWorkbook(destModuleName string) error {
 				common.Logger.Infoln("Finished Sanitizing VBA Module: ", vbCompName)
 			}
 		}
+		return nil
 	}
 	return customerrs.ErrExcelNoMacroFound
 }
