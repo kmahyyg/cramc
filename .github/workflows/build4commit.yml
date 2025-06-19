@@ -123,7 +123,7 @@ jobs:
           cd ${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}
           ./bootstrap.sh
           ( cd ${YARA_BUILD_WIN64} && \
-            ${YARA_SRC}/configure CC=x86_64-w64-mingw32 --prefix=${PROJ_PREFIX_WIN64} )
+            ${YARA_SRC}/configure --host=x86_64-w64-mingw32 --prefix=${PROJ_PREFIX_WIN64} )
           make -C ${YARA_BUILD_WIN64} install
       - name: Golang Exe WinRES
         run: |
