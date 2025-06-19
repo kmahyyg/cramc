@@ -37,7 +37,7 @@ jobs:
       - name: Install Build Deps
         run: |
           sudo apt update -y
-          sudo apt install gcc-mingw-w64-x86-64 build-essential pkg-config libyara-dev git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev musl-tools -y
+          sudo apt install gcc-mingw-w64-x86-64 build-essential pkg-config libyara-dev git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev musl-tools upx -y
           go install github.com/tc-hib/go-winres@latest
           mkdir -p ${THIRD_PARTY_SRC} ${PROJ_PREFIX_LINUX_MUSL} ${YARA_BUILD_LINUX_MUSL} ${PROJECT_DEST}
       - name: Fetch Yara src
@@ -75,6 +75,7 @@ jobs:
           rm -f ./devreleaser
           cd ${GITHUB_WORKSPACE}/bin
           mv ./devreleaser ./devreleaser_musl_linux_amd64
+          upx ./devreleaser_musl_linux_amd64
           ls -alh ${GITHUB_WORKSPACE}/bin
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
