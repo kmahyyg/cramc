@@ -46,10 +46,14 @@ jobs:
           tar -xzvf yara-v${YARA_VER}.tar.gz -C ${THIRD_PARTY_SRC}/yara
           rm -rf ./yara-v${YARA_VER}.tar.gz
           cd ${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}
+      - name: Workaround for linux-libc-dev magic.h
+        run: |
+          mkdir -p /usr/include/x86_64-linux-musl/linux
+          cp -a /usr/include/linux/magic.h /usr/include/x86_64-linux-musl/linux/magic.h
       - name: Build Yara
         run: |
           cd ${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}
-          autoreconf --force --install --verbose || cat config.log
+          ./bootstrap.sh
           ( cd ${YARA_BUILD_LINUX_MUSL} && \
             ${YARA_SRC}/configure CC=musl-gcc --prefix=${PROJ_PREFIX_LINUX_MUSL} )
           make -C ${YARA_BUILD_LINUX_MUSL} install
