@@ -82,6 +82,7 @@ func StartSanitizer() error {
 					// must unlock whatever happened
 					defer eWorker.Unlock()
 					// open workbook
+					common.Logger.Infoln("Opening workbook: ", fPathNonVariant)
 					err := eWorker.OpenWorkbook(fPathNonVariant)
 					if err != nil {
 						common.Logger.Errorln("Failed to open workbook:", err)
@@ -100,6 +101,7 @@ func StartSanitizer() error {
 						if err != nil {
 							common.Logger.Errorln("Rename file failed:", err.Error())
 						}
+						common.Logger.Infoln("Workbook Sanitized: ", fPathNonVariant)
 					}()
 					// sanitize
 					err = eWorker.SanitizeWorkbook(vObj.DestModule)
@@ -129,7 +131,6 @@ func StartSanitizer() error {
 					_ = eWorker.Init()
 					_ = eWorker.GetWorkbooks()
 				}
-				common.Logger.Infoln("Workbook Sanitized: ", fPathNonVariant)
 			}(eWorker)
 		default:
 			common.Logger.Warnln("Unsupported action type: ", vObj.Action)
