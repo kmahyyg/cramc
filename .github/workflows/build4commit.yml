@@ -72,8 +72,9 @@ jobs:
           rm -f ./devreleaser
           cd ${GITHUB_WORKSPACE}/bin
           mv ./devreleaser ./devreleaser_musl_linux_amd64
+          ls -alh ${GITHUB_WORKSPACE}/bin
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           retention-days: 30
-          path: ${GITHUB_WORKSPACE}/bin
+          path: ${{ env.GITHUB_WORKSPACE }}/bin
