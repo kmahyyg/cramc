@@ -28,7 +28,7 @@ cd ~/softsrcs/yara-${YARA_VER}
 ./bootstrap.sh
 # environment
 PROJECT_DEST="/opt/buildtargets"
-PROJECT_NAME="cramc_go_scan"
+PROJECT_NAME="cramc_go"
 export YARA_BUILD_LINUX_MUSL=${PROJECT_DEST}/yara/musl_linux_amd64
 export YARA_SRC=/root/softsrcs/yara-${YARA_VER}
 export PROJ_PREFIX_LINUX_MUSL=${PROJECT_DEST}/${PROJECT_NAME}/musl_linux_amd64
