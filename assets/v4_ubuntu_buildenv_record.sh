@@ -1,0 +1,62 @@
+#!/bin/bash
+
+GO_VER="1.24.4"
+YARAX_VER="1.2.1"
+
+apt update -y
+apt install gcc-mingw-w64-x86-64 build-essential nano rustup vim pkg-config libyara-dev git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev musl-tools upx sudo libunwind-dev -y
+
+cd /tmp
+curl -L -O https://go.dev/dl/go${GO_VER}.linux-amd64.tar.gz
+tar -zxvf go${GO_VER}.linux-amd64.tar.gz -C /opt
+mv /opt/go /opt/golang
+go install github.com/tc-hib/go-winres@latest
+
+export GOPROXY=https://goproxy.cn,direct CGO_ENABLED=1
+export GOROOT=/opt/golang
+export PATH="${GOROOT}/bin:${PATH}"
+
+
+export PROJECT_DEST="/opt/buildtargets"
+export PROJECT_NAME="cramc_go"
+export THIRD_PARTY_SRC="/opt/softsrcs"
+export YARAX_SRC=${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
+export PROJ_PREFIX_LINUX_MUSL=${PROJECT_DEST}/${PROJECT_NAME}/musl_linux_amd64
+export YARAX_BUILD_LINUX_MUSL=${PROJECT_DEST}/yara-x/musl_linux_amd64
+mkdir -p ${THIRD_PARTY_SRC} ${PROJ_PREFIX_LINUX_MUSL} ${YARAX_BUILD_LINUX_MUSL} ${PROJECT_DEST}
+
+mkdir -p ${THIRD_PARTY_SRC}/yara-x
+cd ${THIRD_PARTY_SRC}
+curl -L -O https://github.com/VirusTotal/yara-x/archive/refs/tags/v${YARAX_VER}.tar.gz
+mv ./v${YARAX_VER}.tar.gz ./yara-x-v${YARAX_VER}.tar.gz
+tar -xzvf yara-x-v${YARAX_VER}.tar.gz -C ${THIRD_PARTY_SRC}/yara-x
+rm -rf ./yara-x-v${YARAX_VER}.tar.gz
+cd ${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
+
+rustup toolchain install 1.85.0
+rustup default 1.85.0-x86_64-unknown-linux-gnu
+rustup target add x86_64-unknown-linux-musl
+cargo install cargo-c
+
+# https://doc.rust-lang.org/rustc/codegen-options/index.html
+# https://doc.rust-lang.org/nightly/rustc/platform-support.html
+export RUSTFLAGS="-C target-feature=+crt-static"
+export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER="musl-gcc"
+# library-type=staticlib must be provided, currently musl target does NOT support cdylib
+cargo cinstall -p yara-x-capi --release --target=x86_64-unknown-linux-musl --library-type=staticlib --prefix=${PROJ_PREFIX_LINUX_MUSL}
+
+#
+# https://github.com/rust-lang/cargo/issues/8607
+# https://github.com/dotnet/runtimelab/issues/1891
+#
+# if you'd like to build cdylib, `-crt-static` must be explicitly specified and libgcc-s1 must be installed
+# and workaround must be applied:
+#   $ sudo ln -s /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 /usr/lib/x86_64-linux-musl/libgcc_s.so.1
+#
+# it works!
+#
+
+# git clone my repo
+ln -s /usr/lib/x86_64-linux-gnu/libunwind.a /usr/lib/x86_64-linux-musl/libunwind.a
+
+# for windows,  C API headers and static/dynamic libs are always included in each release
