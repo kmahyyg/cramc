@@ -8,3 +8,4 @@ Thumbs.db
 devreleaser.bin
 *.log
 *.bin
+.venv/
