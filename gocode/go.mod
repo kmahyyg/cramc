@@ -15,6 +15,7 @@ require (
 )
 
 require (
+	github.com/VirusTotal/yara-x/go v1.2.1 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/ebitengine/purego v0.8.4 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
@@ -24,4 +25,5 @@ require (
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/text v0.25.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 )
