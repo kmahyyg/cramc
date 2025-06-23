@@ -58,5 +58,5 @@ cargo cinstall -p yara-x-capi --release
 
 # git clone my repo
 # ln -s /usr/lib/x86_64-linux-gnu/libunwind.a /usr/lib/x86_64-linux-musl/libunwind.a
-ln -s /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 /usr/local/lib/x86_64-linux-gnu/libgcc_s.so.1
+
 # for windows,  C API headers and static/dynamic libs are always included in each release
