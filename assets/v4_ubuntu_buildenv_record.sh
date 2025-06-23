@@ -40,10 +40,10 @@ cargo install cargo-c
 
 # https://doc.rust-lang.org/rustc/codegen-options/index.html
 # https://doc.rust-lang.org/nightly/rustc/platform-support.html
-export RUSTFLAGS="-C target-feature=+crt-static"
-export CARGO_TARGET_X86_64_UNKNOWN_LINUX_MUSL_LINKER="musl-gcc"
+# export RUSTFLAGS="-C target-feature=+crt-static"
 # library-type=staticlib must be provided, currently musl target does NOT support cdylib
-cargo cinstall -p yara-x-capi --release --target=x86_64-unknown-linux-musl --library-type=staticlib --prefix=${PROJ_PREFIX_LINUX_MUSL}
+
+cargo cinstall -p yara-x-capi --release
 
 #
 # https://github.com/rust-lang/cargo/issues/8607
@@ -57,6 +57,6 @@ cargo cinstall -p yara-x-capi --release --target=x86_64-unknown-linux-musl --lib
 #
 
 # git clone my repo
-ln -s /usr/lib/x86_64-linux-gnu/libunwind.a /usr/lib/x86_64-linux-musl/libunwind.a
-
+# ln -s /usr/lib/x86_64-linux-gnu/libunwind.a /usr/lib/x86_64-linux-musl/libunwind.a
+ln -s /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 /usr/local/lib/x86_64-linux-gnu/libgcc_s.so.1
 # for windows,  C API headers and static/dynamic libs are always included in each release
