@@ -5,7 +5,7 @@ import (
 	"cramc_go/cryptutils"
 	"cramc_go/customerrs"
 	"cramc_go/logging"
-	"cramc_go/yara_scanner"
+	"cramc_go/yarax_scanner"
 	"encoding/hex"
 	"flag"
 	"os"
@@ -43,7 +43,7 @@ func main() {
 		common.Logger.Infoln("Binary rules folder created!")
 		_ = os.Remove("yrules/bin/unified.yar")
 		common.Logger.Infoln("Tried to remove previously compiled rules!")
-		yara_scanner.MergeAndCompile2UnifiedRules("yrules/", "yrules/bin/unified.yar")
+		yarax_scanner.MergeAndCompile2UnifiedRules("yrules/", "yrules/bin/unified.yar")
 		common.Logger.Infoln("Operation finished.")
 		return
 	}

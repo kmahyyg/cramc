@@ -1,4 +1,4 @@
-package yara_scanner
+package yarax_scanner
 
 import (
 	"bytes"
@@ -18,7 +18,7 @@ func MergeAndCompile2UnifiedRules(plainTextRulesDir string, destUnifiedBinRulesP
 		panic(err)
 	}
 	// should NOT be necessary to call, unless memory leakage occurred, explicit GC
-	defer yrCompiler.Destroy()
+	// defer yrCompiler.Destroy()
 	yrCompiler.NewNamespace("ycramc")
 	common.Logger.Infoln("Yara Compiler Created.")
 	// prepare buf
@@ -70,7 +70,7 @@ func MergeAndCompile2UnifiedRules(plainTextRulesDir string, destUnifiedBinRulesP
 	}
 	common.Logger.Infoln("Yara Compiler - Rules Compiled.")
 	// should NOT be necessary to call, explicit gc
-	defer compRules.Destroy()
+	// defer compRules.Destroy()
 	// open dumped out file fd
 	destFd, err := os.Create(destUnifiedBinRulesPath)
 	if err != nil {

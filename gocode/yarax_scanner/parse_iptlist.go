@@ -1,4 +1,4 @@
-package yara_scanner
+package yarax_scanner
 
 import (
 	"bufio"

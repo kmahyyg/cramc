@@ -1,40 +1,36 @@
-package yara_scanner
+package yarax_scanner
 
 import (
 	"archive/zip"
 	"bytes"
 	"cramc_go/common"
-	"github.com/hillu/go-yara/v4"
+	yarax "github.com/VirusTotal/yara-x/go"
 	"io"
 	"os"
 	"path"
 )
 
-func RecycleYaraResources() {
-	_ = yara.Finalize()
-}
+// yarax_scanner.RecycleYaraResources() is deprecated, as yara-x official golang integration manages its allocated RAM automatically
+// if any unexpected leakage happened, it would be better to create another struct holding all member resources and GC manually
 
-func LoadRuleAndCreateYaraScanner(rules []byte) (*yara.Scanner, error) {
+func LoadRuleAndCreateYaraScanner(rules []byte) (*yarax.Scanner, error) {
 	yrrRd := bytes.NewReader(rules)
-	yrr, err := yara.ReadRules(yrrRd)
+	yrRules, err := yarax.ReadFrom(yrrRd)
 	if err != nil {
 		return nil, err
 	}
-	yrs, err := yara.NewScanner(yrr)
-	if err != nil {
-		return nil, err
-	}
+	yrs := yarax.NewScanner(yrRules)
 	return yrs, nil
 }
 
-func ScanFilesWithYara(yrr *yara.Scanner, detList []string, outputChan chan *common.YaraScanResult) error {
+func ScanFilesWithYara(yrr *yarax.Scanner, detList []string, outputChan chan *common.YaraScanResult) error {
 	// had to decompress myself, so maintaining status data in memory is mandatory.
 	// files pending for scan should only exist in `unknown_detection` key
 	defer close(outputChan)
 	for _, filep := range detList {
 		fExt := path.Ext(filep)
 		common.Logger.Infoln("Currently processing: ", filep)
-		var mr yara.MatchRules
+		var mr *yarax.ScanResults
 		if len(fExt) > 4 {
 			// .xlsm,.xlsb
 			vbaP, err := decompressMacroBin(filep)
@@ -43,7 +39,7 @@ func ScanFilesWithYara(yrr *yara.Scanner, detList []string, outputChan chan *com
 				continue
 			}
 			common.Logger.Infoln("Decompressed: ", filep)
-			err = yrr.SetCallback(&mr).ScanMem(vbaP)
+			mr, err = yrr.Scan(vbaP)
 			if err != nil {
 				common.Logger.Errorln(err)
 				continue
@@ -57,15 +53,15 @@ func ScanFilesWithYara(yrr *yara.Scanner, detList []string, outputChan chan *com
 				common.Logger.Errorln(err)
 				continue
 			}
-			err = yrr.SetCallback(&mr).ScanMem(xlFile)
+			mr, err = yrr.Scan(xlFile)
 			if err != nil {
 				common.Logger.Errorln(err)
 				continue
 			}
 		}
-		for _, m := range mr {
+		for _, m := range mr.MatchingRules() {
 			nDet := &common.YaraScanResult{
-				DetectedRule: m.Rule,
+				DetectedRule: m.Identifier(),
 				FilePath:     filep,
 			}
 			outputChan <- nDet

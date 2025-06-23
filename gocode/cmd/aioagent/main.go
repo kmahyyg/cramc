@@ -12,7 +12,7 @@ import (
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/sanitizer_ole"
 	"cramc_go/updchecker"
-	"cramc_go/yara_scanner"
+	"cramc_go/yarax_scanner"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -329,21 +329,19 @@ func main() {
 			logger.Fatalln(err)
 		}
 		// build scanner instance
-		yrScanner, err := yara_scanner.LoadRuleAndCreateYaraScanner(yrRuleBin)
+		yrScanner, err := yarax_scanner.LoadRuleAndCreateYaraScanner(yrRuleBin)
 		if err != nil {
 			logger.Infoln("Unable to create yara scanner with provided rule.")
 			sentry.CaptureException(err)
 			logger.Fatalln(err)
 		}
-		// make sure memory won't leak
-		defer yara_scanner.RecycleYaraResources()
 		common.Logger.Infoln("Yara scanner loaded successfully.")
 		// producer set
 		// go to scan against rules
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = yara_scanner.ScanFilesWithYara(yrScanner, searcherFoundList, scanMatchedFiles)
+			err = yarax_scanner.ScanFilesWithYara(yrScanner, searcherFoundList, scanMatchedFiles)
 			if err != nil {
 				common.Logger.Errorln("Yara scanner returned err when exit: ", err)
 			}
@@ -359,7 +357,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err = yara_scanner.ParseYaraScanResultText(iptFileList, scanMatchedFiles)
+			err = yarax_scanner.ParseYaraScanResultText(iptFileList, scanMatchedFiles)
 			if err != nil {
 				common.Logger.Errorln(err)
 				common.Logger.Fatalln(customerrs.ErrUnknownInternalError)
