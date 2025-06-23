@@ -39,6 +39,7 @@ var (
 	flNoDiskScan      = flag.Bool("noDiskScan", false, "Do not scan files on disk, but supply file list. If platform is not Windows x86_64, yara won't work, you have to set this to true and then run Yara scanner against our rules and save output to ipt_yrscan.lst. Yara-X scanner is not supported yet.")
 	allowedExts       = []string{".xls", ".xlsx", ".xlsm", ".xlsb"}
 	flHelp            = flag.Bool("help", false, "Show help")
+	flNoPriv          = flag.Bool("nopriv", false, "Do not run as privileged user, even you are privileged.")
 )
 
 func init() {
@@ -156,7 +157,7 @@ func main() {
 		triggeredErrFallback := false
 		goesForPrivileged := false
 		// check if booster could be used
-		if isElevated && isNTFS {
+		if isElevated && isNTFS && !*flNoPriv {
 			goesForPrivileged = true
 			// prepare consumer, and check physically exists on disk
 			wg.Add(1)
@@ -198,7 +199,7 @@ func main() {
 		wg.Wait()
 
 		// unsupported platform OR MFTSearcher failed on windows
-		if !common.IsRunningOnWin || triggeredErrFallback {
+		if !common.IsRunningOnWin || triggeredErrFallback || *flNoPriv {
 			// rebuild writer chan by closing and re-creating, to prevent writing on closed chan
 			if !goesForPrivileged {
 				close(searcherOptChan)
