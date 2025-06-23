@@ -9,6 +9,7 @@ import (
 )
 
 func ParseYaraScanResultText(inputfName string, outputChan chan *common.YaraScanResult) error {
+	// this basically matches the default text output format for both yara 4.3.x+ and yara-x 1.x+
 	defer close(outputChan)
 	resLstFd, err := os.OpenFile(inputfName, os.O_RDONLY, 0644)
 	if err != nil {
