@@ -1,21 +1,21 @@
 #!/bin/bash
 
-GO_VER="1.24.4"
-YARAX_VER="1.2.1"
+export GO_VER="1.24.4"
+export YARAX_VER="1.2.1"
 
 apt update -y
-apt install gcc-mingw-w64-x86-64 build-essential nano rustup vim pkg-config libyara-dev git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev musl-tools upx sudo libunwind-dev -y
+apt install gcc-mingw-w64-x86-64 build-essential nano rustup vim pkg-config libyara-dev git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev musl-tools upx sudo libunwind-dev liblzma-dev -y
 
 cd /tmp
 curl -L -O https://go.dev/dl/go${GO_VER}.linux-amd64.tar.gz
 tar -zxvf go${GO_VER}.linux-amd64.tar.gz -C /opt
 mv /opt/go /opt/golang
-go install github.com/tc-hib/go-winres@latest
+
 
 export GOPROXY=https://goproxy.cn,direct CGO_ENABLED=1
 export GOROOT=/opt/golang
 export PATH="${GOROOT}/bin:${PATH}"
-
+go install github.com/tc-hib/go-winres@latest
 
 export PROJECT_DEST="/opt/buildtargets"
 export PROJECT_NAME="cramc_go"
