@@ -2,10 +2,14 @@ name: Binary Build
 
 on:
   push:
+    branches:
+      - 'v3_comapi'
   pull_request:
     types:
       - ready_for_review
       - opened
+    branches:
+      - 'v3_comapi'
 
 permissions:
   contents: write
