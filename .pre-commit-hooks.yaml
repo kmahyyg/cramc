@@ -1,7 +1,0 @@
--   id: reformat-yara-x-rules
-    name: Reformat Yara-X Rule Files
-    language: system
-    fail_fast: true
-    entry: bash -c 'find yrules/ -type f -iname "*.yar" -exec bash -c '\''yr fmt "$(realpath "$0")"'\'' {} \;'
-    pass_filenames: false
-    files: '\.yar$'
