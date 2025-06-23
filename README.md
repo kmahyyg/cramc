@@ -30,8 +30,7 @@ Backup your data before you use it. No warranty at all.
 
 # Compile
 
-- https://github.com/hillu/go-yara/blob/master/README.cross-building.md
-- https://yara.readthedocs.io/en/v4.3.2/gettingstarted.html
+- https://virustotal.github.io/yara-x/docs/api/c/c-/
 
 # License
 
