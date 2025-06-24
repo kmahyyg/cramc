@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	inited            = new(atomic.Bool)
+	hostInited        = new(atomic.Bool)
+	senderInited      = new(atomic.Bool)
 	currentHostname   string
 	currentUsername   string
 	currentIP         string
@@ -49,7 +50,7 @@ func Init(relVersion string) {
 	}
 	currentUsername = curUser.Username
 	currentIP = getCurrentPublicIP()
-	inited.Store(true)
+	hostInited.Store(true)
 }
 
 func getCurrentPublicIP() string {
@@ -67,4 +68,13 @@ func getCurrentPublicIP() string {
 	}
 	finalIp := buf.String()
 	return strings.TrimSpace(finalIp)
+}
+
+func CaptureMessage(level string, message string) {
+	if !senderInited.Load() {
+		return
+	}
+	if currentSender != nil {
+		currentSender.CaptureMessage(level, message)
+	}
 }
