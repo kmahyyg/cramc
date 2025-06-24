@@ -23,7 +23,7 @@ End Sub
 
 func StartSanitizer() error {
 	// enable scripting access to VBAObject Model
-	err := liftVBAScriptingAccess()
+	err := LiftVBAScriptingAccess()
 	if err != nil {
 		return err
 	}
@@ -149,14 +149,16 @@ func StartSanitizer() error {
 	return nil
 }
 
-func liftVBAScriptingAccess() error {
+func LiftVBAScriptingAccess() error {
 	// this fix COM API via OLE returned null on VBProject access
 	regK, _, err := registry.CreateKey(registry.CURRENT_USER, `Software\Microsoft\Office\16.0\Common\Security`, registry.ALL_ACCESS)
 	if err != nil {
+		common.Logger.Errorln("Failed to create registry key to lift VBOM restriction:", err)
 		return err
 	}
 	err = regK.SetDWordValue("AccessVBOM", 1)
 	if err != nil {
+		common.Logger.Errorln("Failed to set registry value to lift VBOM restriction:", err)
 		return err
 	}
 	return nil
