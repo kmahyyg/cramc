@@ -21,9 +21,8 @@ export PROJECT_DEST="/opt/buildtargets"
 export PROJECT_NAME="cramc_go"
 export THIRD_PARTY_SRC="/opt/softsrcs"
 export YARAX_SRC=${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
-export PROJ_PREFIX_LINUX_MUSL=${PROJECT_DEST}/${PROJECT_NAME}/musl_linux_amd64
-export YARAX_BUILD_LINUX_MUSL=${PROJECT_DEST}/yara-x/musl_linux_amd64
-mkdir -p ${THIRD_PARTY_SRC} ${PROJ_PREFIX_LINUX_MUSL} ${YARAX_BUILD_LINUX_MUSL} ${PROJECT_DEST}
+export PROJ_PREFIX_LINUX_GNU=${PROJECT_DEST}/${PROJECT_NAME}/linux_amd64
+mkdir -p ${THIRD_PARTY_SRC} ${PROJ_PREFIX_LINUX_GNU} ${PROJECT_DEST}
 
 mkdir -p ${THIRD_PARTY_SRC}/yara-x
 cd ${THIRD_PARTY_SRC}
@@ -45,10 +44,10 @@ cargo install cargo-c
 
 # static link against glibc
 export RUSTFLAGS="-C target-feature=+crt-static"
-cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --prefix /target/build/proj
+cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --prefix ${PROJ_PREFIX_LINUX_GNU}
 
 # clone my repo
-PKG_CONFIG_PATH="/target/build/proj/lib/x86_64-linux-gnu/pkgconfig" go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static -lm -static-libgcc -static-libstdc++\""  -tags static_link -o ../bin/devreleaser ./cmd/devreleaser
+PKG_CONFIG_PATH="${PROJ_PREFIX_LINUX_GNU}/lib/x86_64-linux-gnu/pkgconfig" go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static -lm -static-libgcc -static-libstdc++\""  -tags static_link -o ../bin/devreleaser ./cmd/devreleaser
 
 # for windows,  C API headers and static/dynamic libs are always included in each release
 
