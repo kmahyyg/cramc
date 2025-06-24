@@ -38,7 +38,7 @@ jobs:
       - name: Introduce Build Envvar
         run: |
           echo "YARAX_SRC=${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}" >> $GITHUB_ENV
-          echo "PROJ_PREFIX_LINUX_GNU=${PROJECT_DEST}/${PROJECT_NAME}/GNU_linux_amd64" >> $GITHUB_ENV
+          echo "PROJ_PREFIX_LINUX_GNU=${PROJECT_DEST}/${PROJECT_NAME}/linux_amd64" >> $GITHUB_ENV
       - name: Install Build Deps
         run: |
           sudo apt update -y
