@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - 'v3_comapi'
+    tags:
+      - 'v0.4.*'
   pull_request:
     types:
       - ready_for_review
