@@ -68,6 +68,7 @@ jobs:
           RUSTFLAGS: "-C target-feature=+crt-static"
           # GNU GLIBC can be forced to be statically linked
         run: |
+          cd ${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
           cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --prefix=${PROJ_PREFIX_LINUX_GNU}
       - name: Build Go Code
         run: |
@@ -145,6 +146,7 @@ jobs:
           RUSTFLAGS: "-C target-feature=+crt-static"
           # GNU GLIBC can be forced to be statically linked
         run: |
+          cd ${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
           cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --target x86_64-pc-windows-gnu --prefix=${PROJ_PREFIX_WIN_AMD64}
       - name: Workaround for Linker (Windows-RS 0.52.0)
         run: |
