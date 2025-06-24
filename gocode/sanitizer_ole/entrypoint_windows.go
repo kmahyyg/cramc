@@ -6,7 +6,6 @@ import (
 	"context"
 	"cramc_go/common"
 	"cramc_go/platform/windoge_utils"
-	"github.com/getsentry/sentry-go"
 	ole "github.com/go-ole/go-ole"
 	"golang.org/x/sys/windows/registry"
 	"strings"
@@ -43,14 +42,14 @@ func StartSanitizer() error {
 	eWorker := &ExcelWorker{}
 	err = eWorker.Init()
 	if err != nil {
-		sentry.CaptureException(err)
+
 		common.Logger.Errorln("Failed to initialize excel worker:", err)
 		return err
 	}
 	defer eWorker.Quit(false)
 	err = eWorker.GetWorkbooks()
 	if err != nil {
-		sentry.CaptureException(err)
+
 		common.Logger.Errorln("Failed to get workbooks:", err)
 		return err
 	}
@@ -90,7 +89,6 @@ func StartSanitizer() error {
 					err := eWorker.OpenWorkbook(fPathNonVariant)
 					if err != nil {
 						common.Logger.Errorln("Failed to open workbook:", err)
-						sentry.CaptureMessage("Failed Open Document: " + fPathNonVariant)
 						doneC <- struct{}{}
 						return
 					}
@@ -111,7 +109,6 @@ func StartSanitizer() error {
 					err = eWorker.SanitizeWorkbook(vObj.DestModule)
 					if err != nil {
 						common.Logger.Errorln("Failed to sanitize workbook:", err)
-						sentry.CaptureMessage("Failed Sanitize Document: " + fPathNonVariant)
 						doneC <- struct{}{}
 						return
 					}
@@ -123,10 +120,9 @@ func StartSanitizer() error {
 					// go ahead
 					common.Logger.Debugln("Sanitize workbook finished, doneC returned correctly.")
 				case <-ctx.Done():
-					// timed out or error, send log to sentry
+					// timed out or error
 					err := ctx.Err()
 					if err != nil {
-						sentry.CaptureException(err)
 						common.Logger.Errorln("Failed to sanitize workbook, timed out:", err)
 					}
 					// for GC, cleanup and rebuild excel instance

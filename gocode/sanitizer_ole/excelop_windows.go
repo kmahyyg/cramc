@@ -4,7 +4,6 @@ import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
 	"cramc_go/platform/windoge_utils"
-	"github.com/getsentry/sentry-go"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	"sync"
@@ -67,7 +66,7 @@ func (w *ExcelWorker) Init() error {
 	var err error
 	w.currentExcelObj, err = createExcelInstance()
 	if err != nil {
-		sentry.CaptureException(err)
+
 		common.Logger.Errorln(err)
 		return err
 	}
