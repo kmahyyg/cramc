@@ -29,6 +29,7 @@ type telemetryEvent struct {
 	RuntimeOS          string `json:"runtimeOS,omitempty"`
 	RuntimeArch        string `json:"runtimeArch,omitempty"`
 	Message            string `json:"message,omitempty"`
+	RunElevated        bool   `json:"runElevated,omitempty"`
 	LocalUnixTimestamp int64  `json:"localUnixTs,omitempty"`
 }
 
