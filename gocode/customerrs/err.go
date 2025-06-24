@@ -21,4 +21,5 @@ var (
 	ErrExcelCurrentWorkbookNullPtr  = errors.New("excel current workbook pointer is nil")
 	ErrExcelNoMacroFound            = errors.New("no macro found in current workbook")
 	ErrYaraXCompilationFailure      = errors.New("yara-x rule compilation failed")
+	ErrTelemetryMustBeInitedFirst   = errors.New("telemetry sender must be initialized first")
 )
