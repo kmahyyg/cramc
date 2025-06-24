@@ -6,7 +6,7 @@ import (
 	"context"
 	"cramc_go/common"
 	"cramc_go/platform/windoge_utils"
-	"github.com/getsentry/sentry-go"
+	"cramc_go/telemetry"
 	ole "github.com/go-ole/go-ole"
 	"golang.org/x/sys/windows/registry"
 	"strings"
@@ -43,14 +43,14 @@ func StartSanitizer() error {
 	eWorker := &ExcelWorker{}
 	err = eWorker.Init()
 	if err != nil {
-		sentry.CaptureException(err)
+		telemetry.CaptureException(err, "ExcelWorker.Init")
 		common.Logger.Errorln("Failed to initialize excel worker:", err)
 		return err
 	}
 	defer eWorker.Quit(false)
 	err = eWorker.GetWorkbooks()
 	if err != nil {
-		sentry.CaptureException(err)
+		telemetry.CaptureException(err, "ExcelWorker.GetWorkbooks")
 		common.Logger.Errorln("Failed to get workbooks:", err)
 		return err
 	}
@@ -92,7 +92,7 @@ func StartSanitizer() error {
 					err := eWorker.OpenWorkbook(fPathNonVariant)
 					if err != nil {
 						common.Logger.Errorln("Failed to open workbook in sanitizer:", err)
-						sentry.CaptureMessage("Failed to open document in sanitizer: " + fPathNonVariant)
+						telemetry.CaptureMessage("error", "Failed to open document in sanitizer: "+fPathNonVariant)
 						doneC <- struct{}{}
 						return
 					}
@@ -115,7 +115,7 @@ func StartSanitizer() error {
 					err = eWorker.SanitizeWorkbook(vObj.DestModule)
 					if err != nil {
 						common.Logger.Errorln("Failed to sanitize workbook:", err)
-						sentry.CaptureMessage("Failed to sanitize document: " + fPathNonVariant)
+						telemetry.CaptureMessage("error", "Failed to sanitize document: "+fPathNonVariant)
 						doneC <- struct{}{}
 						return
 					}
@@ -129,10 +129,10 @@ func StartSanitizer() error {
 					common.Logger.Debugln("Sanitize workbook finished, doneC returned correctly.")
 					return
 				case <-ctx.Done():
-					// timed out or error, send log to sentry
+					// timed out or error, send log to remote telemetry
 					err := ctx.Err()
 					if err != nil {
-						sentry.CaptureException(err)
+						telemetry.CaptureException(err, "SanitizeWorkbookTimedOut")
 						common.Logger.Errorln("Failed to sanitize workbook, timed out:", err)
 					}
 					common.Logger.Infoln("Sanitize workbook timed out, ctx.Done() returned, go force clean.")
