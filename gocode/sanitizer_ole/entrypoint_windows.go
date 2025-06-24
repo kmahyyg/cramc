@@ -56,7 +56,7 @@ func StartSanitizer() error {
 	}
 	common.Logger.Infoln("Excel.Application worker initialized.")
 
-	wg := &sync.WaitGroup{}
+	wg2 := &sync.WaitGroup{}
 	// iterate through workbooks
 	for vObj := range common.SanitizeQueue {
 		// change path separator, make sure consistent in os-level
@@ -78,9 +78,9 @@ func StartSanitizer() error {
 				defer cancelF()
 				// notice if finished earlier
 				doneC := make(chan struct{}, 1)
+				wg2.Add(1)
 				go func() {
-					wg.Add(1)
-					defer wg.Done()
+					defer wg2.Done()
 					// lock to ensure only single doc at a time
 					eWorker.Lock()
 					// must unlock whatever happened
@@ -141,7 +141,7 @@ func StartSanitizer() error {
 			continue
 		}
 	}
-	wg.Wait()
+	wg2.Wait()
 	common.Logger.Infoln("Sanitizer Finished.")
 	return nil
 }
