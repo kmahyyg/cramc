@@ -1,0 +1,104 @@
+name: Binary Build (Yara-X)
+
+on:
+  push:
+    branches:
+      - 'v4_yarax'
+  pull_request:
+    branches:
+      - 'v4_yarax'
+    types:
+      - ready_for_review
+      - opened
+
+permissions:
+  contents: write
+
+env:
+  GO_VER: "1.24.4"
+  YARAX_VER: "1.2.1"
+  PROJECT_DEST: "/opt/buildtargets"
+  PROJECT_NAME: "cramc_go"
+  THIRD_PARTY_SRC: "/opt/softsrcs"
+  CGO_ENABLED: 1
+
+jobs:
+  build-linux-amd64:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Workaround for git describe
+        run: git fetch --prune --unshallow --tags
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.4'
+          cache-dependency-path: 'gocode/go.sum'
+      - name: Introduce Build Envvar
+        run: |
+          echo "YARAX_SRC=${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}" >> $GITHUB_ENV
+          echo "PROJ_PREFIX_LINUX_GNU=${PROJECT_DEST}/${PROJECT_NAME}/GNU_linux_amd64" >> $GITHUB_ENV
+      - name: Install Build Deps
+        run: |
+          sudo apt update -y
+          sudo apt install gcc-mingw-w64-x86-64 build-essential pkg-config git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev upx -y
+          go install github.com/tc-hib/go-winres@latest
+          mkdir -p ${THIRD_PARTY_SRC} ${PROJ_PREFIX_LINUX_GNU} ${PROJECT_DEST}
+      - name: Fetch YaraX src
+        run: |
+          mkdir -p ${THIRD_PARTY_SRC}/yara-x
+          cd ${THIRD_PARTY_SRC}
+          curl -L -O https://github.com/VirusTotal/yara-x/archive/refs/tags/v${YARAX_VER}.tar.gz
+          mv ./v${YARAX_VER}.tar.gz ./yara-x-v${YARAX_VER}.tar.gz
+          tar -xzvf yara-x-v${YARAX_VER}.tar.gz -C ${THIRD_PARTY_SRC}/yara-x
+          rm -rf ./yara-x-v${YARAX_VER}.tar.gz
+          cd ${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: '1.85.0'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
+          default: true
+      - name: Install Cargo-C
+        run: cargo install cargo-c
+      - name: Build Yara-X
+        env:
+          # https://doc.rust-lang.org/rustc/codegen-options/index.html
+          # https://github.com/VirusTotal/yara-x/issues/181
+          # https://github.com/VirusTotal/yara-x/issues/185 Damn SLOW when against glibc.
+          RUSTFLAGS: "-C target-feature=+crt-static"
+          # GNU GLIBC can be forced to be statically linked
+        run: |
+          cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --prefix=${PROJ_PREFIX_LINUX_GNU}
+      - name: Build Go Code
+        run: |
+          cd ${GITHUB_WORKSPACE}/gocode
+          mkdir -p ../bin
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_LINUX_GNU}/lib/x86_64-linux-gnu/pkgconfig go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/devreleaser ./cmd/devreleaser
+          upx -9 ../bin/devreleaser
+      - name: Autoupdate of Yara Database and Cleanup Database
+        run: |
+          cp -ar ${GITHUB_WORKSPACE}/bin/devreleaser ${GITHUB_WORKSPACE}/assets
+          cd ${GITHUB_WORKSPACE}/assets
+          ./devreleaser -compile
+          ./devreleaser -enc=true -in=./yrules/bin/unified.yar -out=../bin/unified.yar.bin
+          ./devreleaser -enc=true -in=./cramc_db.json -out=../bin/cramc_db.bin
+          rm -f ./devreleaser
+          cd ${GITHUB_WORKSPACE}/bin
+          mv ./devreleaser ./devreleaser_linux_amd64
+          upx -9 ./devreleaser_linux_amd64
+          ls -alh ${GITHUB_WORKSPACE}/bin
+      - name: Upload Runtime Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: database_updates
+          retention-days: 30
+          path: ${{ github.workspace }}/bin/*.bin
+      - name: Upload DevReleaser Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: devreleaser
+          retention-days: 30
+          path: ${{ github.workspace }}/bin/devreleaser_linux_amd64
+
+  build-windows-amd64:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: todo
