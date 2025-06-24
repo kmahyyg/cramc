@@ -58,6 +58,15 @@ jobs:
         with:
           toolchain: '1.85.0'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
           default: true
+      - name: Caching with Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ~/.cargo/bin/
+          key: ${{ runner.os }}-cargo-rust
       - name: Install Cargo-C
         run: cargo install cargo-c
       - name: Build Yara-X
@@ -136,6 +145,15 @@ jobs:
           toolchain: '1.85.0'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
           default: true
           target: 'x86_64-pc-windows-gnu'
+      - name: Caching with Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ~/.cargo/bin/
+          key: ${{ runner.os }}-cargo-rust
       - name: Install Cargo-C
         run: cargo install cargo-c
       - name: Build Yara-X
@@ -156,7 +174,7 @@ jobs:
         run: |
           cd ${GITHUB_WORKSPACE}/gocode
           mkdir -p ../bin
-          GOOS=windows GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_WIN_AMD64}/lib/pkgconfig \
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_WIN_AMD64}/lib/pkgconfig CC=x86_64-w64-mingw32-gcc \
             go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" \
             -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/cramc_aio.exe ./cmd/aioagent
       - name: Compress of Windows Executables
