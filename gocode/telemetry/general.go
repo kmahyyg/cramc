@@ -80,3 +80,12 @@ func CaptureMessage(level string, message string) {
 		currentSender.CaptureMessage(level, message)
 	}
 }
+
+func CaptureException(err error, source string) {
+	if !senderInited.Load() {
+		return
+	}
+	if currentSender != nil {
+		currentSender.CaptureException(err, source)
+	}
+}
