@@ -11,6 +11,7 @@ import (
 	"cramc_go/logging"
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/sanitizer_ole"
+	"cramc_go/telemetry"
 	"cramc_go/updchecker"
 	"cramc_go/yarax_scanner"
 	"encoding/hex"
@@ -27,6 +28,9 @@ const (
 	databasePath  = "cramc_db.bin"
 	yaraRulesPath = "unified.yar.bin"
 	iptFileList   = "ipt_yrscan.lst"
+
+	betterStackURL         = "https://s1358347.eu-nbg-2.betterstackdata.com"
+	betterStackBearerToken = "26Y9ahkqDMsQgLN9yTb1JETU"
 )
 
 var (
@@ -53,6 +57,11 @@ func main() {
 	common.Logger = logger
 	defer logfd.Close()
 	defer logfd.Sync()
+
+	// init telemetry
+	telemetry.Init(common.VersionStr)
+	bsSender := telemetry.NewBetterStackSender(betterStackURL, betterStackBearerToken)
+	bsSender.SetDefaultSender()
 
 	// startup behavior
 	logger.Infoln("Welcome to CRAMC!")
