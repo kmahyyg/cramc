@@ -42,7 +42,7 @@ jobs:
       - name: Install Build Deps
         run: |
           sudo apt update -y
-          sudo apt install gcc-mingw-w64-x86-64 build-essential pkg-config git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev upx -y
+          sudo apt install gcc-mingw-w64-x86-64 build-essential pkg-config zip unzip git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev upx libunwind-dev liblzma-dev -y
           go install github.com/tc-hib/go-winres@latest
           mkdir -p ${THIRD_PARTY_SRC} ${PROJ_PREFIX_LINUX_GNU} ${PROJECT_DEST}
       - name: Fetch YaraX src
@@ -73,8 +73,9 @@ jobs:
         run: |
           cd ${GITHUB_WORKSPACE}/gocode
           mkdir -p ../bin
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_LINUX_GNU}/lib/x86_64-linux-gnu/pkgconfig go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/devreleaser ./cmd/devreleaser
-          upx -9 ../bin/devreleaser
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_LINUX_GNU}/lib/x86_64-linux-gnu/pkgconfig \
+            go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" \
+            -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/devreleaser ./cmd/devreleaser
       - name: Autoupdate of Yara Database and Cleanup Database
         run: |
           cp -ar ${GITHUB_WORKSPACE}/bin/devreleaser ${GITHUB_WORKSPACE}/assets
