@@ -180,7 +180,11 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           artifactErrorsFailBuild: true
-          body: We recommend everyone stays on the latest version. To use, download `*.bin` and `cramc_aio.exe` together, then put them under the same new empty folder. Program will try auto-elevate based on your current privileges.
+          body: |
+            We recommend everyone stays on the latest version. 
+            To use, download `*.bin` and `cramc_aio.exe` together, then put them under the same new empty folder and execute under that folder. 
+            Program will try auto-elevate based on your current privileges. 
+            Do not reuse `*.bin` generated from v0.5.x in v0.4.x executables.
           allowUpdates: true
           makeLatest: true
           artifacts: /tmp/relbuild/${{ github.repository_owner }}/*
