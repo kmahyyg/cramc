@@ -357,4 +357,5 @@ func main() {
 	time.Sleep(3 * time.Second)
 	runtime.GC()
 	time.Sleep(5 * time.Second)
+	common.Logger.Infoln("All done. Program exited.")
 }
