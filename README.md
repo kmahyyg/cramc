@@ -46,4 +46,4 @@ Thanks to:
 
 # Privacy Notice
 
-To help us serve you better, we are collecting program crash and error context information using service provided by Sentry.io , their privacy policy could be found [here](https://sentry.io/privacy/) . Our team won't sell your information, collected information is only used for necessary troubleshooting purpose.
+To help us serve you better, we are collecting program crash and error context information using service provided by BetterStack.com , their privacy policy could be found [here](https://betterstack.com/privacy) . Our team won't sell your information, collected information is only used for necessary troubleshooting purpose.
