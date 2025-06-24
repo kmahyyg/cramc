@@ -32,6 +32,7 @@ func (bs *BetterStackSender) CaptureMessage(level string, message string) {
 		IpAddress:          currentIP,
 		RuntimeOS:          runtime.GOOS,
 		RuntimeArch:        runtime.GOARCH,
+		RunElevated:        common.IsElevated,
 		Message:            message,
 		LocalUnixTimestamp: time.Now().UnixMilli(),
 	}

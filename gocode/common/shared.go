@@ -12,6 +12,7 @@ var (
 	CleanupDB *CRAMCCleanupDB
 
 	IsRunningOnWin = runtime.GOOS == "windows"
+	IsElevated     bool
 
 	VersionStr    string
 	SanitizeQueue = make(chan *IPC_SingleDocToBeSanitized, 100)

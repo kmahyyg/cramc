@@ -126,6 +126,7 @@ func main() {
 	common.Logger.Infoln("Called update-checker.")
 	// check privilege
 	isElevated, _ := fileutils.CheckProcessElevated()
+	common.IsElevated = isElevated
 	isNTFS, _ := fileutils.IsDriveFileSystemNTFS(*flActionPath)
 	common.Logger.Infoln("Privilege and platform check passed.")
 	// if noDiskScan set, directly go for yara scanner
