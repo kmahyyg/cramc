@@ -35,6 +35,7 @@ type telemetryEvent struct {
 
 type TelemetrySender interface {
 	CaptureMessage(level string, message string)
+	CaptureException(err error, source string)
 	SetDefaultSender()
 }
 
