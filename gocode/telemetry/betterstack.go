@@ -16,7 +16,7 @@ type BetterStackSender struct {
 }
 
 func NewBetterStackSender(serverUrl string, authToken string) *BetterStackSender {
-	if !inited.Load() {
+	if !hostInited.Load() {
 		common.Logger.Errorln(customerrs.ErrTelemetryMustBeInitedFirst)
 		return nil
 	}
@@ -61,4 +61,5 @@ func (bs *BetterStackSender) CaptureMessage(level string, message string) {
 
 func (bs *BetterStackSender) SetDefaultSender() {
 	currentSender = bs
+	senderInited.Store(true)
 }
