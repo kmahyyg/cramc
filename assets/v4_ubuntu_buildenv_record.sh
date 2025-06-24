@@ -43,20 +43,12 @@ cargo install cargo-c
 # export RUSTFLAGS="-C target-feature=+crt-static"
 # library-type=staticlib must be provided, currently musl target does NOT support cdylib
 
-cargo cinstall -p yara-x-capi --release
+# static link against glibc
+export RUSTFLAGS="-C target-feature=+crt-static"
+cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --prefix /target/build/proj
 
-#
-# https://github.com/rust-lang/cargo/issues/8607
-# https://github.com/dotnet/runtimelab/issues/1891
-#
-# if you'd like to build cdylib, `-crt-static` must be explicitly specified and libgcc-s1 must be installed
-# and workaround must be applied:
-#   $ sudo ln -s /usr/lib/x86_64-linux-gnu/libgcc_s.so.1 /usr/lib/x86_64-linux-musl/libgcc_s.so.1
-#
-# it works!
-#
-
-# git clone my repo
-# ln -s /usr/lib/x86_64-linux-gnu/libunwind.a /usr/lib/x86_64-linux-musl/libunwind.a
+# clone my repo
+PKG_CONFIG_PATH="/target/build/proj/lib/x86_64-linux-gnu/pkgconfig" go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static -lm -static-libgcc -static-libstdc++\""  -tags static_link -o ../bin/devreleaser ./cmd/devreleaser
 
 # for windows,  C API headers and static/dynamic libs are always included in each release
+
