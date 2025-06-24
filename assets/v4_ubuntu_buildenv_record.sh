@@ -11,7 +11,6 @@ curl -L -O https://go.dev/dl/go${GO_VER}.linux-amd64.tar.gz
 tar -zxvf go${GO_VER}.linux-amd64.tar.gz -C /opt
 mv /opt/go /opt/golang
 
-
 export GOPROXY=https://goproxy.cn,direct CGO_ENABLED=1
 export GOROOT=/opt/golang
 export PATH="${GOROOT}/bin:${PATH}"
@@ -51,7 +50,6 @@ cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --
 # or add dependencies: https://kennykerr.ca/rust-getting-started/understanding-windows-targets.html
 # cargo add windows_x86_64_msvc@0.52.0 -p yara-x --target x86_64-pc-windows-gnu
 # cargo add windows_x86_64_msvc@0.52.0 -p yara-x-capi --target x86_64-pc-windows-gnu
-cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --target x86_64-pc-windows-gnu --prefix ${PROJ_PREFIX_WIN_AMD64}
 
 # clone my repo
 # go build
@@ -66,7 +64,13 @@ GOOS=linux GOARCH=amd64 PKG_CONFIG_PATH="${PROJ_PREFIX_LINUX_GNU}/lib/x86_64-lin
 #mkdir -p ${PROJ_PREFIX_WIN_AMD64}/yara-x
 #unzip -d ${PROJ_PREFIX_WIN_AMD64}/yara-x yara-x-capi-v1.2.1-x86_64-pc-windows-msvc.zip
 
+# build c api for windows
+cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --target x86_64-pc-windows-gnu --prefix ${PROJ_PREFIX_WIN_AMD64}
 # clone my repo
+# hack for linker
+cd "${PROJ_PREFIX_WIN_AMD64}/lib"
+curl -L -O https://github.com/microsoft/windows-rs/raw/b62b802bae534fdaed3fa25b6838dc3001b6d084/crates/targets/x86_64_gnu/lib/libwindows.0.52.0.a
+
 # go build
 GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc PKG_CONFIG_PATH="${PROJ_PREFIX_WIN_AMD64}/lib/pkgconfig" \
   go build -trimpath \
