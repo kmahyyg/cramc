@@ -23,6 +23,10 @@ func NewBetterStackSender(serverUrl string, authToken string) *BetterStackSender
 	return &BetterStackSender{sendURL: serverUrl, bearerToken: authToken}
 }
 
+func (bs *BetterStackSender) CaptureException(err error, source string) {
+	bs.CaptureMessage("error", "from: "+source+", "+err.Error())
+}
+
 func (bs *BetterStackSender) CaptureMessage(level string, message string) {
 	tsEv := &telemetryEvent{
 		LogLevel:           level,
