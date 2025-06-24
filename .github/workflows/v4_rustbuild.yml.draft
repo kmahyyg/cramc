@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - 'v4_yarax'
+    tags:
+      - 'v0.5.*'
   pull_request:
     branches:
       - 'v4_yarax'
