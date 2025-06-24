@@ -102,6 +102,100 @@ jobs:
           path: ${{ github.workspace }}/bin/devreleaser_linux_amd64
 
   build-windows-amd64:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
-      - name: todo
+      - uses: actions/checkout@v4
+      - name: Workaround for git describe
+        run: git fetch --prune --unshallow --tags
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.4'
+          cache-dependency-path: 'gocode/go.sum'
+      - name: Introduce Build Envvar
+        run: |
+          echo "YARAX_SRC=${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}" >> $GITHUB_ENV
+          echo "PROJ_PREFIX_WIN_AMD64=${PROJECT_DEST}/${PROJECT_NAME}/win_amd64" >> $GITHUB_ENV
+      - name: Install Build Deps
+        run: |
+          sudo apt update -y
+          sudo apt install gcc-mingw-w64-x86-64 build-essential pkg-config zip unzip git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev upx libunwind-dev liblzma-dev -y
+          go install github.com/tc-hib/go-winres@latest
+          mkdir -p ${THIRD_PARTY_SRC} ${PROJ_PREFIX_WIN_AMD64} ${PROJECT_DEST}
+      - name: Fetch YaraX src
+        run: |
+          mkdir -p ${THIRD_PARTY_SRC}/yara-x
+          cd ${THIRD_PARTY_SRC}
+          curl -L -O https://github.com/VirusTotal/yara-x/archive/refs/tags/v${YARAX_VER}.tar.gz
+          mv ./v${YARAX_VER}.tar.gz ./yara-x-v${YARAX_VER}.tar.gz
+          tar -xzvf yara-x-v${YARAX_VER}.tar.gz -C ${THIRD_PARTY_SRC}/yara-x
+          rm -rf ./yara-x-v${YARAX_VER}.tar.gz
+          cd ${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: '1.85.0'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
+          default: true
+          target: 'x86_64-pc-windows-gnu'
+      - name: Install Cargo-C
+        run: cargo install cargo-c
+      - name: Build Yara-X
+        env:
+          # https://doc.rust-lang.org/rustc/codegen-options/index.html
+          # https://github.com/VirusTotal/yara-x/issues/181
+          # https://github.com/VirusTotal/yara-x/issues/185 Damn SLOW when against glibc.
+          RUSTFLAGS: "-C target-feature=+crt-static"
+          # GNU GLIBC can be forced to be statically linked
+        run: |
+          cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --target x86_64-pc-windows-gnu --prefix=${PROJ_PREFIX_WIN_AMD64}
+      - name: Workaround for Linker (Windows-RS 0.52.0)
+        run: |
+          cd "${PROJ_PREFIX_WIN_AMD64}/lib"
+          curl -L -O https://github.com/microsoft/windows-rs/raw/b62b802bae534fdaed3fa25b6838dc3001b6d084/crates/targets/x86_64_gnu/lib/libwindows.0.52.0.a
+      - name: Build Go Code
+        run: |
+          cd ${GITHUB_WORKSPACE}/gocode
+          mkdir -p ../bin
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_WIN_AMD64}/lib/pkgconfig \
+            go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" \
+            -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/cramc_aio.exe ./cmd/aioagent
+      - name: Compress of Windows Executables
+        run: |
+          cd ${GITHUB_WORKSPACE}/bin
+          upx -9 ./cramc_aio.exe
+          ls -alh ${GITHUB_WORKSPACE}/bin
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cramc_win_aioagent
+          retention-days: 30
+          path: ${{ github.workspace }}/bin/cramc_aio.exe
+
+  release-to-public:
+    needs:
+      - build-linux-amd64
+      - build-windows-amd64
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Prepare for release
+        run: |
+          mkdir -p /tmp/relbuild/${{ github.repository_owner }}
+      - name: Download artifacts previously generated
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/relbuild/${{ github.repository_owner }}
+          merge-multiple: true
+      - name: List all artifacts downloaded
+        run: |
+          ls -alh /tmp/relbuild/**/*
+      - name: Craft release
+        uses: ncipollo/release-action@v1
+        with:
+          artifactErrorsFailBuild: true
+          body: |
+            We recommend everyone stays on the latest version. 
+            To use, download `*.bin` and `cramc_aio.exe` together, then put them under the same new empty folder and execute under that folder. 
+            Program will try auto-elevate based on your current privileges. 
+            This version uses totally different scanner engine, please do not reuse rules from v0.4.x.
+          allowUpdates: true
+          prerelease: true
+          artifacts: /tmp/relbuild/${{ github.repository_owner }}/*

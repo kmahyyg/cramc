@@ -146,7 +146,7 @@ jobs:
           cd ${GITHUB_WORKSPACE}/gocode
           mkdir -p ../bin
           GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc PKG_CONFIG_PATH=${PROJ_PREFIX_WIN64}/lib/pkgconfig go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static\"" -tags yara_static -o ../bin/cramc_aio.exe ./cmd/aioagent
-      - name: Autoupdate of Yara Database and Cleanup Database
+      - name: Compress of Windows Executables
         run: |
           cd ${GITHUB_WORKSPACE}/bin
           upx ./cramc_aio.exe
