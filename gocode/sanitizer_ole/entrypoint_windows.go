@@ -58,6 +58,7 @@ func StartSanitizer() error {
 	wg2 := &sync.WaitGroup{}
 	// iterate through workbooks
 	for vObj := range common.SanitizeQueue {
+		common.Logger.Debugln("Sanitizer Queue Received a New File.")
 		// change path separator, make sure consistent in os-level
 		fPathNonVariant := strings.ReplaceAll(vObj.Path, "/", "\\")
 		// backup file
@@ -65,7 +66,7 @@ func StartSanitizer() error {
 		if err != nil {
 			common.Logger.Errorln("Backup file failed:", err.Error())
 		}
-		common.Logger.Infoln("Original file backup succeeded.")
+		common.Logger.Infoln("Original file backup succeeded: ", vObj.Path)
 		// sleep 1 second to leave space for saving
 		time.Sleep(1 * time.Second)
 		switch vObj.Action {
@@ -78,6 +79,7 @@ func StartSanitizer() error {
 				// notice if finished earlier
 				doneC := make(chan struct{}, 1)
 				wg2.Add(1)
+				common.Logger.Debugln("Sanitize workbook started, wg2 +=1 ")
 				go func() {
 					defer wg2.Done()
 					// lock to ensure only single doc at a time
@@ -85,33 +87,36 @@ func StartSanitizer() error {
 					// must unlock whatever happened
 					defer eWorker.Unlock()
 					// open workbook
-					common.Logger.Infoln("Opening workbook: ", fPathNonVariant)
+					common.Logger.Infoln("Opening workbook in sanitizer: ", fPathNonVariant)
 					err := eWorker.OpenWorkbook(fPathNonVariant)
 					if err != nil {
-						common.Logger.Errorln("Failed to open workbook:", err)
+						common.Logger.Errorln("Failed to open workbook in sanitizer:", err)
 						doneC <- struct{}{}
 						return
 					}
+					common.Logger.Debugln("Workbook opened: ", fPathNonVariant)
 					defer func() {
 						err = eWorker.SaveAndCloseWorkbook()
 						if err != nil {
-							common.Logger.Errorln("Failed to save and close workbook:", err)
+							common.Logger.Errorln("Failed to save and close workbook in defer Sanitizer:", err)
 						}
 						time.Sleep(1 * time.Second)
 						// rename file and save to clean state cache of cloud-storage provider
 						err = renameFileAndSave(fPathNonVariant)
 						if err != nil {
-							common.Logger.Errorln("Rename file failed:", err.Error())
+							common.Logger.Errorln("Rename file failed in sanitizer:", err.Error())
 						}
 						common.Logger.Infoln("Workbook Sanitized: ", fPathNonVariant)
 					}()
 					// sanitize
+					common.Logger.Debugln("Sanitize Workbook VBA Module now.")
 					err = eWorker.SanitizeWorkbook(vObj.DestModule)
 					if err != nil {
 						common.Logger.Errorln("Failed to sanitize workbook:", err)
 						doneC <- struct{}{}
 						return
 					}
+					common.Logger.Debugln("Sanitize Workbook VBA Module finished, doneC returned.")
 					doneC <- struct{}{}
 				}()
 				select {
@@ -119,12 +124,14 @@ func StartSanitizer() error {
 					// properly remediated
 					// go ahead
 					common.Logger.Debugln("Sanitize workbook finished, doneC returned correctly.")
+					return
 				case <-ctx.Done():
 					// timed out or error
 					err := ctx.Err()
 					if err != nil {
 						common.Logger.Errorln("Failed to sanitize workbook, timed out:", err)
 					}
+					common.Logger.Infoln("Sanitize workbook timed out, ctx.Done() returned, go to force clean.")
 					// for GC, cleanup and rebuild excel instance
 					eWorker.Quit(true)
 					// safely ignore errors as it's already built correctly before
