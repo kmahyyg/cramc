@@ -155,16 +155,22 @@ func StartSanitizer() error {
 
 func LiftVBAScriptingAccess() error {
 	// this fix COM API via OLE returned null on VBProject access
-	regK, _, err := registry.CreateKey(registry.CURRENT_USER, `Software\Microsoft\Office\16.0\Common\Security`, registry.ALL_ACCESS)
+	regK, openedExists, err := registry.CreateKey(registry.CURRENT_USER, `Software\Microsoft\Office\16.0\Common\Security`, registry.ALL_ACCESS)
 	if err != nil {
 		common.Logger.Errorln("Failed to create registry key to lift VBOM restriction:", err)
 		return err
 	}
-	err = regK.SetDWordValue("AccessVBOM", 1)
+	if openedExists {
+		common.Logger.Debugln("Registry key already exists, opened existing one.")
+	}
+	common.Logger.Debugln("Registry key Opened.")
+	defer regK.Close()
+	err = regK.SetDWordValue("AccessVBOM", (uint32)(1))
 	if err != nil {
 		common.Logger.Errorln("Failed to set registry value to lift VBOM restriction:", err)
 		return err
 	}
+	common.Logger.Infoln("Registry value set to 1 for AccessVBOM.")
 	return nil
 }
 
