@@ -18,11 +18,6 @@ func createExcelInstance() (*ole.IDispatch, error) {
 	return excelObj, err
 }
 
-func exitExcelInstance(excelObj *ole.IDispatch) {
-	excelObj.CallMethod("Quit")
-	excelObj.Release()
-}
-
 func excelInstanceStartupConfig(excelObj *ole.IDispatch) {
 	// security and ux optimize
 	_, err := oleutil.PutProperty(excelObj, "Visible", false)
