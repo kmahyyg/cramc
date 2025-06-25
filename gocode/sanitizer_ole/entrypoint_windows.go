@@ -6,6 +6,7 @@ import (
 	"context"
 	"cramc_go/common"
 	"cramc_go/platform/windoge_utils"
+	"cramc_go/telemetry"
 	ole "github.com/go-ole/go-ole"
 	"golang.org/x/sys/windows/registry"
 	"strings"
@@ -42,14 +43,12 @@ func StartSanitizer() error {
 	eWorker := &ExcelWorker{}
 	err = eWorker.Init()
 	if err != nil {
-
 		common.Logger.Errorln("Failed to initialize excel worker:", err)
 		return err
 	}
 	defer eWorker.Quit(false)
 	err = eWorker.GetWorkbooks()
 	if err != nil {
-
 		common.Logger.Errorln("Failed to get workbooks:", err)
 		return err
 	}
@@ -79,7 +78,7 @@ func StartSanitizer() error {
 				// notice if finished earlier
 				doneC := make(chan struct{}, 1)
 				wg2.Add(1)
-				common.Logger.Debugln("Sanitize workbook started, wg2 +=1 ")
+				common.Logger.Debugln("Sanitize workbook started, wg2 += 1")
 				go func() {
 					defer wg2.Done()
 					// lock to ensure only single doc at a time
@@ -129,6 +128,7 @@ func StartSanitizer() error {
 					// timed out or error
 					err := ctx.Err()
 					if err != nil {
+						telemetry.CaptureException(err, "SanitizeWorkbookTimedOut")
 						common.Logger.Errorln("Failed to sanitize workbook, timed out:", err)
 					}
 					common.Logger.Infoln("Sanitize workbook timed out, ctx.Done() returned, go to force clean.")

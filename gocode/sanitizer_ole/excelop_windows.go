@@ -4,6 +4,7 @@ import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
 	"cramc_go/platform/windoge_utils"
+	"cramc_go/telemetry"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	"sync"
@@ -55,13 +56,14 @@ type ExcelWorker struct {
 	workbooksHandle *ole.IDispatch
 	currentWorkbook *ole.IDispatch
 	mu              *sync.Mutex
+	curFilePath     string
 }
 
 func (w *ExcelWorker) Init() error {
 	var err error
 	w.currentExcelObj, err = createExcelInstance()
 	if err != nil {
-
+		telemetry.CaptureException(err, "Excel.Application.Create")
 		common.Logger.Errorln(err)
 		return err
 	}
@@ -101,9 +103,11 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 	}
 	currentWorkbook, err := oleutil.CallMethod(w.workbooksHandle, "Open", fPath)
 	if err != nil {
+		telemetry.CaptureException(err, "Excel.Application.Workbooks.Open")
 		return err
 	}
 	w.currentWorkbook = currentWorkbook.ToIDispatch()
+	w.curFilePath = fPath
 	common.Logger.Infoln("Workbook currently opened: ", fPath)
 	return nil
 }
@@ -129,7 +133,12 @@ func (w *ExcelWorker) SanitizeWorkbook(destModuleName string) error {
 	wbHasVBA := oleutil.MustGetProperty(w.currentWorkbook, "HasVBProject").Value().(bool)
 	if wbHasVBA {
 		common.Logger.Infoln("Workbook has VBProject.")
-		wbVbaProj := oleutil.MustGetProperty(w.currentWorkbook, "VBProject").ToIDispatch()
+		wbVbaProjRes, err := oleutil.GetProperty(w.currentWorkbook, "VBProject")
+		if err != nil {
+			telemetry.CaptureException(err, "Excel.Workbook.VBProject.VBOMAccess")
+			return err
+		}
+		wbVbaProj := wbVbaProjRes.ToIDispatch()
 		vbCompsInProj := oleutil.MustGetProperty(wbVbaProj, "VBComponents").ToIDispatch()
 		vbCompsCount := (int)(oleutil.MustGetProperty(vbCompsInProj, "Count").Value().(int32))
 		common.Logger.Debugln("VBComponents Count: ", vbCompsCount)
@@ -145,6 +154,7 @@ func (w *ExcelWorker) SanitizeWorkbook(destModuleName string) error {
 				// remove all lines
 				_, err := codeMod.CallMethod("DeleteLines", 1, codeModLineCnt)
 				if err != nil {
+					telemetry.CaptureException(err, "Excel.WorkbookVBACodeModule.DeleteLines_"+w.curFilePath)
 					common.Logger.Errorln(err)
 					continue
 				}

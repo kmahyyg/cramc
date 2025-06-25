@@ -92,6 +92,7 @@ func main() {
 	execDir := filepath.Dir(execPath)
 	databaseAbsPath := filepath.Join(execDir, databasePath)
 	common.Logger.Debugln("DEBUG: Database path: ", databaseAbsPath)
+	// read database
 	databaseEncBin, err := os.ReadFile(databaseAbsPath)
 	if err != nil {
 		logger.Infoln("Could not read database from file.")
@@ -100,6 +101,7 @@ func main() {
 	originalCleanupDB, err := cryptutils.XChacha20Decrypt(hPwdBytes, databaseEncBin)
 	if err != nil {
 		logger.Infoln("Could not decrypt database.")
+		telemetry.CaptureException(err, "MainDecryptCleanupDB")
 		logger.Fatalln(err)
 	}
 	var cleanupDBObj = &common.CRAMCCleanupDB{}
@@ -113,6 +115,8 @@ func main() {
 	// dry run is always handled by callee to make sure behavior consistent.
 	common.DryRunOnly = *flDryRun
 	common.EnableHardening = *flEnableHardening
+	// record start
+	telemetry.CaptureMessage("info", "Program successfully started.")
 	// kill M365 office processes on windows
 	_, _ = windoge_utils.KillAllOfficeProcesses()
 	common.Logger.Infoln("Triggered M365 Office processes killer.")
@@ -188,7 +192,7 @@ func main() {
 				}
 				if err != nil {
 					common.Logger.Errorln("Unknown error happened: ", err)
-
+					telemetry.CaptureException(err, "MFTSearcher")
 					common.Logger.Fatalln(customerrs.ErrUnknownInternalError)
 				}
 				common.Logger.Infof("MFTSearcher found %d applicable files.", countedFile)
@@ -226,7 +230,7 @@ func main() {
 				// should not encounter some unexpected error
 				if err != nil {
 					common.Logger.Errorln("Unwanted error in GeneralSearcher: ", err)
-
+					telemetry.CaptureException(err, "GenrealWalkthroughSearcher")
 					common.Logger.Fatalln(customerrs.ErrUnknownInternalError)
 				}
 				common.Logger.Infof("Found %d File using GeneralSearcher, proceed to next step.", counted)
@@ -244,7 +248,7 @@ func main() {
 		if errors.Is(err, customerrs.ErrUnsupportedPlatform) {
 			common.Logger.Infoln("Due to the nature of OLE, we can only support this on Windows. Aborting for sanitization.")
 		} else if err != nil {
-
+			telemetry.CaptureException(err, "MainStartSanitizer")
 			common.Logger.Errorln("Unknown Internal Error Happened in Sanitizer: ", err.Error())
 		}
 		common.Logger.Infoln("Sanitizer finished.")
@@ -334,14 +338,14 @@ func main() {
 		yrRuleBin, err := cryptutils.XChacha20Decrypt(hPwdBytes, yrRulesEncBin)
 		if err != nil {
 			logger.Infoln("Could not decrypt yara compiled rules file.")
-
+			telemetry.CaptureException(err, "MainDecryptYaraRules")
 			logger.Fatalln(err)
 		}
 		// build scanner instance
 		yrScanner, err := yarax_scanner.LoadRuleAndCreateYaraScanner(yrRuleBin)
 		if err != nil {
 			logger.Infoln("Unable to create yara scanner with provided rule.")
-
+			telemetry.CaptureException(err, "MainLoadRuleAndCreateYaraScanner")
 			logger.Fatalln(err)
 		}
 		common.Logger.Infoln("Yara scanner loaded successfully.")
