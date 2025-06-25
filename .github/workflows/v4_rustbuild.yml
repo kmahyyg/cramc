@@ -168,6 +168,10 @@ jobs:
         run: |
           cd "${PROJ_PREFIX_WIN_AMD64}/lib"
           curl -L -O https://github.com/microsoft/windows-rs/raw/b62b802bae534fdaed3fa25b6838dc3001b6d084/crates/targets/x86_64_gnu/lib/libwindows.0.52.0.a
+      - name: Golang Exe WinRES
+        run: |
+          cd ${GITHUB_WORKSPACE}/gocode/cmd/aioagent
+          GOOS=windows GOARCH=amd64 go-winres make --product-version=git-tag
       - name: Build Go Code
         run: |
           cd ${GITHUB_WORKSPACE}/gocode
