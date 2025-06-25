@@ -19,6 +19,7 @@ import (
 	"errors"
 	"flag"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -82,7 +83,16 @@ func main() {
 		logger.Infoln("Cannot prepare password.")
 		logger.Fatalln(err)
 	}
-	databaseEncBin, err := os.ReadFile(databasePath)
+	// fix #9
+	execPath, err := os.Executable()
+	if err != nil {
+		logger.Infoln("Cannot get executable path.")
+		logger.Fatalln(err)
+	}
+	execDir := filepath.Dir(execPath)
+	databaseAbsPath := filepath.Join(execDir, databasePath)
+	common.Logger.Debugln("DEBUG: Database path: ", databaseAbsPath)
+	databaseEncBin, err := os.ReadFile(databaseAbsPath)
 	if err != nil {
 		logger.Infoln("Could not read database from file.")
 		logger.Fatalln(err)
@@ -312,7 +322,10 @@ func main() {
 	// read yara rules and decrypt
 	if !*flNoDiskScan {
 		// if no diskscan, supplied output already included necessary detection information, directly go for sanitizer and hardener
-		yrRulesEncBin, err := os.ReadFile(yaraRulesPath)
+		// fix #9
+		yaraRulesAbsPath := filepath.Join(execDir, yaraRulesPath)
+		common.Logger.Debugln("DEBUG: Yara Rules path: ", yaraRulesAbsPath)
+		yrRulesEncBin, err := os.ReadFile(yaraRulesAbsPath)
 		if err != nil {
 			logger.Infoln("Could not read yara compiled rules file.")
 			logger.Fatalln(err)
