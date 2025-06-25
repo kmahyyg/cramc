@@ -2,6 +2,7 @@ package hardener
 
 import (
 	"cramc_go/common"
+	"cramc_go/customerrs"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -84,6 +85,9 @@ func applyTextTemplate(tmpl string) (string, error) {
 	cUser, err := user.Current()
 	if err != nil {
 		return "", err
+	}
+	if cUser.Uid == "S-1-5-18" {
+		return "", customerrs.ErrRunsOnSystemMachineAccount
 	}
 	tRes := strings.ReplaceAll(tmpl, "${HOME}", cUser.HomeDir)
 	return tRes, nil
