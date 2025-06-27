@@ -9,7 +9,7 @@ import (
 	"cramc_go/telemetry"
 	ole "github.com/go-ole/go-ole"
 	"golang.org/x/sys/windows/registry"
-	"strings"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -59,7 +59,11 @@ func StartSanitizer() error {
 	for vObj := range common.SanitizeQueue {
 		common.Logger.Debugln("Sanitizer Queue Received a New File.")
 		// change path separator, make sure consistent in os-level
-		fPathNonVariant := strings.ReplaceAll(vObj.Path, "/", "\\")
+		fPathNonVariant, err2 := filepath.Abs(vObj.Path)
+		if err2 != nil {
+			common.Logger.Errorln("Failed to get absolute path:", err2)
+			continue
+		}
 		// backup file
 		err = gzBakFile(fPathNonVariant)
 		if err != nil {
