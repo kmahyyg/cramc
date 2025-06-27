@@ -177,3 +177,19 @@ const (
 	MsoAutomationSecurityByUI
 	MsoAutomationSecurityForceDisable
 )
+
+type XlCalculation int
+
+const (
+	XlCalculationManual        = -4135
+	XlCalculationAutomatic     = -4105
+	XlCalculationSemiautomatic = 2
+)
+
+type XlUpdateLinks int
+
+const (
+	XlUpdateLinksUserSetting = 1 + iota
+	XlUpdateLinksNever
+	XlUpdateLinksAlways
+)

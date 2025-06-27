@@ -45,9 +45,10 @@ func excelInstanceStartupConfig(excelObj *ole.IDispatch) {
 	}
 	// avoid any macro to execute
 	_ = oleutil.MustPutProperty(excelObj, "AutomationSecurity", MsoAutomationSecurityForceDisable)
-	if err != nil {
-		common.Logger.Errorln(err)
-	}
+	// in rare cases, e.g. a ~30M xlsm file may fail to open in 1 min, thus timed out.
+	// try to eliminate such cases
+	_ = oleutil.MustPutProperty(excelObj, "CalculateBeforeSave", false)
+	_ = oleutil.MustPutProperty(excelObj, "Calculation", XlCalculationManual)
 	return
 }
 
@@ -109,6 +110,11 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 	w.currentWorkbook = currentWorkbook.ToIDispatch()
 	w.curFilePath = fPath
 	common.Logger.Infoln("Workbook currently opened: ", fPath)
+	// try to eliminate slow workbook
+	// disable update embedded ole links
+	_ = oleutil.MustPutProperty(w.currentWorkbook, "UpdateLinks", XlUpdateLinksNever)
+	// disable update remote ref in workbook
+	_ = oleutil.MustPutProperty(w.currentWorkbook, "UpdateRemoteReferences", false)
 	return nil
 }
 
