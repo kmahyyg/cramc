@@ -147,9 +147,10 @@ func StartSanitizer() error {
 					}
 					common.Logger.Infoln("Sanitize workbook timed out, ctx.Done() returned, go to force clean.")
 					// for GC, cleanup and rebuild excel instance
+					originalDbgStatus := eWorker.inDbg
 					eWorker.Quit(true)
 					// safely ignore errors as it's already built correctly before
-					_ = eWorker.Init()
+					_ = eWorker.Init(originalDbgStatus)
 					_ = eWorker.GetWorkbooks()
 				}
 			}(eWorker)
