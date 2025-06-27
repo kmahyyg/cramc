@@ -51,6 +51,8 @@ func excelInstanceStartupConfig(excelObj *ole.IDispatch) {
 	_ = oleutil.MustPutProperty(excelObj, "Calculation", XlCalculationManual)
 	// possibly if not working:
 	_ = oleutil.MustPutProperty(excelObj, "ForceFullCalculation", false)
+	// also eliminate odbc query timeout
+	_ = oleutil.MustPutProperty(excelObj, "ODBCTimeout", 10)
 	return
 }
 
