@@ -56,7 +56,7 @@ jobs:
           cd ${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: '1.85.0'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
+          toolchain: 'stable'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
           default: true
       - name: Caching with Cargo
         uses: actions/cache@v4
@@ -141,7 +141,7 @@ jobs:
           cd ${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: '1.85.0'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
+          toolchain: 'stable'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
           default: true
           target: 'x86_64-pc-windows-gnu'
       - name: Caching with Cargo
