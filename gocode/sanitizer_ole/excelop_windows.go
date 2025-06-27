@@ -31,6 +31,7 @@ func excelInstanceStartupConfig(excelObj *ole.IDispatch) {
 	// ignore remote dde update requests
 	_, err = oleutil.PutProperty(excelObj, "IgnoreRemoteRequests", true)
 	if err != nil {
+		telemetry.CaptureException(err, "Excel.Application.SetIgnoreRemoteRequests")
 		common.Logger.Errorln(err)
 	}
 	// prevent async OLAP data queries from executing
@@ -47,12 +48,28 @@ func excelInstanceStartupConfig(excelObj *ole.IDispatch) {
 	_ = oleutil.MustPutProperty(excelObj, "AutomationSecurity", MsoAutomationSecurityForceDisable)
 	// in rare cases, e.g. a ~30M xlsm file may fail to open in 1 min, thus timed out.
 	// try to eliminate such cases
-	_ = oleutil.MustPutProperty(excelObj, "CalculateBeforeSave", false)
-	_ = oleutil.MustPutProperty(excelObj, "Calculation", XlCalculationManual)
+	_, err = oleutil.PutProperty(excelObj, "Calculation", XlCalculationManual)
+	if err != nil {
+		telemetry.CaptureException(err, "Excel.Application.SetCalculationManual")
+		common.Logger.Errorln(err)
+	}
+	_, err = oleutil.PutProperty(excelObj, "CalculateBeforeSave", false)
+	if err != nil {
+		telemetry.CaptureException(err, "Excel.Application.SetCalculateBeforeSaveFalse")
+		common.Logger.Errorln(err)
+	}
 	// possibly if not working:
-	_ = oleutil.MustPutProperty(excelObj, "ForceFullCalculation", false)
+	_, err = oleutil.PutProperty(excelObj, "ForceFullCalculation", false)
+	if err != nil {
+		telemetry.CaptureException(err, "Excel.Application.SetForceFullCalculationFalse")
+		common.Logger.Errorln(err)
+	}
 	// also eliminate odbc query timeout
-	_ = oleutil.MustPutProperty(excelObj, "ODBCTimeout", 10)
+	_, err = oleutil.PutProperty(excelObj, "ODBCTimeout", 10)
+	if err != nil {
+		telemetry.CaptureException(err, "Excel.Application.SetODBCTimeout10s")
+		common.Logger.Errorln(err)
+	}
 	return
 }
 
@@ -116,9 +133,17 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 	common.Logger.Infoln("Workbook currently opened: ", fPath)
 	// try to eliminate slow workbook
 	// disable update embedded ole links
-	_ = oleutil.MustPutProperty(w.currentWorkbook, "UpdateLinks", XlUpdateLinksNever)
+	_, err = oleutil.PutProperty(w.currentWorkbook, "UpdateLinks", XlUpdateLinksNever)
+	if err != nil {
+		telemetry.CaptureException(err, "Excel.Workbook.SetUpdateLinksNever")
+		common.Logger.Errorln(err)
+	}
 	// disable update remote ref in workbook
-	_ = oleutil.MustPutProperty(w.currentWorkbook, "UpdateRemoteReferences", false)
+	_, err = oleutil.PutProperty(w.currentWorkbook, "UpdateRemoteReferences", false)
+	if err != nil {
+		telemetry.CaptureException(err, "Excel.Workbook.SetUpdateRemoteReferencesFalse")
+		common.Logger.Errorln(err)
+	}
 	return nil
 }
 
