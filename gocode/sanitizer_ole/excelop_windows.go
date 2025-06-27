@@ -56,18 +56,6 @@ func excelInstanceStartupConfig(excelObj *ole.IDispatch) {
 	}
 	// avoid any macro to execute
 	_ = oleutil.MustPutProperty(excelObj, "AutomationSecurity", MsoAutomationSecurityForceDisable)
-	// in rare cases, e.g. a ~30M xlsm file may fail to open in 1 min, thus timed out.
-	// try to eliminate such cases
-	_, err = oleutil.PutProperty(excelObj, "Calculation", XlCalculationManual)
-	if err != nil {
-		telemetry.CaptureException(err, "Excel.Application.SetCalculationManual")
-		common.Logger.Errorln(err)
-	}
-	_, err = oleutil.PutProperty(excelObj, "CalculateBeforeSave", false)
-	if err != nil {
-		telemetry.CaptureException(err, "Excel.Application.SetCalculateBeforeSaveFalse")
-		common.Logger.Errorln(err)
-	}
 	// also eliminate odbc query timeout
 	_, err = oleutil.PutProperty(excelObj, "ODBCTimeout", 10)
 	if err != nil {
@@ -151,6 +139,19 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 	_, err = oleutil.PutProperty(w.currentWorkbook, "UpdateRemoteReferences", false)
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.Workbook.SetUpdateRemoteReferencesFalse")
+		common.Logger.Errorln(err)
+	}
+	// in rare cases, e.g. a ~30M xlsm file may fail to open in 1 min, thus timed out.
+	// try to eliminate such cases, these two properties must be set after opening any workbook and
+	// will only affect the current instance
+	_, err = oleutil.PutProperty(w.currentExcelObj, "Calculation", XlCalculationManual)
+	if err != nil {
+		telemetry.CaptureException(err, "Excel.Application.SetCalculationManual")
+		common.Logger.Errorln(err)
+	}
+	_, err = oleutil.PutProperty(w.currentExcelObj, "CalculateBeforeSave", false)
+	if err != nil {
+		telemetry.CaptureException(err, "Excel.Application.SetCalculateBeforeSaveFalse")
 		common.Logger.Errorln(err)
 	}
 	return nil
