@@ -7,6 +7,7 @@ import (
 	"cramc_go/telemetry"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
+	"os"
 	"sync"
 )
 
@@ -19,14 +20,28 @@ func createExcelInstance() (*ole.IDispatch, error) {
 }
 
 func excelInstanceStartupConfig(excelObj *ole.IDispatch) {
-	// security and ux optimize
-	_, err := oleutil.PutProperty(excelObj, "Visible", false)
-	if err != nil {
-		common.Logger.Errorln(err)
+	inDebugging := false
+	var err error
+	if data, ok := os.LookupEnv("RunEnv"); ok {
+		if data == "DEBUG" {
+			inDebugging = true
+		}
 	}
-	_, err = oleutil.PutProperty(excelObj, "DisplayAlerts", false)
-	if err != nil {
-		common.Logger.Errorln(err)
+	// security and ux optimize
+	if !inDebugging {
+		_, err = oleutil.PutProperty(excelObj, "Visible", false)
+		if err != nil {
+			common.Logger.Errorln(err)
+		}
+		_, err = oleutil.PutProperty(excelObj, "DisplayAlerts", false)
+		if err != nil {
+			common.Logger.Errorln(err)
+		}
+		// boost runtime speed
+		_, err = oleutil.PutProperty(excelObj, "ScreenUpdating", false)
+		if err != nil {
+			common.Logger.Errorln(err)
+		}
 	}
 	// ignore remote dde update requests
 	_, err = oleutil.PutProperty(excelObj, "IgnoreRemoteRequests", true)
@@ -36,11 +51,6 @@ func excelInstanceStartupConfig(excelObj *ole.IDispatch) {
 	}
 	// prevent async OLAP data queries from executing
 	_, err = oleutil.PutProperty(excelObj, "DeferAsyncQueries", true)
-	if err != nil {
-		common.Logger.Errorln(err)
-	}
-	// boost runtime speed
-	_, err = oleutil.PutProperty(excelObj, "ScreenUpdating", false)
 	if err != nil {
 		common.Logger.Errorln(err)
 	}
