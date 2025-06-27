@@ -7,7 +7,6 @@ import (
 	"cramc_go/telemetry"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
-	"os"
 	"sync"
 )
 
@@ -19,45 +18,57 @@ func createExcelInstance() (*ole.IDispatch, error) {
 	return excelObj, err
 }
 
-func excelInstanceStartupConfig(excelObj *ole.IDispatch) {
-	inDebugging := false
-	var err error
-	if data, ok := os.LookupEnv("RunEnv"); ok {
-		if data == "DEBUG" {
-			inDebugging = true
-		}
+func (w *ExcelWorker) excelInstanceStartupConfig() {
+	if w.currentExcelObj == nil {
+		panic("Excel instance is not initialized.")
 	}
-	// security and ux optimize
-	if !inDebugging {
-		_, err = oleutil.PutProperty(excelObj, "Visible", false)
+	// open gui for dbg
+	var err error
+	if w.inDbg {
+		_, err = oleutil.PutProperty(w.currentExcelObj, "Visible", true)
 		if err != nil {
 			common.Logger.Errorln(err)
 		}
-		_, err = oleutil.PutProperty(excelObj, "DisplayAlerts", false)
+		_, err = oleutil.PutProperty(w.currentExcelObj, "DisplayAlerts", true)
 		if err != nil {
 			common.Logger.Errorln(err)
 		}
 		// boost runtime speed
-		_, err = oleutil.PutProperty(excelObj, "ScreenUpdating", false)
+		_, err = oleutil.PutProperty(w.currentExcelObj, "ScreenUpdating", true)
+		if err != nil {
+			common.Logger.Errorln(err)
+		}
+	} else {
+		// security and ux optimize
+		_, err = oleutil.PutProperty(w.currentExcelObj, "Visible", false)
+		if err != nil {
+			common.Logger.Errorln(err)
+		}
+		_, err = oleutil.PutProperty(w.currentExcelObj, "DisplayAlerts", false)
+		if err != nil {
+			common.Logger.Errorln(err)
+		}
+		// boost runtime speed
+		_, err = oleutil.PutProperty(w.currentExcelObj, "ScreenUpdating", false)
 		if err != nil {
 			common.Logger.Errorln(err)
 		}
 	}
 	// ignore remote dde update requests
-	_, err = oleutil.PutProperty(excelObj, "IgnoreRemoteRequests", true)
+	_, err = oleutil.PutProperty(w.currentExcelObj, "IgnoreRemoteRequests", true)
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.Application.SetIgnoreRemoteRequests")
 		common.Logger.Errorln(err)
 	}
 	// prevent async OLAP data queries from executing
-	_, err = oleutil.PutProperty(excelObj, "DeferAsyncQueries", true)
+	_, err = oleutil.PutProperty(w.currentExcelObj, "DeferAsyncQueries", true)
 	if err != nil {
 		common.Logger.Errorln(err)
 	}
 	// avoid any macro to execute
-	_ = oleutil.MustPutProperty(excelObj, "AutomationSecurity", MsoAutomationSecurityForceDisable)
+	_ = oleutil.MustPutProperty(w.currentExcelObj, "AutomationSecurity", MsoAutomationSecurityForceDisable)
 	// also eliminate odbc query timeout
-	_, err = oleutil.PutProperty(excelObj, "ODBCTimeout", 10)
+	_, err = oleutil.PutProperty(w.currentExcelObj, "ODBCTimeout", 10)
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.Application.SetODBCTimeout10s")
 		common.Logger.Errorln(err)
@@ -71,9 +82,10 @@ type ExcelWorker struct {
 	currentWorkbook *ole.IDispatch
 	mu              *sync.Mutex
 	curFilePath     string
+	inDbg           bool
 }
 
-func (w *ExcelWorker) Init() error {
+func (w *ExcelWorker) Init(inDbg bool) error {
 	var err error
 	w.currentExcelObj, err = createExcelInstance()
 	if err != nil {
@@ -81,7 +93,8 @@ func (w *ExcelWorker) Init() error {
 		common.Logger.Errorln(err)
 		return err
 	}
-	excelInstanceStartupConfig(w.currentExcelObj)
+	w.inDbg = inDbg
+	w.excelInstanceStartupConfig()
 	common.Logger.Infoln("Excel.Application object initialized.")
 	w.mu = &sync.Mutex{}
 	return nil

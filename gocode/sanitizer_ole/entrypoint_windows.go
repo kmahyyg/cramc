@@ -9,6 +9,7 @@ import (
 	"cramc_go/telemetry"
 	ole "github.com/go-ole/go-ole"
 	"golang.org/x/sys/windows/registry"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -40,8 +41,14 @@ func StartSanitizer() error {
 	defer ole.CoUninitialize()
 
 	// new approach: bundled
+	inDebugging := false
+	if data, ok := os.LookupEnv("RunEnv"); ok {
+		if data == "DEBUG" {
+			inDebugging = true
+		}
+	}
 	eWorker := &ExcelWorker{}
-	err = eWorker.Init()
+	err = eWorker.Init(inDebugging)
 	if err != nil {
 		common.Logger.Errorln("Failed to initialize excel worker:", err)
 		return err
