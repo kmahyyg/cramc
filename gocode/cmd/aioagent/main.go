@@ -380,8 +380,7 @@ func main() {
 	}
 	// wait for all procedures
 	wg.Wait()
-	// wait for 8 seconds for cleanup
-	time.Sleep(3 * time.Second)
+	// wait for 5 seconds for cleanup
 	runtime.GC()
 	time.Sleep(5 * time.Second)
 	common.Logger.Infoln("All done. Program exited.")

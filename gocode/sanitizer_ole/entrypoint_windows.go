@@ -72,8 +72,11 @@ func StartSanitizer() error {
 		case "sanitize":
 			// parse and take action
 			func(eWorker *ExcelWorker) {
-				// 60 seconds should be sufficient for open and sanitize a single doc
-				ctx, cancelF := context.WithTimeout(context.TODO(), 60*time.Second)
+				// 60 seconds should be sufficient for opening and sanitizing a single normal doc
+				//
+				// unfortunately, in some rare cases, it cost around 109 seconds for open.
+				// in case of such a sucking document, have to change timeout to 150s
+				ctx, cancelF := context.WithTimeout(context.TODO(), 150*time.Second)
 				defer cancelF()
 				// notice if finished earlier
 				doneC := make(chan struct{}, 1)
