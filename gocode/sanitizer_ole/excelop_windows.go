@@ -68,12 +68,6 @@ func excelInstanceStartupConfig(excelObj *ole.IDispatch) {
 		telemetry.CaptureException(err, "Excel.Application.SetCalculateBeforeSaveFalse")
 		common.Logger.Errorln(err)
 	}
-	// possibly if not working:
-	_, err = oleutil.PutProperty(excelObj, "ForceFullCalculation", false)
-	if err != nil {
-		telemetry.CaptureException(err, "Excel.Application.SetForceFullCalculationFalse")
-		common.Logger.Errorln(err)
-	}
 	// also eliminate odbc query timeout
 	_, err = oleutil.PutProperty(excelObj, "ODBCTimeout", 10)
 	if err != nil {
@@ -142,6 +136,11 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 	w.curFilePath = fPath
 	common.Logger.Infoln("Workbook currently opened: ", fPath)
 	// try to eliminate slow workbook
+	_, err = oleutil.PutProperty(w.currentWorkbook, "ForceFullCalculation", false)
+	if err != nil {
+		telemetry.CaptureException(err, "Excel.ThisWorkbook.SetForceFullCalculationFalse")
+		common.Logger.Errorln(err)
+	}
 	// disable update embedded ole links
 	_, err = oleutil.PutProperty(w.currentWorkbook, "UpdateLinks", XlUpdateLinksNever)
 	if err != nil {
