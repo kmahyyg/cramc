@@ -75,8 +75,8 @@ func StartSanitizer() error {
 				// 60 seconds should be sufficient for opening and sanitizing a single normal doc
 				//
 				// unfortunately, in some rare cases, it cost around 109 seconds for open.
-				// in case of such a sucking document, have to change timeout to 150s
-				ctx, cancelF := context.WithTimeout(context.TODO(), 150*time.Second)
+				// in case of such a sucking document, have to change timeout to 180s
+				ctx, cancelF := context.WithTimeout(context.TODO(), 180*time.Second)
 				defer cancelF()
 				// notice if finished earlier
 				doneC := make(chan struct{}, 1)

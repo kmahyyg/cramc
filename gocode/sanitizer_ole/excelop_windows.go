@@ -146,15 +146,27 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 	// will only affect the current instance
 	_, err = oleutil.PutProperty(w.currentExcelObj, "Calculation", XlCalculationManual)
 	if err != nil {
-		telemetry.CaptureException(err, "Excel.Application.SetCalculationManual")
+		telemetry.CaptureException(err, "Excel.Workbook.ParentApp.SetCalculationManual")
 		common.Logger.Errorln(err)
 	}
 	_, err = oleutil.PutProperty(w.currentExcelObj, "CalculateBeforeSave", false)
 	if err != nil {
-		telemetry.CaptureException(err, "Excel.Application.SetCalculateBeforeSaveFalse")
+		telemetry.CaptureException(err, "Excel.Workbook.ParentApp.SetCalculateBeforeSaveFalse")
 		common.Logger.Errorln(err)
 	}
+	// also do not prompt for format conversion
+	// https://learn.microsoft.com/en-us/dotnet/api/microsoft.office.tools.excel.workbook.donotpromptforconvert
+	_, err = oleutil.PutProperty(w.currentWorkbook, "DoNotPromptForConvert", false)
+	if err != nil {
+		common.Logger.Errorln(err)
+	}
+	_, err = oleutil.PutProperty(w.currentWorkbook, "CheckCompatibility", false)
+	if err != nil {
+		common.Logger.Errorln(err)
+	}
+	common.Logger.Infoln("Workbook slowness workarounds applied.")
 	return nil
+
 }
 
 func (w *ExcelWorker) SaveAndCloseWorkbook() error {
