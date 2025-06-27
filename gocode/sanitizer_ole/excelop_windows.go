@@ -49,6 +49,8 @@ func excelInstanceStartupConfig(excelObj *ole.IDispatch) {
 	// try to eliminate such cases
 	_ = oleutil.MustPutProperty(excelObj, "CalculateBeforeSave", false)
 	_ = oleutil.MustPutProperty(excelObj, "Calculation", XlCalculationManual)
+	// possibly if not working:
+	// _ = oleutil.MustPutProperty(excelObj, "ForceFullCalculation", false)
 	return
 }
 
