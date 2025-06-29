@@ -140,7 +140,7 @@ jobs:
       - name: Golang Exe WinRES
         run: |
           cd ${GITHUB_WORKSPACE}/gocode/cmd/aioagent
-          GOOS=windows GOARCH=amd64 go-winres make --product-version=git-tag
+          GOOS=windows GOARCH=amd64 go-winres make --product-version=git-tag --file-version=git-tag
       - name: Build Golang Program
         run: |
           cd ${GITHUB_WORKSPACE}/gocode
