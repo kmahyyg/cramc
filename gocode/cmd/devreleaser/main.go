@@ -29,8 +29,8 @@ func init() {
 
 func main() {
 	logger, logFd := logging.NewLogger("cramc_go_devrel.log")
-	defer logFd.Sync()
 	defer logFd.Close()
+	defer logFd.Sync()
 	common.Logger = logger
 	logger.Infoln("DevReleaser for CRAMC, Don't Forget to Bump Database/UpdateChecker Version!")
 	logger.Infoln("Current Version: ", common.VersionStr)
