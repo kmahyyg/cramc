@@ -40,8 +40,8 @@ var (
 	modWtsapi32                    = syscall.NewLazyDLL("wtsapi32.dll")
 	procWTSQuerySessionInformation = modWtsapi32.NewProc("WTSQuerySessionInformationA")
 
-	modNtdll            = syscall.NewLazyDLL("ntdll.dll")
-	procIsWindowsServer = modNtdll.NewProc("IsWindowsServer")
+	modShlwapi = syscall.NewLazyDLL("shlwapi.dll")
+	procIsOS   = modShlwapi.NewProc("IsOS")
 )
 
 func CheckRunningUnderSYSTEM() (bool, error) {
@@ -298,9 +298,7 @@ func wtsQuerySessionInformation(hServer windows.Handle, sessionID uint32,
 }
 
 func isWindowsServer() bool {
-	ret, _, _ := procIsWindowsServer.Call()
-	if ret == 1 {
-		return true
-	}
-	return false
+	var OS_ANYSERVER uint32 = 29
+	ret, _, _ := syscall.SyscallN(procIsOS.Addr(), 1, uintptr(OS_ANYSERVER))
+	return ret != 0
 }
