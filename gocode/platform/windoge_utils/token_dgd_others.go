@@ -8,14 +8,10 @@ func CheckRunningUnderSYSTEM() (bool, error) {
 	return false, customerrs.ErrUnsupportedPlatform
 }
 
-func GetActiveConsoleSessionId() (int, error) {
-	return -1, customerrs.ErrUnsupportedPlatform
-}
-
-func ImpersonateCurrentInteractiveUserInThread() error {
+func ImpersonateCurrentInteractiveUserInThread(sessionID uint32) error {
 	return customerrs.ErrUnsupportedPlatform
 }
 
-func PrepareForTokenOperation() error {
+func PrepareForTokenImpersonation() error {
 	return customerrs.ErrUnsupportedPlatform
 }
