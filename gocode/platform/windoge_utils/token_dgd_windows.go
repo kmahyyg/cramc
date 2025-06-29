@@ -16,6 +16,10 @@ const (
 	WELLKNOWN_SYSTEM_SID = "S-1-5-18"
 
 	WTS_CURRENT_SERVER_HANDLE = windows.Handle(0)
+
+	SE_TCB_NAME                = "SeTcbPrivilege"
+	SE_ASSIGNPRIMARYTOKEN_NAME = "SeAssignPrimaryTokenPrivilege"
+	SE_IMPERSONATE_NAME        = "SeImpersonatePrivilege"
 )
 
 type LSTATUS uint32
@@ -130,31 +134,53 @@ func getActiveWTSSessionID() (uint32, error) {
 	}
 	// if no active session found, means user logged-out or already disconnected.
 	if sessionIDfound {
+		common.Logger.Infof("Active WTS Session ID Found: %d", selectedSessionID)
 		return selectedSessionID, nil
 	} else {
 		return 0, customerrs.ErrUnknownInternalError
 	}
 }
 
-func ImpersonateCurrentInteractiveUserInThread() error {
+func ImpersonateCurrentInteractiveUserInThread() (uintptr, error) {
+	// to ensure cross-platform compatibility, returned value should be Windows.Token, use uintptr to prevent further issue
 	// get sessionID from getActiveWTSSessionID()
 	sessID, err := getActiveWTSSessionID()
 	if err != nil {
 		common.Logger.Errorln("Cannot determine current active session, abort with error: ", err)
-		return err
+		return 0, err
 	}
 	if sessID == 0 {
 		common.Logger.Errorln("Unexpected Session ID returned, must fail.")
-		return customerrs.ErrUnknownInternalError
+		return 0, customerrs.ErrUnknownInternalError
 	}
 	// now query logged-in session
 	var sessUserToken windows.Token
 	err = windows.WTSQueryUserToken(sessID, &sessUserToken)
 	if err != nil {
 		common.Logger.Errorln("Cannot retrieve primary user token from given session ID: ", sessID, "with Error: ", err)
-		return err
+		return 0, err
 	}
-	// token retrieved, thread locked,
+	defer sessUserToken.Close()
+	// enable priv
+	err = enableNecessaryPrivilege()
+	if err != nil {
+		common.Logger.Errorln("Cannot enable necessary privilege: ", err)
+		return 0, err
+	}
+	// token retrieved, thread locked, now time to duplicate a primary token as an impersonation token,
+	// this impersonation token cannot be used to CreateProcessAsUser and should be freed after use.
+	var impUserToken windows.Token
+	err = windows.DuplicateTokenEx(sessUserToken, windows.TOKEN_ALL_ACCESS, nil, windows.SecurityImpersonation, windows.TokenImpersonation, &impUserToken)
+	if err != nil {
+		common.Logger.Errorln("Cannot duplicate token from given session ID: ", sessID, "with Error: ", err)
+		return 0, err
+	}
+	// set to impersonation token in the current thread
+	err = windows.SetThreadToken(nil, impUserToken)
+	if err != nil {
+		return (uintptr)(impUserToken), err
+	}
+	return (uintptr)(impUserToken), nil
 }
 
 func PrepareForTokenImpersonation(isReverse bool) error {
@@ -174,6 +200,51 @@ func PrepareForTokenImpersonation(isReverse bool) error {
 		// safe to ignore and go next
 		common.Logger.Warnln("RegDisablePredefinedCacheEx returned err: ", err.Error())
 		return err
+	}
+	return nil
+}
+
+func enableNecessaryPrivilege() error {
+	curProcHnd := windows.CurrentProcess()
+	var curProcToken windows.Token
+	err := windows.OpenProcessToken(curProcHnd, windows.TOKEN_ADJUST_PRIVILEGES|windows.TOKEN_QUERY, &curProcToken)
+	if err != nil {
+		return err
+	}
+	defer curProcToken.Close()
+	// lookupLuID
+	curSys := uint16(0)
+	checkLUIDUnderPrivAndAdjust := func(privName string, tkn windows.Token) error {
+		var privLUID windows.LUID
+		namePtr, err2 := windows.UTF16PtrFromString(privName)
+		if err2 != nil {
+			return err2
+		}
+		err2 = windows.LookupPrivilegeValue(&curSys, namePtr, &privLUID)
+		if err2 != nil {
+			return err2
+		}
+		tknPriv := &windows.Tokenprivileges{
+			PrivilegeCount: 1,
+			Privileges: [1]windows.LUIDAndAttributes{
+				{
+					Luid:       privLUID,
+					Attributes: windows.SE_PRIVILEGE_ENABLED,
+				},
+			},
+		}
+		err2 = windows.AdjustTokenPrivileges(tkn, false, tknPriv, 0, nil, nil)
+		if err2 != nil {
+			return err2
+		}
+		return nil
+	}
+
+	for _, priv := range []string{SE_TCB_NAME, SE_ASSIGNPRIMARYTOKEN_NAME, SE_IMPERSONATE_NAME} {
+		err3 := checkLUIDUnderPrivAndAdjust(priv, curProcToken)
+		if err3 != nil {
+			common.Logger.Errorln("Adjusting Token Privilege Error: ", err3, " When processing:", priv)
+		}
 	}
 	return nil
 }
