@@ -41,6 +41,14 @@ func StartSanitizer() error {
 	_, _ = windoge_utils.KillAllOfficeProcesses()
 	common.Logger.Infoln("Triggered M365 Office processes killer.")
 
+	// check if run as system
+	runAsSystem, _ := windoge_utils.CheckRunningUnderSYSTEM()
+	if runAsSystem {
+		_ = windoge_utils.PrepareForTokenImpersonation(false)
+		defer windoge_utils.PrepareForTokenImpersonation(true)
+		//TODO
+	}
+
 	// prepare to call ole
 	err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
 	if err != nil {
@@ -48,13 +56,19 @@ func StartSanitizer() error {
 	}
 	defer ole.CoUninitialize()
 
+	// try impersonate while calling COM API
 	// if anything wrong related to SYSTEM impersonation, you may try:
 	// https://learn.microsoft.com/en-us/windows/win32/com/setting-processwide-security-with-coinitializesecurity
 	// calling: HRESULT CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_NONE, RPC_C_IMP_LEVEL_IMPERSONATE,
 	// 											NULL, EOAC_NONE, NULL);
 	//
-	cAuthSvc := (int32)(-1)
-	err = CoInitializeSecurity(0, &cAuthSvc, nil, 0, RPC_C_AUTHN_LEVEL_NONE, RPC_C_IMP_LEVEL_IMPERSONATE, nil, EOAC_NONE, 0)
+	if runAsSystem {
+		cAuthSvc := (int32)(-1)
+		err = CoInitializeSecurity(0, &cAuthSvc, nil, 0, RPC_C_AUTHN_LEVEL_NONE, RPC_C_IMP_LEVEL_IMPERSONATE, nil, EOAC_NONE, 0)
+		if err != nil {
+			common.Logger.Errorln("Failed to call CoInitializeSecurity:", err)
+		}
+	}
 
 	// new approach: bundled
 	inDebugging := false
