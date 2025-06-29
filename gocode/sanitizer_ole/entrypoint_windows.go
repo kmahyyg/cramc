@@ -63,11 +63,13 @@ func StartSanitizer() error {
 	// 											NULL, EOAC_NONE, NULL);
 	//
 	if runAsSystem {
-		cAuthSvc := (int32)(-1)
-		err = CoInitializeSecurity(0, &cAuthSvc, nil, 0, RPC_C_AUTHN_LEVEL_NONE, RPC_C_IMP_LEVEL_IMPERSONATE, nil, EOAC_NONE, 0)
-		if err != nil {
-			common.Logger.Errorln("Failed to call CoInitializeSecurity:", err)
-		}
+		// no effect on final result
+		//cAuthSvc := (int32)(-1)
+		//err = CoInitializeSecurity(0, &cAuthSvc, nil, 0, RPC_C_AUTHN_LEVEL_NONE, RPC_C_IMP_LEVEL_IMPERSONATE, nil, EOAC_NONE, 0)
+		//if err != nil {
+		//	common.Logger.Errorln("Failed to call CoInitializeSecurity:", err)
+		//}
+		//
 		// after handling COM API security, call impersonation on current thread.
 		// for now, as prepare for token impersonation is already called, it should be bounded to a single OS thread
 		// so we shouldn't make ourselves mess around.
