@@ -8,6 +8,7 @@ import (
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/telemetry"
 	ole "github.com/go-ole/go-ole"
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 	"os"
 	"path/filepath"
@@ -67,10 +68,19 @@ func StartSanitizer() error {
 		if err != nil {
 			common.Logger.Errorln("Failed to call CoInitializeSecurity:", err)
 		}
-		// after handling COM API security, call impersonate on current thread.
+		// after handling COM API security, call impersonation on current thread.
 		// for now, as prepare for token impersonation is already called, it should be bounded to a single OS thread
 		// so we shouldn't make ourselves mess around.
-
+		impToken, err2 := windoge_utils.ImpersonateCurrentInteractiveUserInThread()
+		if impToken != 0 {
+			defer (windows.Token)(impToken).Close()
+			common.Logger.Infoln("Current interactive user impersonation token created.")
+		}
+		if err2 != nil {
+			common.Logger.Errorln("Failed to impersonate current interactive user:", err2)
+			return err2
+		}
+		common.Logger.Infoln("Current interactive user impersonated.")
 	}
 
 	// new approach: bundled
