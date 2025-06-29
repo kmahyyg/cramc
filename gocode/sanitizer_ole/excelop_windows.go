@@ -60,6 +60,11 @@ func (w *ExcelWorker) excelInstanceStartupConfig() {
 		telemetry.CaptureException(err, "Excel.Application.SetIgnoreRemoteRequests")
 		common.Logger.Errorln(err)
 	}
+	// ignore external link update dialog (auto-update) (WTF, it should be never update at all, FxxK MSFT)
+	_, err = oleutil.PutProperty(w.currentExcelObj, "AskToUpdateLinks", false)
+	if err != nil {
+		common.Logger.Errorln(err)
+	}
 	// prevent async OLAP data queries from executing
 	_, err = oleutil.PutProperty(w.currentExcelObj, "DeferAsyncQueries", true)
 	if err != nil {
