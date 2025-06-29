@@ -44,9 +44,8 @@ func StartSanitizer() error {
 	// check if run as system
 	runAsSystem, _ := windoge_utils.CheckRunningUnderSYSTEM()
 	if runAsSystem {
-		_ = windoge_utils.PrepareForTokenImpersonation(false)
+		_ = windoge_utils.PrepareForTokenImpersonation(false) // os-thread locked
 		defer windoge_utils.PrepareForTokenImpersonation(true)
-		//TODO
 	}
 
 	// prepare to call ole
@@ -56,7 +55,7 @@ func StartSanitizer() error {
 	}
 	defer ole.CoUninitialize()
 
-	// try impersonate while calling COM API
+	// try to impersonate while calling COM API
 	// if anything wrong related to SYSTEM impersonation, you may try:
 	// https://learn.microsoft.com/en-us/windows/win32/com/setting-processwide-security-with-coinitializesecurity
 	// calling: HRESULT CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_NONE, RPC_C_IMP_LEVEL_IMPERSONATE,
@@ -68,6 +67,10 @@ func StartSanitizer() error {
 		if err != nil {
 			common.Logger.Errorln("Failed to call CoInitializeSecurity:", err)
 		}
+		// after handling COM API security, call impersonate on current thread.
+		// for now, as prepare for token impersonation is already called, it should be bounded to a single OS thread
+		// so we shouldn't make ourselves mess around.
+
 	}
 
 	// new approach: bundled

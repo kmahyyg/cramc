@@ -4,6 +4,7 @@ package windoge_utils
 
 import (
 	"cramc_go/common"
+	"cramc_go/customerrs"
 	"golang.org/x/sys/windows"
 	"os/user"
 	"runtime"
@@ -14,8 +15,7 @@ import (
 const (
 	WELLKNOWN_SYSTEM_SID = "S-1-5-18"
 
-	WTS_CURRENT_SERVER_HANDLE windows.Handle = 0
-	NULLPTR                                  = windows.Handle(0)
+	WTS_CURRENT_SERVER_HANDLE = windows.Handle(0)
 )
 
 type LSTATUS uint32
@@ -35,6 +35,9 @@ var (
 
 	modWtsapi32                    = syscall.NewLazyDLL("wtsapi32.dll")
 	procWTSQuerySessionInformation = modWtsapi32.NewProc("WTSQuerySessionInformationA")
+
+	modNtdll            = syscall.NewLazyDLL("ntdll.dll")
+	procIsWindowsServer = modNtdll.NewProc("IsWindowsServer")
 )
 
 func CheckRunningUnderSYSTEM() (bool, error) {
@@ -97,14 +100,61 @@ func getActiveWTSSessionID() (uint32, error) {
 			sessionIDfound = true
 			break
 		}
-		// if still not found, try first disconnected session with non-null username
-		// it's failover, do not rely on this
-
+		// if still not found, find the first disconnected session
+		// determine if server edition first, if yes, result below is unreliable
+		if isWindowsServer() {
+			common.Logger.Warnln("[WARN] WTSActiveSession not found and running on server OS.")
+		}
+		// as MSFT stated: The WinStation is active but the client is disconnected. This state occurs when a user is signed in but not actively connected to the device, such as when the user has chosen to exit to the lock screen.
+		// https://stackoverflow.com/questions/12063873/trying-to-interpret-user-session-states-on-windows-os
+		var userN *uint16
+		var userNsize uint32
+		if ses.State == windows.WTSDisconnected {
+			// for precaution, check session linked username, it should not be null
+			err = wtsQuerySessionInformation(WTS_CURRENT_SERVER_HANDLE, ses.SessionID, WTSUserName, &userN, &userNsize)
+			if err != nil {
+				common.Logger.Errorln(err)
+			}
+			defer windows.WTSFreeMemory(uintptr(unsafe.Pointer(userN)))
+			curUserName := windows.UTF16PtrToString(userN)
+			if len(curUserName) != 0 {
+				selectedSessionID = ses.SessionID
+				sessionIDfound = true
+				break
+			} else {
+				continue
+			}
+		}
+		// I don't want to fallback to Connected Session, as user may not be logged-in.
+		// which I can't use for further token query and impersonation.
+	}
+	// if no active session found, means user logged-out or already disconnected.
+	if sessionIDfound {
+		return selectedSessionID, nil
+	} else {
+		return 0, customerrs.ErrUnknownInternalError
 	}
 }
 
-func ImpersonateCurrentInteractiveUserInThread(sessionID uint32) error {
-
+func ImpersonateCurrentInteractiveUserInThread() error {
+	// get sessionID from getActiveWTSSessionID()
+	sessID, err := getActiveWTSSessionID()
+	if err != nil {
+		common.Logger.Errorln("Cannot determine current active session, abort with error: ", err)
+		return err
+	}
+	if sessID == 0 {
+		common.Logger.Errorln("Unexpected Session ID returned, must fail.")
+		return customerrs.ErrUnknownInternalError
+	}
+	// now query logged-in session
+	var sessUserToken windows.Token
+	err = windows.WTSQueryUserToken(sessID, &sessUserToken)
+	if err != nil {
+		common.Logger.Errorln("Cannot retrieve primary user token from given session ID: ", sessID, "with Error: ", err)
+		return err
+	}
+	// token retrieved, thread locked,
 }
 
 func PrepareForTokenImpersonation(isReverse bool) error {
@@ -158,7 +208,28 @@ func regDisablePredefinedCacheEx() error {
 	return nil
 }
 
-func wtsQuerySessionInformation(hServer windows.Handle, sessionID uint32, wtsInfoClass uint32,
-	ppBuffer *uint16, pBytesReturned uint32) bool {
+type WtsInfoClass uint8
 
+const (
+	WTSUserName WtsInfoClass = 5
+)
+
+// wtsQuerySessionInformation (ANSI version):
+// from MSDN: https://learn.microsoft.com/en-us/windows/win32/api/wtsapi32/nf-wtsapi32-wtsquerysessioninformationa
+// https://learn.microsoft.com/en-us/windows/win32/api/wtsapi32/ne-wtsapi32-wts_info_class
+func wtsQuerySessionInformation(hServer windows.Handle, sessionID uint32,
+	klass WtsInfoClass, ppBuffer **uint16, pBytesReturned *uint32) error {
+	ret, _, err := syscall.SyscallN(procWTSQuerySessionInformation.Addr(), 5, uintptr(hServer), uintptr(sessionID), uintptr(klass), uintptr(unsafe.Pointer(ppBuffer)), uintptr(unsafe.Pointer(pBytesReturned)))
+	if ret == 0 {
+		return err
+	}
+	return nil
+}
+
+func isWindowsServer() bool {
+	ret, _, _ := procIsWindowsServer.Call()
+	if ret == 1 {
+		return true
+	}
+	return false
 }

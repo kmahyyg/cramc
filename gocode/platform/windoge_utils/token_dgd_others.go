@@ -8,7 +8,7 @@ func CheckRunningUnderSYSTEM() (bool, error) {
 	return false, customerrs.ErrUnsupportedPlatform
 }
 
-func ImpersonateCurrentInteractiveUserInThread(sessionID uint32) error {
+func ImpersonateCurrentInteractiveUserInThread() error {
 	return customerrs.ErrUnsupportedPlatform
 }
 
