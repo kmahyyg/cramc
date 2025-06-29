@@ -128,7 +128,15 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 		common.Logger.Errorln(customerrs.ErrExcelWorkbooksUnable2Fetch)
 		return customerrs.ErrExcelWorkbooksUnable2Fetch
 	}
-	currentWorkbook, err := oleutil.CallMethod(w.workbooksHandle, "Open", fPath)
+	//
+	// https://learn.microsoft.com/en-us/dotnet/api/microsoft.office.interop.excel.workbooks.open?view=excel-pia#microsoft-office-interop-excel-workbooks-open(system-string-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object)
+	// Microsoft.Office.Interop.Excel.Workbook Open(string Filename, object UpdateLinks, object ReadOnly,
+	// 	object Format, object Password, object WriteResPassword, object IgnoreReadOnlyRecommended,
+	// 	object Origin, object Delimiter, object Editable, object Notify, object Converter,
+	// 	object AddToMru, object Local, object CorruptLoad);
+	//
+	// https://stackoverflow.com/questions/14908372/how-to-suppress-update-links-warning
+	currentWorkbook, err := oleutil.CallMethod(w.workbooksHandle, "Open", fPath, 0)
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.Application.Workbooks.Open")
 		return err
