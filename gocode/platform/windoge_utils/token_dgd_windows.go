@@ -83,32 +83,29 @@ func getActiveWTSSessionID() (uint32, error) {
 	defer windows.WTSFreeMemory(uintptr(unsafe.Pointer(sessionsInfo)))
 	var selectedSessionID uint32
 	var sessionIDfound bool
+	// determine if server edition first, if yes, result below is unreliable
+	if isWindowsServer() {
+		common.Logger.Warnln("[WARN] WTSActiveSession not found and running on server OS.")
+	}
 	for _, ses := range sessions {
 		// skip session ID 0 (service) & ID > 65530 special listening session
 		if ses.SessionID == 0 || ses.SessionID > 65530 {
+			common.Logger.Debugln("Special WTS Session ID Skipped.")
 			continue
 		}
 		// check console session,
 		sesName := windows.UTF16PtrToString(ses.WindowStationName)
 		// active console first
-		if sesName == "Console" && ses.State == windows.WTSActive {
-			selectedSessionID = ses.SessionID
-			sessionIDfound = true
-			break
-		}
-		// if not, find the first active session
-		// https://learn.microsoft.com/en-us/windows/win32/api/wtsapi32/ne-wtsapi32-wts_connectstate_class
-		// WtsConnected may not indicate logged-in.
 		if ses.State == windows.WTSActive {
+			common.Logger.Debugln("Active WTS Session Found.")
+			if sesName == "Console" {
+				common.Logger.Debugln("Active WTS Session on Console.")
+			}
 			selectedSessionID = ses.SessionID
 			sessionIDfound = true
 			break
 		}
 		// if still not found, find the first disconnected session
-		// determine if server edition first, if yes, result below is unreliable
-		if isWindowsServer() {
-			common.Logger.Warnln("[WARN] WTSActiveSession not found and running on server OS.")
-		}
 		// as MSFT stated: The WinStation is active but the client is disconnected. This state occurs when a user is signed in but not actively connected to the device, such as when the user has chosen to exit to the lock screen.
 		// https://stackoverflow.com/questions/12063873/trying-to-interpret-user-session-states-on-windows-os
 		var userN *uint16
