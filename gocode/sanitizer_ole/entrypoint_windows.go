@@ -159,31 +159,31 @@ func StartSanitizer() error {
 					common.Logger.Debugln("Impersonate again in worker thread.")
 					// open workbook
 					common.Logger.Infoln("Opening workbook in sanitizer: ", fPathNonVariant)
-					err := eWorker.OpenWorkbook(fPathNonVariant)
-					if err != nil {
-						common.Logger.Errorln("Failed to open workbook in sanitizer:", err)
+					err3 = eWorker.OpenWorkbook(fPathNonVariant)
+					if err3 != nil {
+						common.Logger.Errorln("Failed to open workbook in sanitizer:", err3)
 						doneC <- struct{}{}
 						return
 					}
 					common.Logger.Debugln("Workbook opened: ", fPathNonVariant)
 					defer func() {
-						err = eWorker.SaveAndCloseWorkbook()
+						err4 := eWorker.SaveAndCloseWorkbook()
 						if err != nil {
-							common.Logger.Errorln("Failed to save and close workbook in defer Sanitizer:", err)
+							common.Logger.Errorln("Failed to save and close workbook in defer Sanitizer:", err4)
 						}
 						time.Sleep(1 * time.Second)
 						// rename file and save to clean state cache of cloud-storage provider
-						err = renameFileAndSave(fPathNonVariant)
-						if err != nil {
-							common.Logger.Errorln("Rename file failed in sanitizer:", err.Error())
+						err4 = renameFileAndSave(fPathNonVariant)
+						if err4 != nil {
+							common.Logger.Errorln("Rename file failed in sanitizer:", err4.Error())
 						}
 						common.Logger.Infoln("Workbook Sanitized: ", fPathNonVariant)
 					}()
 					// sanitize
 					common.Logger.Debugln("Sanitize Workbook VBA Module now.")
-					err = eWorker.SanitizeWorkbook(vObj.DestModule)
-					if err != nil {
-						common.Logger.Errorln("Failed to sanitize workbook:", err)
+					err3 = eWorker.SanitizeWorkbook(vObj.DestModule)
+					if err3 != nil {
+						common.Logger.Errorln("Failed to sanitize workbook:", err3)
 						doneC <- struct{}{}
 						return
 					}
@@ -198,10 +198,10 @@ func StartSanitizer() error {
 					return
 				case <-ctx.Done():
 					// timed out or error
-					err := ctx.Err()
-					if err != nil {
-						telemetry.CaptureException(err, "SanitizeWorkbookTimedOut")
-						common.Logger.Errorln("Failed to sanitize workbook, timed out:", err)
+					err5 := ctx.Err()
+					if err5 != nil {
+						telemetry.CaptureException(err5, "SanitizeWorkbookTimedOut")
+						common.Logger.Errorln("Failed to sanitize workbook, timed out:", err5)
 					}
 					common.Logger.Infoln("Sanitize workbook timed out, ctx.Done() returned, go to force clean.")
 					// for GC, cleanup and rebuild excel instance
