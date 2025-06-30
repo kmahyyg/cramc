@@ -12,6 +12,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -145,6 +146,17 @@ func StartSanitizer() error {
 					eWorker.Lock()
 					// must unlock whatever happened
 					defer eWorker.Unlock()
+					// special debug
+					runtime.LockOSThread()
+					defer runtime.UnlockOSThread()
+					nTkn, err3 := windoge_utils.ImpersonateCurrentInteractiveUserInThread()
+					if err3 != nil {
+						common.Logger.Errorln("[2nd call] Failed to impersonate current interactive user:", err3)
+					}
+					var nTkn_t windows.Token
+					nTkn_t = windows.Token(nTkn)
+					defer nTkn_t.Close()
+					common.Logger.Debugln("Impersonate again in worker thread.")
 					// open workbook
 					common.Logger.Infoln("Opening workbook in sanitizer: ", fPathNonVariant)
 					err := eWorker.OpenWorkbook(fPathNonVariant)
