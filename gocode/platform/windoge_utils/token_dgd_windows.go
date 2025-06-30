@@ -167,7 +167,7 @@ func ImpersonateCurrentInteractiveUserInThread() (uintptr, error) {
 	// token retrieved, thread locked, now time to duplicate a primary token as an impersonation token,
 	// this impersonation token cannot be used to CreateProcessAsUser and should be freed after use.
 	var impUserToken windows.Token
-	err = windows.DuplicateTokenEx(sessUserToken, windows.TOKEN_ALL_ACCESS, nil, windows.SecurityImpersonation, windows.TokenImpersonation, &impUserToken)
+	err = windows.DuplicateTokenEx(sessUserToken, windows.TOKEN_ALL_ACCESS, nil, windows.SecurityImpersonation, windows.TokenPrimary, &impUserToken)
 	if err != nil {
 		common.Logger.Errorln("Cannot duplicate token from given session ID: ", sessID, "with Error: ", err)
 		return 0, err
