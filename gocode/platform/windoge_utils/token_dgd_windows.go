@@ -138,7 +138,10 @@ func getActiveWTSSessionID() (uint32, error) {
 	}
 }
 
-func ImpersonateCurrentInteractiveUserInThread() (uintptr, error) {
+func GetLoggedInUserToken(tokenType uint32) (uintptr, error) {
+	if tokenType != windows.TokenPrimary && tokenType != windows.TokenImpersonation {
+		return 0, customerrs.ErrInvalidInput
+	}
 	// to ensure cross-platform compatibility, returned value should be Windows.Token, use uintptr to prevent further issue
 	// get sessionID from getActiveWTSSessionID()
 	sessID, err := getActiveWTSSessionID()
@@ -167,15 +170,11 @@ func ImpersonateCurrentInteractiveUserInThread() (uintptr, error) {
 	// token retrieved, thread locked, now time to duplicate a primary token as an impersonation token,
 	// this impersonation token cannot be used to CreateProcessAsUser and should be freed after use.
 	var impUserToken windows.Token
-	err = windows.DuplicateTokenEx(sessUserToken, windows.TOKEN_ALL_ACCESS, nil, windows.SecurityImpersonation, windows.TokenImpersonation, &impUserToken)
+	err = windows.DuplicateTokenEx(sessUserToken, windows.TOKEN_ALL_ACCESS, nil,
+		windows.SecurityImpersonation, tokenType, &impUserToken)
 	if err != nil {
 		common.Logger.Errorln("Cannot duplicate token from given session ID: ", sessID, "with Error: ", err)
 		return 0, err
-	}
-	// set to impersonation token in the current thread
-	err = windows.SetThreadToken(nil, impUserToken)
-	if err != nil {
-		return (uintptr)(impUserToken), err
 	}
 	return (uintptr)(impUserToken), nil
 }

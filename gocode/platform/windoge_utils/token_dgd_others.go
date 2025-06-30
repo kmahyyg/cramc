@@ -8,7 +8,7 @@ func CheckRunningUnderSYSTEM() (bool, error) {
 	return false, customerrs.ErrUnsupportedPlatform
 }
 
-func ImpersonateCurrentInteractiveUserInThread() (uintptr, error) {
+func GetLoggedInUserToken(tokenType uint32) (uintptr, error) {
 	return 0, customerrs.ErrUnsupportedPlatform
 }
 
