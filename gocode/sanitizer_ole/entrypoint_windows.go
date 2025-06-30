@@ -63,6 +63,7 @@ func StartSanitizer() error {
 	// 											NULL, EOAC_NONE, NULL);
 	//
 	if runAsSystem {
+		//
 		// no effect on final result
 		//cAuthSvc := (int32)(-1)
 		//err = CoInitializeSecurity(0, &cAuthSvc, nil, 0, RPC_C_AUTHN_LEVEL_NONE, RPC_C_IMP_LEVEL_IMPERSONATE, nil, EOAC_NONE, 0)
