@@ -147,7 +147,7 @@ func StartSanitizer() error {
 					defer eWorker.Unlock()
 					// open workbook
 					common.Logger.Infoln("Opening workbook in sanitizer: ", fPathNonVariant)
-					err3 = eWorker.OpenWorkbook(fPathNonVariant)
+					err3 := eWorker.OpenWorkbook(fPathNonVariant)
 					if err3 != nil {
 						common.Logger.Errorln("Failed to open workbook in sanitizer:", err3)
 						doneC <- struct{}{}
