@@ -44,92 +44,12 @@ func StartSanitizer() error {
 
 	}
 
-	wg2 := &sync.WaitGroup{}
 	// iterate through workbooks
 	for vObj := range common.SanitizeQueue {
 		common.Logger.Debugln("Sanitizer Queue Received a New File.")
 		// todo: get file from queue and send it out
-		switch vObj.Action {
-		case "remediate":
-			// parse and take action
-			func(eWorker *ExcelWorker) {
-				// 60 seconds should be sufficient for opening and sanitizing a single normal doc
-				//
-				// unfortunately, in some rare cases, it cost around 109 seconds for open.
-				// in case of such a sucking document, have to change timeout to 180s
-				ctx, cancelF := context.WithTimeout(context.TODO(), 180*time.Second)
-				defer cancelF()
-				// notice if finished earlier
-				doneC := make(chan struct{}, 1)
-				wg2.Add(1)
-				common.Logger.Debugln("Sanitize workbook started, wg2 += 1")
-				go func() {
-					defer wg2.Done()
-					// lock to ensure only single doc at a time
-					eWorker.Lock()
-					// must unlock whatever happened
-					defer eWorker.Unlock()
-					// open workbook
-					common.Logger.Infoln("Opening workbook in sanitizer: ", fPathNonVariant)
-					err3 := eWorker.OpenWorkbook(fPathNonVariant)
-					if err3 != nil {
-						common.Logger.Errorln("Failed to open workbook in sanitizer:", err3)
-						doneC <- struct{}{}
-						return
-					}
-					common.Logger.Debugln("Workbook opened: ", fPathNonVariant)
-					defer func() {
-						err4 := eWorker.SaveAndCloseWorkbook()
-						if err != nil {
-							common.Logger.Errorln("Failed to save and close workbook in defer Sanitizer:", err4)
-						}
-						time.Sleep(1 * time.Second)
-						// rename file and save to clean state cache of cloud-storage provider
-						err4 = renameFileAndSave(fPathNonVariant)
-						if err4 != nil {
-							common.Logger.Errorln("Rename file failed in sanitizer:", err4.Error())
-						}
-						common.Logger.Infoln("Workbook Sanitized: ", fPathNonVariant)
-					}()
-					// sanitize
-					common.Logger.Debugln("Sanitize Workbook VBA Module now.")
-					err3 = eWorker.SanitizeWorkbook(vObj.DestModule)
-					if err3 != nil {
-						common.Logger.Errorln("Failed to sanitize workbook:", err3)
-						doneC <- struct{}{}
-						return
-					}
-					common.Logger.Debugln("Sanitize Workbook VBA Module finished, doneC returned.")
-					doneC <- struct{}{}
-				}()
-				select {
-				case <-doneC:
-					// properly remediated
-					// go ahead
-					common.Logger.Debugln("Sanitize workbook finished, doneC returned correctly.")
-					return
-				case <-ctx.Done():
-					// timed out or error
-					err5 := ctx.Err()
-					if err5 != nil {
-						telemetry.CaptureException(err5, "SanitizeWorkbookTimedOut")
-						common.Logger.Errorln("Failed to sanitize workbook, timed out:", err5)
-					}
-					common.Logger.Infoln("Sanitize workbook timed out, ctx.Done() returned, go to force clean.")
-					// for GC, cleanup and rebuild excel instance
-					originalDbgStatus := eWorker.inDbg
-					eWorker.Quit(true)
-					// safely ignore errors as it's already built correctly before
-					_ = eWorker.Init(originalDbgStatus)
-					_ = eWorker.GetWorkbooks()
-				}
-			}(eWorker)
-		default:
-			common.Logger.Warnln("Unsupported action type: ", vObj.Action)
-			continue
-		}
+
 	}
-	wg2.Wait()
 	common.Logger.Infoln("Sanitizer Finished.")
 	return nil
 }
@@ -155,6 +75,6 @@ func LiftVBAScriptingAccess(versionStr string, componentStr string) error {
 	return nil
 }
 
-func SpawnRPCServer() {
+func SpawnRPCServer() error {
 	//TODO
 }

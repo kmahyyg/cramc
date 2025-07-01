@@ -2,9 +2,11 @@ package sanitizer_ole
 
 import (
 	"bufio"
+	"context"
 	"cramc_go/common"
 	"cramc_go/customerrs"
 	"cramc_go/platform/windoge_utils"
+	"cramc_go/telemetry"
 	"encoding/json"
 	"github.com/Microsoft/go-winio"
 	"github.com/go-ole/go-ole"
@@ -227,6 +229,7 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 			common.Logger.Infoln("Received QUIT control msg")
 			_, err = conn.Write(getRespBytes(msg, 0, "ok"))
 			r.quit <- struct{}{}
+			close(r.quit)
 			return err
 		default:
 			_, err = conn.Write(getRespBytes(msg, 400, "invalid request"))
@@ -242,6 +245,7 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 		}
 		if !r.eWorkerSet.Load() || r.eWorker == nil {
 			common.Logger.Errorln("eWorker does not initialized correctly.")
+			r.quit <- struct{}{}
 			return customerrs.ErrExcelWorkerUninitialized
 		}
 		// change path separator, make sure consistent in os-level
@@ -259,7 +263,22 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 		// sleep 1 second to leave space for saving
 		time.Sleep(1 * time.Second)
 		// send response and processing using another goroutine
-
+		_, err = conn.Write(getRespBytes(msg, 202, "file enqueued"))
+		if err != nil {
+			common.Logger.Errorf("Error writing to connection: %v", err)
+		}
+		r.wg.Add(1)
+		go func() {
+			defer r.wg.Done()
+			// 60 seconds should be sufficient for opening and sanitizing a single normal doc
+			//
+			// unfortunately, in some rare cases, it cost around 109 seconds for open.
+			// in case of such a sucking document, have to change timeout to 180s
+			ctx, cancelF := context.WithTimeout(context.TODO(), 180*time.Second)
+			defer cancelF()
+			errC := make(chan error, 1)
+			r.excelFileCleanProcedure(ctx, fPathNonVariant, docSanitizeMsg.Action, docSanitizeMsg.DestModule, errC)
+		}()
 	}
 	return nil
 }
@@ -273,4 +292,79 @@ func getRespBytes(msgbase *common.IPCReqMessageBase, resCode uint32, msg string)
 	}
 	respB, _ := json.Marshal(respS)
 	return respB
+}
+
+func (r *RPCServer) excelFileCleanProcedure(ctx context.Context, fPath string, targetOp string, targetMod string, errC chan error) {
+	// get lock first
+	r.eWorker.Lock()
+	defer r.eWorker.Unlock()
+	// start actual processing
+	r.wg.Add(1)
+	go func() {
+		defer r.wg.Done()
+		// open workbook
+		common.Logger.Infoln("Opening workbook in sanitizer: ", fPath)
+		err3 := r.eWorker.OpenWorkbook(fPath)
+		if err3 != nil {
+			common.Logger.Errorln("Failed to open workbook in sanitizer:", err3)
+			errC <- err3
+			return
+		}
+		common.Logger.Debugln("Workbook opened: ", fPath)
+		// defer save and close
+		defer func() {
+			err4 := r.eWorker.SaveAndCloseWorkbook()
+			if err4 != nil {
+				common.Logger.Errorln("Failed to save and close workbook in defer Sanitizer:", err4)
+			}
+			time.Sleep(1 * time.Second)
+			// rename file and save to clean state cache of cloud-storage provider
+			err4 = renameFileAndSave(fPath)
+			if err4 != nil {
+				common.Logger.Errorln("Rename file failed in sanitizer:", err4)
+			}
+			common.Logger.Infoln("Workbook Sanitized: ", fPath)
+		}()
+		// sanitize
+		common.Logger.Debugln("Sanitize Workbook VBA Module now.")
+		err3 = r.eWorker.SanitizeWorkbook(targetOp, targetMod)
+		if err3 != nil {
+			common.Logger.Errorln("Failed to sanitize workbook:", err3)
+			errC <- err3
+			return
+		}
+		common.Logger.Debugln("Sanitize Workbook VBA Module finished, doneC returned.")
+		errC <- nil
+	}()
+	select {
+	case err := <-errC:
+		if err != nil {
+			common.Logger.Errorln("Failed to sanitize workbook, errC returned:", err)
+			telemetry.CaptureException(err, "RPCServer.excelFileCleanProcedure.ErrC")
+			return
+		}
+		// properly remediated
+		// go ahead
+		common.Logger.Debugln("Sanitize workbook finished, doneC returned correctly.")
+		return
+	case <-ctx.Done():
+		// timed out or error
+		err5 := ctx.Err()
+		if err5 != nil {
+			telemetry.CaptureException(err5, "RPCServer.excelFileCleanProcedure.CtxTimedOut")
+			common.Logger.Errorln("Failed to sanitize workbook, timed out:", err5)
+		}
+		common.Logger.Infoln("Sanitize workbook timed out, ctx.Done() returned, go to force clean.")
+		// set mark for recreation
+		r.eWorkerSet.Store(false)
+		// for GC, cleanup and rebuild excel instance
+		originalDbgStatus := r.eWorker.inDbg
+		r.eWorker.Quit(true)
+		// safely ignore errors as it's already built correctly before
+		_ = r.eWorker.Init(originalDbgStatus)
+		_ = r.eWorker.GetWorkbooks()
+		// set mark again for ready to use
+		r.eWorkerSet.Store(true)
+		return
+	}
 }
