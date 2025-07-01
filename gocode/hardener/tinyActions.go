@@ -2,7 +2,8 @@ package hardener
 
 import (
 	"cramc_go/common"
-	"cramc_go/customerrs"
+	"cramc_go/platform/windoge_utils"
+	"golang.org/x/sys/windows"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -82,13 +83,29 @@ func f_harden_SetRO(aType string, filep string) {
 }
 
 func applyTextTemplate(tmpl string) (string, error) {
+	runAsSystem, err := windoge_utils.CheckRunningUnderSYSTEM()
+	if err != nil {
+		return "", err
+	}
 	cUser, err := user.Current()
 	if err != nil {
 		return "", err
 	}
-	if cUser.Uid == "S-1-5-18" {
-		return "", customerrs.ErrRunsOnSystemMachineAccount
+	var tRes string
+	if runAsSystem {
+		impToken, err := windoge_utils.GetLoggedInUserToken(windows.TokenPrimary)
+		if err != nil {
+			return "", err
+		}
+		intaUserToken := (windows.Token)(impToken)
+		defer intaUserToken.Close()
+		userProf, err := intaUserToken.GetUserProfileDirectory()
+		if err != nil {
+			return "", err
+		}
+		tRes = strings.ReplaceAll(tmpl, "${HOME}", userProf)
+	} else {
+		tRes = strings.ReplaceAll(tmpl, "${HOME}", cUser.HomeDir)
 	}
-	tRes := strings.ReplaceAll(tmpl, "${HOME}", cUser.HomeDir)
 	return tRes, nil
 }
