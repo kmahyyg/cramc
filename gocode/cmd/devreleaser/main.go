@@ -4,6 +4,7 @@ import (
 	"cramc_go/common"
 	"cramc_go/cryptutils"
 	"cramc_go/customerrs"
+	"cramc_go/fileutils"
 	"cramc_go/logging"
 	"cramc_go/yarax_scanner"
 	"encoding/hex"
@@ -52,7 +53,7 @@ func main() {
 		panic(customerrs.ErrInvalidInput)
 	}
 	if *fDec || *fEnc {
-		if !checkFileLogicalExists(*fInFile) {
+		if !fileutils.CheckFileLogicalExists(*fInFile) {
 			common.Logger.Fatalln("Input file not found", *fInFile)
 			panic(customerrs.ErrInvalidInput)
 		}
@@ -94,15 +95,4 @@ func main() {
 		common.Logger.Infoln("Successfully wrote output binary!")
 		return
 	}
-}
-
-func checkFileLogicalExists(filename string) bool {
-	if len(filename) == 0 {
-		return false
-	}
-	info, err := os.Stat(filename)
-	if err != nil {
-		return false
-	}
-	return !info.IsDir()
 }

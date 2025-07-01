@@ -47,3 +47,14 @@ func GeneralWalkthroughSearch(actionPath string, allowedExts []string, outputCha
 	}
 	return counter, nil
 }
+
+func CheckFileLogicalExists(filename string) bool {
+	if len(filename) == 0 {
+		return false
+	}
+	info, err := os.Stat(filename)
+	if err != nil {
+		return false
+	}
+	return !info.IsDir()
+}
