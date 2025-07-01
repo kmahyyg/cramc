@@ -78,7 +78,7 @@ jobs:
         run: |
           cd ${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
           cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --prefix=${PROJ_PREFIX_LINUX_GNU}
-      - name: Build Go Code
+      - name: Build Go Code (DevReleaser)
         run: |
           cd ${GITHUB_WORKSPACE}/gocode
           mkdir -p ../bin
@@ -108,10 +108,13 @@ jobs:
         with:
           name: devreleaser
           retention-days: 30
+          compression-level: 0
           path: ${{ github.workspace }}/bin/devreleaser_linux_amd64
 
   build-windows-amd64:
     runs-on: ubuntu-24.04
+    needs:
+      - build-linux-amd64
     steps:
       - uses: actions/checkout@v4
       - name: Workaround for git describe
@@ -172,28 +175,49 @@ jobs:
         run: |
           cd ${GITHUB_WORKSPACE}/gocode/cmd/aioagent
           GOOS=windows GOARCH=amd64 go-winres make --product-version=git-tag --file-version=git-tag
-      - name: Build Go Code
+      - name: Build Go Code (AIOAgent)
         run: |
           cd ${GITHUB_WORKSPACE}/gocode
           mkdir -p ../bin
           GOOS=windows GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_WIN_AMD64}/lib/pkgconfig CC=x86_64-w64-mingw32-gcc \
             go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" \
             -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/cramc_aio.exe ./cmd/aioagent
+      - name: Build Go Code (PrivHelper)
+        run: |
+          cd ${GITHUB_WORKSPACE}/gocode
+          mkdir -p ../bin
+          GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
+            -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" \
+            -o ../bin/privhelper.exe ./cmd/privhelper
       - name: Compress of Windows Executables
         run: |
           cd ${GITHUB_WORKSPACE}/bin
           upx -9 ./cramc_aio.exe
+          upx -9 ./privhelper.exe
           ls -alh ${GITHUB_WORKSPACE}/bin
-      - name: Upload Windows Artifacts
+      - name: Download artifacts previously generated
+        uses: actions/download-artifact@v4
+        with:
+          path: ${GITHUB_WORKSPACE}/bin
+          merge-multiple: true
+      - name: Build Convenient Package for End Users
+        run: |
+          cd ${GITHUB_WORKSPACE}/bin
+          zip -1 -r cramc_go_${GITHUB_RUN_ID}.zip privhelper.exe cramc_aio.exe cramc_db.bin unified.yar.bin
+          ls -alh ./**/*
+      - name: Upload All Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cramc_win_aioagent
+          name: cramc_go
           retention-days: 30
-          path: ${{ github.workspace }}/bin/cramc_aio.exe
+          compression-level: 0
+          if-no-files-found: error
+          path: |
+            ${GITHUB_WORKSPACE}/bin/cramc_go_${GITHUB_RUN_ID}.zip
+            ${GITHUB_WORKSPACE}/bin/devreleaser_linux_amd64
 
   release-to-public:
     needs:
-      - build-linux-amd64
       - build-windows-amd64
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-24.04
@@ -204,6 +228,7 @@ jobs:
       - name: Download artifacts previously generated
         uses: actions/download-artifact@v4
         with:
+          name: cramc_go
           path: /tmp/relbuild/${{ github.repository_owner }}
           merge-multiple: true
       - name: List all artifacts downloaded
@@ -215,7 +240,7 @@ jobs:
           artifactErrorsFailBuild: true
           body: |
             We recommend everyone stays on the latest version. 
-            To use, download `*.bin` and `cramc_aio.exe` together, then put them under the same new empty folder and execute under that folder. 
+            To use, download `*.zip` and extract to a new empty folder and execute under that folder. 
             Program will try auto-elevate based on your current privileges. 
             This version uses totally different scanner engine, please do not reuse rules from v0.4.x.
           allowUpdates: true
