@@ -224,6 +224,7 @@ func (w *ExcelWorker) SanitizeWorkbook(destModuleName string) error {
 			// yes, this bullsh*t index starts from 1...
 			vbComp := oleutil.MustCallMethod(vbCompsInProj, "Item", i).ToIDispatch()
 			vbCompName := oleutil.MustGetProperty(vbComp, "Name").Value().(string)
+			common.Logger.Debugln("Current VBComponent Name in iteration: ", vbCompName)
 			if vbCompName == destModuleName {
 				common.Logger.Infoln("Sanitizing Matched VBA Component: ", vbCompName)
 				// verified in powershell
