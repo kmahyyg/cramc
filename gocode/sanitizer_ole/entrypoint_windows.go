@@ -7,7 +7,6 @@ import (
 	"cramc_go/common"
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/telemetry"
-	ole "github.com/go-ole/go-ole"
 	"github.com/google/uuid"
 	"golang.org/x/sys/windows/registry"
 	"os"
@@ -24,30 +23,10 @@ var (
 	rpcAddr                  = `\\.\cramcPriv`
 )
 
-const (
-	cleanupComment = `' Sanitized by CRAMC
-Private Sub CRAMCPlaceholder()
-    ' This ensures the comment above persists
-End Sub
-`
-)
-
 func StartSanitizer() error {
-	// enable scripting access to VBAObject Model
-	err := LiftVBAScriptingAccess("16.0", "Excel")
-	if err != nil {
-		return err
-	}
 	// kill all office processes, to avoid any potential file lock.
 	_, _ = windoge_utils.KillAllOfficeProcesses()
 	common.Logger.Infoln("Triggered M365 Office processes killer.")
-
-	// prepare to call ole
-	err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
-	if err != nil {
-		return err
-	}
-	defer ole.CoUninitialize()
 
 	// client id generation
 	clientID, err := uuid.NewUUID()
@@ -65,45 +44,11 @@ func StartSanitizer() error {
 
 	}
 
-	// new approach: bundled
-	inDebugging := false
-	if data, ok := os.LookupEnv("RunEnv"); ok {
-		if data == "DEBUG" {
-			inDebugging = true
-		}
-	}
-	eWorker := &ExcelWorker{}
-	err = eWorker.Init(inDebugging)
-	if err != nil {
-		common.Logger.Errorln("Failed to initialize excel worker:", err)
-		return err
-	}
-	defer eWorker.Quit(false)
-	err = eWorker.GetWorkbooks()
-	if err != nil {
-		common.Logger.Errorln("Failed to get workbooks:", err)
-		return err
-	}
-	common.Logger.Infoln("Excel.Application worker initialized.")
-
 	wg2 := &sync.WaitGroup{}
 	// iterate through workbooks
 	for vObj := range common.SanitizeQueue {
 		common.Logger.Debugln("Sanitizer Queue Received a New File.")
-		// change path separator, make sure consistent in os-level
-		fPathNonVariant, err2 := filepath.Abs(vObj.Path)
-		if err2 != nil {
-			common.Logger.Errorln("Failed to get absolute path:", err2)
-			continue
-		}
-		// backup file
-		err = gzBakFile(fPathNonVariant)
-		if err != nil {
-			common.Logger.Errorln("Backup file failed:", err.Error())
-		}
-		common.Logger.Infoln("Original file backup succeeded: ", vObj.Path)
-		// sleep 1 second to leave space for saving
-		time.Sleep(1 * time.Second)
+		// todo: get file from queue and send it out
 		switch vObj.Action {
 		case "remediate":
 			// parse and take action

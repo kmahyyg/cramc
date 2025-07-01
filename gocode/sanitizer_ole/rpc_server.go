@@ -3,11 +3,15 @@ package sanitizer_ole
 import (
 	"bufio"
 	"cramc_go/common"
+	"cramc_go/customerrs"
+	"cramc_go/platform/windoge_utils"
 	"encoding/json"
 	"github.com/Microsoft/go-winio"
+	"github.com/go-ole/go-ole"
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -16,7 +20,12 @@ import (
 )
 
 const (
-	MSG_MAX_SIZE = 65535
+	MSG_MAX_SIZE   = 65535
+	cleanupComment = `' Sanitized by CRAMC
+Private Sub CRAMCPlaceholder()
+    ' This ensures the comment above persists
+End Sub
+`
 )
 
 type RPCServer struct {
@@ -51,6 +60,50 @@ func NewRPCServer(laddr string) (*RPCServer, error) {
 func (r *RPCServer) Start() {
 	common.Logger.Infoln("Server started, listening on: ", r.listener.Addr().String())
 
+	// -------- initialize excel worker -------- //
+	// enable scripting access to VBAObject Model
+	err := LiftVBAScriptingAccess("16.0", "Excel")
+	if err != nil {
+		common.Logger.Errorln(err)
+		r.quit <- struct{}{}
+		return
+	}
+	// kill all office processes, to avoid any potential file lock.
+	_, _ = windoge_utils.KillAllOfficeProcesses()
+	common.Logger.Infoln("Triggered M365 Office processes killer.")
+	// prepare to call ole
+	err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
+	if err != nil {
+		common.Logger.Errorln(err)
+		r.quit <- struct{}{}
+		return
+	}
+	defer ole.CoUninitialize()
+	// new approach: bundled
+	inDebugging := false
+	if data, ok := os.LookupEnv("RunEnv"); ok {
+		if data == "DEBUG" {
+			inDebugging = true
+		}
+	}
+	r.eWorker = &ExcelWorker{}
+	err = r.eWorker.Init(inDebugging)
+	if err != nil {
+		common.Logger.Errorln("Failed to initialize excel worker:", err)
+		r.quit <- struct{}{}
+		return
+	}
+	defer r.eWorker.Quit(false)
+	err = r.eWorker.GetWorkbooks()
+	if err != nil {
+		common.Logger.Errorln("Failed to get workbooks:", err)
+		r.quit <- struct{}{}
+		return
+	}
+	common.Logger.Infoln("Excel.Application worker initialized.")
+	r.eWorkerSet.Store(true)
+
+	// -------- connection handling -------- //
 	r.wg.Add(1)
 	go r.acceptRPCConnection()
 
@@ -87,6 +140,7 @@ func (r *RPCServer) Stop() {
 func (r *RPCServer) acceptRPCConnection() {
 	defer r.wg.Done()
 
+	// -------- connection handling -------- //
 	for {
 		select {
 		case <-r.quit:
@@ -119,7 +173,6 @@ func (r *RPCServer) handleRPCConnection(conn net.Conn) {
 		case <-r.quit:
 			return
 		default:
-			conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 			if !scanner.Scan() {
 				if err := scanner.Err(); err != nil {
 					common.Logger.Errorf("Error reading from connection: %v", err)
@@ -164,6 +217,9 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 			return err
 		}
 		switch controlMsg.ControlAction {
+		case "ping":
+			_, err = conn.Write(getRespBytes(msg, 0, "pong"))
+			return err
 		case "disconnect":
 			_, err = conn.Write(getRespBytes(msg, 0, "ok"))
 			return err
@@ -178,6 +234,31 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 			return err
 		}
 	case "sanitize":
+		var docSanitizeMsg = &common.IPC_SingleDocToBeSanitized{}
+		err := json.Unmarshal(msg.MsgData, docSanitizeMsg)
+		if err != nil {
+			common.Logger.Errorf("Error unmarshalling sanitize message: %v", err)
+			return err
+		}
+		if !r.eWorkerSet.Load() || r.eWorker == nil {
+			common.Logger.Errorln("eWorker does not initialized correctly.")
+			return customerrs.ErrExcelWorkerUninitialized
+		}
+		// change path separator, make sure consistent in os-level
+		fPathNonVariant, err2 := filepath.Abs(docSanitizeMsg.Path)
+		if err2 != nil {
+			common.Logger.Errorln("Failed to get absolute path:", err2)
+			return err2
+		}
+		// backup file
+		err = gzBakFile(fPathNonVariant)
+		if err != nil {
+			common.Logger.Errorln("Backup file failed:", err.Error())
+		}
+		common.Logger.Infoln("Original file backup succeeded: ", docSanitizeMsg.Path)
+		// sleep 1 second to leave space for saving
+		time.Sleep(1 * time.Second)
+		// send response and processing using another goroutine
 
 	}
 	return nil
