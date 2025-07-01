@@ -3,17 +3,12 @@
 package sanitizer_ole
 
 import (
-	"context"
 	"cramc_go/common"
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/telemetry"
 	"github.com/google/uuid"
 	"golang.org/x/sys/windows/registry"
-	"os"
-	"path/filepath"
-	"sync"
 	"syscall"
-	"time"
 )
 
 var (

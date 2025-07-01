@@ -266,6 +266,7 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 		_, err = conn.Write(getRespBytes(msg, 202, "file enqueued"))
 		if err != nil {
 			common.Logger.Errorf("Error writing to connection: %v", err)
+			return err
 		}
 		r.wg.Add(1)
 		go func() {
@@ -277,7 +278,9 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 			ctx, cancelF := context.WithTimeout(context.TODO(), 180*time.Second)
 			defer cancelF()
 			errC := make(chan error, 1)
+			common.Logger.Infoln("Waiting for file to be cleaned up: ", fPathNonVariant)
 			r.excelFileCleanProcedure(ctx, fPathNonVariant, docSanitizeMsg.Action, docSanitizeMsg.DestModule, errC)
+			common.Logger.Debugln("excelFileCleanProcedure finished.")
 		}()
 	}
 	return nil
@@ -333,6 +336,7 @@ func (r *RPCServer) excelFileCleanProcedure(ctx context.Context, fPath string, t
 			errC <- err3
 			return
 		}
+		common.Logger.Infoln("Finished Sanitizing Workbook: ", fPath)
 		common.Logger.Debugln("Sanitize Workbook VBA Module finished, doneC returned.")
 		errC <- nil
 	}()
