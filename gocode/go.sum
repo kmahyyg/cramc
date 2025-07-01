@@ -1,3 +1,5 @@
+github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
+github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/VirusTotal/yara-x/go v1.2.1 h1:eOFTHXW7GKEQ7JfvJ6XzMMYcAMDg9FqcpJBSV1EIioQ=
 github.com/VirusTotal/yara-x/go v1.2.1/go.mod h1:lgXP/nkYX349MVowrtTtU5hzMdCOWQLv3+wKll9+0F8=
 github.com/alecthomas/assert v1.0.0 h1:3XmGh/PSuLzDbK3W2gUbRXwgW5lqPkuqvRgeQ30FI5o=
