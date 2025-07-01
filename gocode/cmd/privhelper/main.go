@@ -8,7 +8,7 @@ import (
 	"cramc_go/fileutils"
 	"cramc_go/logging"
 	"cramc_go/platform/windoge_utils"
-	"cramc_go/sanitizer_ole/sanrpc"
+	"cramc_go/sanitizer_ole"
 	"cramc_go/telemetry"
 	"os"
 	"os/user"
@@ -59,7 +59,7 @@ func main() {
 		panic(customerrs.ErrPrivHelperLockExists)
 	}
 
-	var rServ *sanrpc.RPCServer
+	var rServ *sanitizer_ole.RPCServer
 	// create lock and listener
 	func() {
 		lockFd, err2 := os.Create(lockFile)
@@ -68,7 +68,7 @@ func main() {
 		}
 		defer lockFd.Close()
 		// start server
-		rServ, err2 = sanrpc.NewRPCServer(listenNamedPipe)
+		rServ, err2 = sanitizer_ole.NewRPCServer(listenNamedPipe)
 		if err2 != nil {
 			panic(err2)
 		}

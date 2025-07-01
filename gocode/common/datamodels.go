@@ -35,23 +35,25 @@ type IPC_SingleDocToBeSanitized struct {
 	DestModule    string `json:"module"`
 }
 
-// IPC, response to sanitization request
-type IPC_Resp_SingleDocToBeSanitized struct {
-	Code          uint32 `json:"code"`
-	Path          string `json:"path"`
-	Result        string `json:"result"`
-	AdditionalMsg string `json:"additionalMsg"`
-}
-
 // IPC, server control msg
-type IPC_ServerControl struct {
+type IPCServerControl struct {
 	ControlAction string `json:"controlAction"`
 }
 
-// IPC, response to server control msg
-type IPC_ServerControlResp struct {
-	IPC_ServerControl
-	ResultCode uint32 `json:"resultCode"`
+// IPC, general response
+type IPCMessageResp struct {
+	ClientID      string `json:"clientID"`
+	MessageID     uint32 `json:"messageID"`
+	ResultCode    uint32 `json:"resultCode"`
+	AdditionalMsg string `json:"additionalMsg"`
+}
+
+// IPC, msg framework
+type IPCReqMessageBase struct {
+	ClientID  string `json:"clientID"`
+	MessageID uint32 `json:"messageID"`
+	MsgType   string `json:"msgType"`
+	MsgData   []byte `json:"msgData"`
 }
 
 type HardeningAction struct {
