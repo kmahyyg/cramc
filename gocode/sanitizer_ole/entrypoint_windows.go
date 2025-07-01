@@ -3,6 +3,7 @@
 package sanitizer_ole
 
 import (
+	"context"
 	"cramc_go/common"
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/telemetry"
@@ -12,13 +13,13 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 )
 
 var (
 	modOle32                 = syscall.NewLazyDLL("ole32.dll")
 	procCoInitializeSecurity = modOle32.NewProc("CoInitializeSecurity")
 	nullptr                  = uintptr(0)
-	rpcAddr                  = `\\.\cramcPriv`
 	rpcHelperExe             = "privhelper.exe"
 )
 
@@ -64,6 +65,7 @@ func StartSanitizer() error {
 		}
 		rpcProc, err2 = os.StartProcess(privHelperPath, nil, rpcSProcAddr)
 		if err2 != nil {
+			telemetry.CaptureException(err2, "Main.StartSanitizer.RPCServer.Impersonate")
 			return err2
 		}
 	} else {
@@ -76,18 +78,37 @@ func StartSanitizer() error {
 		}
 		rpcProc, err2 = os.StartProcess(privHelperPath, nil, rpcSProcAddr)
 		if err2 != nil {
+			telemetry.CaptureException(err2, "Main.StartSanitizer.RPCServer.Normal")
 			return err2
 		}
 	}
 	// iterate through workbooks
 	for vObj := range common.SanitizeQueue {
 		common.Logger.Debugln("Sanitizer Queue Received a New File.")
-		// todo: get file from queue and send it out
+		// todo: ping and check online
+		// todo: get file from queue and send it out, waiting for response
+		// todo: if recv pong, then go ahead.
 
 	}
 	common.Logger.Infoln("Sanitizer Finished, now sending control message to terminate RPC server.")
-	// todo: send control msg
+
+	// wait for termination of rpc server till timed out
+	rpcSC := make(chan struct{}, 1)
+	go func() {
+		// if terminating info sent, after 240 seconds, force kill process
+		tr := time.NewTimer(240 * time.Second)
+		select {
+		case <-tr.C:
+			_ = rpcProc.Kill()
+			common.Logger.Infoln("RPC Server Termination Timer Expired.")
+			telemetry.CaptureMessage("warn", "Privilege RPC Server Termination Timed Out.")
+		case <-rpcSC:
+			tr.Stop()
+		}
+	}()
 	_, _ = rpcProc.Wait()
+	rpcSC <- struct{}{}
+	common.Logger.Infoln("RPC Server terminated correctly.")
 	return nil
 }
 
