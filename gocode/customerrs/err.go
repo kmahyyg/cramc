@@ -22,4 +22,5 @@ var (
 	ErrExcelNoMacroFound            = errors.New("no macro found in current workbook")
 	ErrYaraXCompilationFailure      = errors.New("yara-x rule compilation failed")
 	ErrTelemetryMustBeInitedFirst   = errors.New("telemetry sender must be initialized first")
+	ErrRunsOnSystemMachineAccount   = errors.New("runs under NT AUTHORITY\\SYSTEM account, refuse to continue")
 )
