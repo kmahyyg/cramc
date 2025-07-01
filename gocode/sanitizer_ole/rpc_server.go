@@ -67,7 +67,6 @@ func (r *RPCServer) Start() {
 	err := LiftVBAScriptingAccess("16.0", "Excel")
 	if err != nil {
 		common.Logger.Errorln(err)
-		r.quit <- struct{}{}
 		return
 	}
 	// kill all office processes, to avoid any potential file lock.
@@ -77,7 +76,6 @@ func (r *RPCServer) Start() {
 	err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
 	if err != nil {
 		common.Logger.Errorln(err)
-		r.quit <- struct{}{}
 		return
 	}
 	defer ole.CoUninitialize()
@@ -92,14 +90,12 @@ func (r *RPCServer) Start() {
 	err = r.eWorker.Init(inDebugging)
 	if err != nil {
 		common.Logger.Errorln("Failed to initialize excel worker:", err)
-		r.quit <- struct{}{}
 		return
 	}
 	defer r.eWorker.Quit(false)
 	err = r.eWorker.GetWorkbooks()
 	if err != nil {
 		common.Logger.Errorln("Failed to get workbooks:", err)
-		r.quit <- struct{}{}
 		return
 	}
 	common.Logger.Infoln("Excel.Application worker initialized.")

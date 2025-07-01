@@ -237,12 +237,12 @@ func (w *ExcelWorker) SanitizeWorkbook(targetOp string, destModuleName string) e
 					if err != nil {
 						telemetry.CaptureException(err, "Excel.WorkbookVBACodeModule.DeleteLines_"+w.curFilePath)
 						common.Logger.Errorln(err)
-						break
+						return err
 					}
 					_, err = codeMod.CallMethod("AddFromString", cleanupComment)
 					if err != nil {
 						common.Logger.Errorln(err)
-						break
+						return err
 					}
 					common.Logger.Infoln("Finished Remediating VBA Module: ", vbCompName)
 				case "rm_module":
@@ -251,12 +251,12 @@ func (w *ExcelWorker) SanitizeWorkbook(targetOp string, destModuleName string) e
 					if err != nil {
 						telemetry.CaptureException(err, "Excel.WorkbookVBAComponents.RemoveModule")
 						common.Logger.Errorln(err)
-						break
+						return err
 					}
 					common.Logger.Infoln("Finished Removing VBA Module: ", vbCompName)
 				default:
 					common.Logger.Errorln("Unknown target operation: ", targetOp)
-					break
+					return customerrs.ErrUnknownInternalError
 				}
 			}
 		}

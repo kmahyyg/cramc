@@ -7,7 +7,10 @@ import (
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/telemetry"
 	"github.com/google/uuid"
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
+	"os"
+	"path/filepath"
 	"syscall"
 )
 
@@ -16,6 +19,7 @@ var (
 	procCoInitializeSecurity = modOle32.NewProc("CoInitializeSecurity")
 	nullptr                  = uintptr(0)
 	rpcAddr                  = `\\.\cramcPriv`
+	rpcHelperExe             = "privhelper.exe"
 )
 
 func StartSanitizer() error {
@@ -31,21 +35,59 @@ func StartSanitizer() error {
 	telemetry.CaptureMessage("info", "Sanitizer Client ID: "+clientID.String())
 	common.Logger.Infoln("Sanitizer Client ID: " + clientID.String())
 
+	// get privhelper executable path
+	exePath, _ := os.Executable()
+	privHelperPath := filepath.Join(filepath.Dir(exePath), rpcHelperExe)
+
+	var rpcProc *os.Process
 	// check if run as system
 	runAsSystem, _ := windoge_utils.CheckRunningUnderSYSTEM()
 	if runAsSystem {
-		//todo: impersonate then start process, otherwise directly spawn
+		// impersonate then start process, otherwise directly spawn
+		userTkn, err2 := windoge_utils.GetLoggedInUserToken(windows.TokenPrimary)
+		if err2 != nil {
+			return err2
+		}
+		impTkn := (windows.Token)(userTkn)
+		defer impTkn.Close()
+		procEnvBlk, err2 := impTkn.Environ(false)
+		if err2 != nil {
+			return err2
+		}
+		rpcSProcAddr := &os.ProcAttr{
+			Env: procEnvBlk,
+			Sys: &syscall.SysProcAttr{
+				HideWindow:    true,
+				CreationFlags: windows.CREATE_NEW_PROCESS_GROUP,
+				Token:         syscall.Token(impTkn),
+			},
+		}
+		rpcProc, err2 = os.StartProcess(privHelperPath, nil, rpcSProcAddr)
+		if err2 != nil {
+			return err2
+		}
 	} else {
-
+		var err2 error
+		rpcSProcAddr := &os.ProcAttr{
+			Sys: &syscall.SysProcAttr{
+				HideWindow:    true,
+				CreationFlags: windows.CREATE_NEW_PROCESS_GROUP,
+			},
+		}
+		rpcProc, err2 = os.StartProcess(privHelperPath, nil, rpcSProcAddr)
+		if err2 != nil {
+			return err2
+		}
 	}
-
 	// iterate through workbooks
 	for vObj := range common.SanitizeQueue {
 		common.Logger.Debugln("Sanitizer Queue Received a New File.")
 		// todo: get file from queue and send it out
 
 	}
-	common.Logger.Infoln("Sanitizer Finished.")
+	common.Logger.Infoln("Sanitizer Finished, now sending control message to terminate RPC server.")
+	// todo: send control msg
+	_, _ = rpcProc.Wait()
 	return nil
 }
 
@@ -68,8 +110,4 @@ func LiftVBAScriptingAccess(versionStr string, componentStr string) error {
 	}
 	common.Logger.Infoln("Registry value set to 1 for AccessVBOM.")
 	return nil
-}
-
-func SpawnRPCServer() error {
-	//TODO
 }
