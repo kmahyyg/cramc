@@ -2,7 +2,7 @@ rule VirusX97MSlackerF {
   meta:
     author     = "kmahyyg@GitHub"
     license    = "CC BY-NC-SA 4.0 International"
-    confidence = "medium"
+    confidence = "high"
 
   strings:
     $comment_m1           = "'Private Sub Workbook_BeforeSave(ByVal SaveAsUI As Boolean"
