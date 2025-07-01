@@ -105,7 +105,7 @@ func StartSanitizer() error {
 		// sleep 1 second to leave space for saving
 		time.Sleep(1 * time.Second)
 		switch vObj.Action {
-		case "sanitize":
+		case "remediate":
 			// parse and take action
 			func(eWorker *ExcelWorker) {
 				// 60 seconds should be sufficient for opening and sanitizing a single normal doc

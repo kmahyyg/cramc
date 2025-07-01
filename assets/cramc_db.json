@@ -4,7 +4,7 @@
         {
             "name": "VirusX97MSlackerF",
             "module": "ThisWorkbook",
-            "action": "sanitize",
+            "action": "remediate",
             "mustHarden": true,
             "allowRepeatedHarden": false,
             "hardenMeasures": [
