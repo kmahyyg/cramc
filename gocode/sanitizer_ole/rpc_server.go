@@ -220,19 +220,19 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 		}
 		switch controlMsg.ControlAction {
 		case "ping":
-			_, err = conn.Write(getRespBytes(msg, 0, "pong"))
+			_, err = conn.Write(buildServerRespInBytes(msg, 0, "pong"))
 			return err
 		case "disconnect":
-			_, err = conn.Write(getRespBytes(msg, 0, "ok"))
+			_, err = conn.Write(buildServerRespInBytes(msg, 0, "ok"))
 			return err
 		case "quit":
 			common.Logger.Infoln("Received QUIT control msg")
-			_, err = conn.Write(getRespBytes(msg, 0, "ok"))
+			_, err = conn.Write(buildServerRespInBytes(msg, 0, "ok"))
 			r.quit <- struct{}{}
 			close(r.quit)
 			return err
 		default:
-			_, err = conn.Write(getRespBytes(msg, 400, "invalid request"))
+			_, err = conn.Write(buildServerRespInBytes(msg, 400, "invalid request"))
 			common.Logger.Infoln("Received unknown control action: ", controlMsg.ControlAction)
 			return err
 		}
@@ -263,7 +263,7 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 		// sleep 1 second to leave space for saving
 		time.Sleep(1 * time.Second)
 		// send response and processing using another goroutine
-		_, err = conn.Write(getRespBytes(msg, 202, "file enqueued"))
+		_, err = conn.Write(buildServerRespInBytes(msg, 202, "file enqueued"))
 		if err != nil {
 			common.Logger.Errorf("Error writing to connection: %v", err)
 			return err
@@ -286,7 +286,7 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 	return nil
 }
 
-func getRespBytes(msgbase *common.IPCReqMessageBase, resCode uint32, msg string) []byte {
+func buildServerRespInBytes(msgbase *common.IPCReqMessageBase, resCode uint32, msg string) []byte {
 	respS := &common.IPCMessageResp{
 		ClientID:      msgbase.ClientID,
 		MessageID:     msgbase.MessageID,
