@@ -38,7 +38,7 @@ jobs:
       - name: Debug Build for Commit
         if: ${{ github.ref_type == 'branch' }}
         run: |
-          echo "PROJ_GOBUILD_DBGFLAGS=-gcflags='all=-N -l'" >> $GITHUB_ENV
+          echo "PROJ_GOBUILD_DBGFLAGS=-gcflags=all=-N\ -l" >> $GITHUB_ENV
       - name: Release Build for Tag
         if: ${{ github.ref_type == 'tag' }}
         run: |
@@ -90,6 +90,7 @@ jobs:
         run: |
           cd ${GITHUB_WORKSPACE}/gocode
           mkdir -p ../bin
+          set -x
           GOOS=linux GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_LINUX_GNU}/lib/x86_64-linux-gnu/pkgconfig \
             go build -trimpath -ldflags "${PROJ_GOBUILD_PROD_LDFLAGS} -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" \
             -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link ${PROJ_GOBUILD_DBGFLAGS} \
@@ -135,7 +136,7 @@ jobs:
       - name: Debug Build for Commit
         if: ${{ github.ref_type == 'branch' }}
         run: |
-          echo "PROJ_GOBUILD_DBGFLAGS=-gcflags='all=-N -l'" >> $GITHUB_ENV
+          echo "PROJ_GOBUILD_DBGFLAGS=-gcflags=all=-N\ -l" >> $GITHUB_ENV
       - name: Release Build for Tag
         if: ${{ github.ref_type == 'tag' }}
         run: |
@@ -196,6 +197,7 @@ jobs:
         run: |
           cd ${GITHUB_WORKSPACE}/gocode
           mkdir -p ../bin
+          set -x
           GOOS=windows GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_WIN_AMD64}/lib/pkgconfig CC=x86_64-w64-mingw32-gcc \
             go build -trimpath -ldflags "${PROJ_GOBUILD_PROD_LDFLAGS} -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" \
             -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/cramc_aio.exe \
