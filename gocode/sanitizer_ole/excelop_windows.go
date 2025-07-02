@@ -253,7 +253,7 @@ func (w *ExcelWorker) SanitizeWorkbook(targetOp string, destModuleName string) e
 						common.Logger.Errorln(err)
 						return err
 					}
-					common.Logger.Infoln("Finished Removing VBA Module: ", vbCompName)
+					common.Logger.Infoln("Finished Removal of malicious VBA Module: ", vbCompName)
 				default:
 					common.Logger.Errorln("Unknown target operation: ", targetOp)
 					return customerrs.ErrUnknownInternalError

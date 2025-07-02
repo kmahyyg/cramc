@@ -3,7 +3,6 @@
 package sanitizer_ole
 
 import (
-	"context"
 	"cramc_go/common"
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/telemetry"
@@ -95,8 +94,8 @@ func StartSanitizer() error {
 	// wait for termination of rpc server till timed out
 	rpcSC := make(chan struct{}, 1)
 	go func() {
-		// if terminating info sent, after 240 seconds, force kill process
-		tr := time.NewTimer(240 * time.Second)
+		// if terminating info sent, after 300 seconds, force kill process
+		tr := time.NewTimer(300 * time.Second)
 		select {
 		case <-tr.C:
 			_ = rpcProc.Kill()
