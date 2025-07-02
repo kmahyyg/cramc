@@ -223,7 +223,7 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 			return err
 		case "quit":
 			common.Logger.Infoln("Received QUIT control msg")
-			_, err = conn.Write(buildServerRespInBytes(msg, 0, "ok"))
+			_, err = conn.Write(buildServerRespInBytes(msg, 200, "quit_ack"))
 			r.quit <- struct{}{}
 			close(r.quit)
 			return err
@@ -294,13 +294,13 @@ func buildServerRespInBytes(msgbase *common.IPCReqMessageBase, resCode uint32, m
 }
 
 func (r *RPCServer) excelFileCleanProcedure(ctx context.Context, fPath string, targetOp string, targetMod string, errC chan error) {
-	// get lock first
-	r.eWorker.Lock()
-	defer r.eWorker.Unlock()
 	// start actual processing
 	r.wg.Add(1)
 	go func() {
 		defer r.wg.Done()
+		// get lock first
+		r.eWorker.Lock()
+		defer r.eWorker.Unlock()
 		// open workbook
 		common.Logger.Infoln("Opening workbook in sanitizer: ", fPath)
 		err3 := r.eWorker.OpenWorkbook(fPath)
