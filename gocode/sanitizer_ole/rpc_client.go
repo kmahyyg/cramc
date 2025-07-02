@@ -30,6 +30,11 @@ func generateMessageId() int64 {
 }
 
 func (c *RPCClient) Connect() error {
+	// cleanup existing connection
+	if c.currConn != nil {
+		_ = c.currConn.Close()
+	}
+	c.connected.Store(false)
 	// retry 3 times, 5 seconds time out.
 	var lastErr error
 	timeOut := time.Duration(5 * time.Second)
@@ -54,9 +59,26 @@ func (c *RPCClient) Connect() error {
 }
 
 func (c *RPCClient) Disconnect() error {
-	msgID, _ := c.SendControlMessage("disconn")
+	msgID, err := c.SendControlMessage("disconn")
+	if err != nil {
+		return err
+	}
 	common.Logger.Infof("Disconnect Triggered, Send Control Message with ID: %d ", msgID)
-	c.currConn.Close()
+	resp, err := c.procRespData()
+	if err != nil {
+		return err
+	}
+	common.Logger.Infof("Received Control Message Response: %v", resp)
+	_ = c.ConnClose()
+	common.Logger.Infoln("Disconnected")
+	return nil
+}
+
+func (c *RPCClient) ConnClose() error {
+	if c.currConn != nil || c.connected.Load() {
+		return customerrs.ErrRpcConnectionNotEstablished
+	}
+	_ = c.currConn.Close()
 	c.connected.Store(false)
 	c.currConn = nil
 	c.scanner = nil
@@ -72,7 +94,6 @@ func (c *RPCClient) Ping() error {
 		return err
 	}
 	respObj, err := c.procRespData()
-	common.Logger.Infof("Ping message response: %v ", respObj)
 	if err != nil {
 		return err
 	}
@@ -154,6 +175,7 @@ func (c *RPCClient) procRespData() (*common.IPCMessageResp, error) {
 		return nil, customerrs.ErrRpcConnectionNotEstablished
 	}
 	if !c.scanner.Scan() {
+		common.Logger.Errorf("Error scanning response: %v", c.scanner.Err())
 		return nil, customerrs.ErrUnknownInternalError
 	}
 	respBytes := c.scanner.Bytes()
@@ -163,4 +185,25 @@ func (c *RPCClient) procRespData() (*common.IPCMessageResp, error) {
 		return nil, err
 	}
 	return resp, nil
+}
+
+func (c *RPCClient) RequestTerminateAndDisconnect() error {
+	if !c.connected.Load() {
+		return customerrs.ErrRpcConnectionNotEstablished
+	}
+	// not necessary to check alive
+	// direct request termination
+	msgId, err := c.SendControlMessage("quit")
+	if err != nil {
+		return err
+	}
+	common.Logger.Infof("Request Terminate and Disconnect Triggered, Send Control Message with ID: %d ", msgId)
+	resp, err := c.procRespData()
+	if err != nil {
+		return err
+	}
+	common.Logger.Infof("Received Quit Message Response: %v", resp)
+	_ = c.ConnClose()
+	common.Logger.Infoln("Quit initiated and now terminating connection. Waiting for server cleanup.")
+	return nil
 }
