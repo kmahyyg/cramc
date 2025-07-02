@@ -11,6 +11,7 @@ import (
 	"golang.org/x/sys/windows/registry"
 	"os"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 )
@@ -81,15 +82,42 @@ func StartSanitizer() error {
 			return err2
 		}
 	}
+	// sleep 3 seconds for excel to startup
+	time.Sleep(3 * time.Second)
+	rpcCli := NewRPCClient(rpcAddr, clientID.String())
+	err = rpcCli.Connect()
+	if err != nil {
+		telemetry.CaptureException(err, "Main.StartSanitizer.RPCClient.Connect")
+		return err
+	}
 	// iterate through workbooks
 	for vObj := range common.SanitizeQueue {
 		common.Logger.Debugln("Sanitizer Queue Received a New File.")
-		// todo: ping and check online
-		// todo: get file from queue and send it out, waiting for response
-		// todo: if recv pong, then go ahead.
-
+		//  ping and check online
+		err = rpcCli.Ping()
+		if err != nil {
+			telemetry.CaptureException(err, "Main.StartSanitizer.RPCClient.StartIteratePing")
+			common.Logger.Errorln("Main.StartSanitizer.RPCClient.StartIteratePing", err)
+			continue
+		}
+		// get file from queue and send it out, waiting for response
+		var msgId int64
+		msgId, err = rpcCli.SendSanitizeMessage(vObj)
+		common.Logger.Infoln("Sanitizer Message Sent: ", msgId)
+		if err != nil {
+			telemetry.CaptureException(err, "Main.StartSanitizer.RPCClient.SendSanitizeMessage-"+strconv.FormatInt(msgId, 10))
+			common.Logger.Errorln("Main.StartSanitizer.RPCClient.SendSanitizeMessage", err)
+			continue
+		}
 	}
-	common.Logger.Infoln("Sanitizer Finished, now sending control message to terminate RPC server.")
+
+	// send terminate message
+	common.Logger.Infoln("Sanitizer Finished, now sending control message to disconnect and terminate.")
+	err = rpcCli.RequestTerminateAndDisconnect()
+	if err != nil {
+		telemetry.CaptureException(err, "Main.StartSanitizer.RPCClient.TerminateAndDisconnect")
+		common.Logger.Errorln("Main.StartSanitizer.RPCClient.TerminateAndDisconnect", err)
+	}
 
 	// wait for termination of rpc server till timed out
 	rpcSC := make(chan struct{}, 1)
@@ -98,13 +126,13 @@ func StartSanitizer() error {
 		tr := time.NewTimer(300 * time.Second)
 		select {
 		case <-tr.C:
-			_ = rpcProc.Kill()
-			common.Logger.Infoln("RPC Server Termination Timer Expired.")
+			common.Logger.Infoln("RPC Server Termination Timer Expired. You may manually reboot your system or kill it.")
 			telemetry.CaptureMessage("warn", "Privilege RPC Server Termination Timed Out.")
 		case <-rpcSC:
 			tr.Stop()
 		}
 	}()
+	common.Logger.Infoln("Sanitizer RPC Server Termination Started, wait for 300 seconds.")
 	_, _ = rpcProc.Wait()
 	rpcSC <- struct{}{}
 	common.Logger.Infoln("RPC Server terminated correctly.")
