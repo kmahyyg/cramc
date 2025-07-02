@@ -15,7 +15,7 @@ var (
 	IsElevated     bool
 
 	VersionStr    string
-	SanitizeQueue = make(chan *IPC_SingleDocToBeSanitized, 100)
+	SanitizeQueue = make(chan *IpcSingleDocToBeSanitized, 100)
 
 	DryRunOnly                 bool
 	EnableHardening            bool

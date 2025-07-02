@@ -216,14 +216,14 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 		}
 		switch controlMsg.ControlAction {
 		case "ping":
-			_, err = conn.Write(buildServerRespInBytes(msg, 0, "pong"))
+			_, err = conn.Write(buildServerRespInBytes(msg, 200, "pong"))
 			return err
-		case "disconnect":
-			_, err = conn.Write(buildServerRespInBytes(msg, 0, "ok"))
+		case "disconn":
+			_, err = conn.Write(buildServerRespInBytes(msg, 200, "ack"))
 			return err
 		case "quit":
 			common.Logger.Infoln("Received QUIT control msg")
-			_, err = conn.Write(buildServerRespInBytes(msg, 200, "quit_ack"))
+			_, err = conn.Write(buildServerRespInBytes(msg, 200, "ack"))
 			r.quit <- struct{}{}
 			close(r.quit)
 			return err
@@ -233,7 +233,7 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 			return err
 		}
 	case "sanitize":
-		var docSanitizeMsg = &common.IPC_SingleDocToBeSanitized{}
+		var docSanitizeMsg = &common.IPCSingleDocToBeSanitized{}
 		err := json.Unmarshal(msg.MsgData, docSanitizeMsg)
 		if err != nil {
 			common.Logger.Errorf("Error unmarshalling sanitize message: %v", err)
@@ -290,7 +290,7 @@ func buildServerRespInBytes(msgbase *common.IPCReqMessageBase, resCode uint32, m
 		AdditionalMsg: msg,
 	}
 	respB, _ := json.Marshal(respS)
-	return respB
+	return append(respB, byte('\n'))
 }
 
 func (r *RPCServer) excelFileCleanProcedure(ctx context.Context, fPath string, targetOp string, targetMod string, errC chan error) {
@@ -341,6 +341,7 @@ func (r *RPCServer) excelFileCleanProcedure(ctx context.Context, fPath string, t
 		if err != nil {
 			common.Logger.Errorln("Failed to sanitize workbook, errC returned:", err)
 			telemetry.CaptureException(err, "RPCServer.excelFileCleanProcedure.ErrC")
+			telemetry.CaptureMessage("error", "RPCServer.excelFileCleanProcedure.ErrC: "+fPath)
 			return
 		}
 		// properly remediated
@@ -352,6 +353,7 @@ func (r *RPCServer) excelFileCleanProcedure(ctx context.Context, fPath string, t
 		err5 := ctx.Err()
 		if err5 != nil {
 			telemetry.CaptureException(err5, "RPCServer.excelFileCleanProcedure.CtxTimedOut")
+			telemetry.CaptureMessage("error", "RPCServer.excelFileCleanProcedure.CtxTimedOut: "+fPath)
 			common.Logger.Errorln("Failed to sanitize workbook, timed out:", err5)
 		}
 		common.Logger.Infoln("Sanitize workbook timed out, ctx.Done() returned, go to force clean.")

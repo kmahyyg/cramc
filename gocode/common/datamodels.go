@@ -28,7 +28,7 @@ type YaraScanResult struct {
 }
 
 // IPC, request to sanitize
-type IPC_SingleDocToBeSanitized struct {
+type IPCSingleDocToBeSanitized struct {
 	Path          string `json:"path"`
 	Action        string `json:"action"`
 	DetectionName string `json:"detectionName"`
@@ -43,7 +43,7 @@ type IPCServerControl struct {
 // IPC, general response
 type IPCMessageResp struct {
 	ClientID      string `json:"clientID"`
-	MessageID     uint32 `json:"messageID"`
+	MessageID     int64  `json:"messageID"`
 	ResultCode    uint32 `json:"resultCode"`
 	AdditionalMsg string `json:"additionalMsg"`
 }
@@ -51,7 +51,7 @@ type IPCMessageResp struct {
 // IPC, msg framework
 type IPCReqMessageBase struct {
 	ClientID  string `json:"clientID"`
-	MessageID uint32 `json:"messageID"`
+	MessageID int64  `json:"messageID"`
 	MsgType   string `json:"msgType"`
 	MsgData   []byte `json:"msgData"`
 }
