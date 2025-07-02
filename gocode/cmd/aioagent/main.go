@@ -290,7 +290,7 @@ func main() {
 			for _, solu := range cleanupDBObj.Solutions {
 				if solu.Name == f.DetectedRule {
 					foundSolu = true
-					tmpSanitz := &common.IpcSingleDocToBeSanitized{
+					tmpSanitz := &common.IPCSingleDocToBeSanitized{
 						Path:          f.FilePath,
 						Action:        solu.Action,
 						DestModule:    solu.DestModule,
