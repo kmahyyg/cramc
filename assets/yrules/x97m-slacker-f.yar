@@ -10,11 +10,9 @@ rule VirusX97MSlackerF {
     $comment_m3           = "'Application.Dialogs(xlDialogSaveAs).Show"
     $comment_m4           = "'OOO"
     $comment_m5           = ") = \"BOOK1\" Then"
-    $comment_m6           = "mFileName?"
     $code_takecare_of_mru = "AddToMru"
     $file_head            = "Excel.Application"
     $file_mod             = "ThisWorkbook"
-    $m_bak_dest           = "C:\\TMP\\"
 
   condition:
     all of them
