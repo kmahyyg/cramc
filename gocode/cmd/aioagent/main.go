@@ -43,7 +43,8 @@ var (
 	flNoDiskScan      = flag.Bool("noDiskScan", false, "Do not scan files on disk, but supply file list. If platform is not Windows x86_64, yara won't work, you have to set this to true and then run Yara scanner against our rules and save output to ipt_yrscan.lst. Yara-X scanner is not supported yet.")
 	allowedExts       = []string{".xls", ".xlsx", ".xlsm", ".xlsb"}
 	flHelp            = flag.Bool("help", false, "Show help")
-	flNoPriv          = flag.Bool("nopriv", false, "Do not run as privileged user, even you are privileged.")
+	flNoPriv          = flag.Bool("noPriv", false, "Do not run as privileged user, even you are privileged.")
+	flSkipUpdChk      = flag.Bool("skipUpdChk", false, "Development only: set to true to skip update checker.")
 )
 
 func init() {
@@ -131,19 +132,23 @@ func main() {
 	common.Logger.Info("Triggered M365 Office processes killer.")
 	// update checker
 	latestV, err := updchecker.CheckUpdateFromInternet()
+	common.Logger.Info("Called update-checker.")
 	if err != nil {
 		common.Logger.Error("Update Checker Error: " + err.Error())
 	} else {
-		if latestV.ProgramRevision != common.ProgramRev {
-			common.Logger.Log(context.TODO(), logging.LevelFatal, "Program UpdCheck: "+customerrs.ErrNotLatestVersion.Error())
-			os.Exit(-1)
-		}
-		if latestV.DatabaseVersion != common.CleanupDB.Version {
-			common.Logger.Log(context.TODO(), logging.LevelFatal, "Database UpdCheck: "+customerrs.ErrNotLatestVersion.Error())
-			os.Exit(-1)
+		if *flSkipUpdChk {
+			common.Logger.Info("UpdateChecker skipped due to flag set.")
+		} else {
+			if latestV.ProgramRevision != common.ProgramRev {
+				common.Logger.Log(context.TODO(), logging.LevelFatal, "Program UpdCheck: "+customerrs.ErrNotLatestVersion.Error())
+				os.Exit(-1)
+			}
+			if latestV.DatabaseVersion != common.CleanupDB.Version {
+				common.Logger.Log(context.TODO(), logging.LevelFatal, "Database UpdCheck: "+customerrs.ErrNotLatestVersion.Error())
+				os.Exit(-1)
+			}
 		}
 	}
-	common.Logger.Info("Called update-checker.")
 	// check privilege
 	isElevated, _ := fileutils.CheckProcessElevated()
 	common.IsElevated = isElevated
