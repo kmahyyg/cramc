@@ -18,7 +18,7 @@ permissions:
 
 env:
   GO_VER: "1.24.4"
-  YARAX_VER: "1.2.1"
+  YARAX_VER: "1.3.0"
   PROJECT_DEST: "/opt/buildtargets"
   PROJECT_NAME: "cramc_go"
   THIRD_PARTY_SRC: "/opt/softsrcs"
@@ -28,37 +28,31 @@ jobs:
   build-linux-amd64:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - name: Workaround for git describe
-        run: git fetch --prune --unshallow --tags
-      - uses: actions/setup-go@v5
+      - name: Checkout CRAMC source code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: true
+          fetch-tags: true
+          fetch-depth: 0
+          path: 'cramc'
+      - name: Checkout YARA-X source code
+        uses: actions/checkout@v4
+        with:
+          repository: 'VirusTotal/yara-x'
+          ref: 'v1.3.0'
+          path: 'yara-x'
+      - name: Setup Golang Toolchain
+        uses: actions/setup-go@v5
         with:
           go-version: '1.24.4'
-          cache-dependency-path: 'gocode/go.sum'
-      - name: Introduce Build Envvar
-        run: |
-          echo "YARAX_SRC=${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}" >> $GITHUB_ENV
-          echo "PROJ_PREFIX_LINUX_GNU=${PROJECT_DEST}/${PROJECT_NAME}/linux_amd64" >> $GITHUB_ENV
-      - name: Install Build Deps
-        run: |
-          sudo apt update -y
-          sudo apt install gcc-mingw-w64-x86-64 build-essential pkg-config zip unzip git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev upx libunwind-dev liblzma-dev -y
-          go install github.com/tc-hib/go-winres@latest
-          mkdir -p ${THIRD_PARTY_SRC} ${PROJ_PREFIX_LINUX_GNU} ${PROJECT_DEST}
-      - name: Fetch YaraX src
-        run: |
-          mkdir -p ${THIRD_PARTY_SRC}/yara-x
-          cd ${THIRD_PARTY_SRC}
-          curl -L -O https://github.com/VirusTotal/yara-x/archive/refs/tags/v${YARAX_VER}.tar.gz
-          mv ./v${YARAX_VER}.tar.gz ./yara-x-v${YARAX_VER}.tar.gz
-          tar -xzvf yara-x-v${YARAX_VER}.tar.gz -C ${THIRD_PARTY_SRC}/yara-x
-          rm -rf ./yara-x-v${YARAX_VER}.tar.gz
-          cd ${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
-      - uses: actions-rs/toolchain@v1
+          cache-dependency-path: 'cramc/gocode/go.sum'
+      - name: Setup Rust Toolchain
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: 'stable'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
           default: true
-      - name: Caching with Cargo
+      - name: Caching with Cargo Dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -66,85 +60,62 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
           key: ${{ runner.os }}-cargo-rust-linuxbuild
-      - name: Install Cargo-C
-        run: cargo install cargo-c
-      - name: Build Yara-X
-        env:
-          # https://doc.rust-lang.org/rustc/codegen-options/index.html
-          # https://github.com/VirusTotal/yara-x/issues/181
-          # https://github.com/VirusTotal/yara-x/issues/185 Damn SLOW when against glibc.
-          RUSTFLAGS: "-C target-feature=+crt-static"
-          # GNU GLIBC can be forced to be statically linked
+      - name: Install cargo-c from crates.io with cache
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-c
+          locked: false
+          cache-key: ${{ runner.os }}-cargo-cinstall-linuxbuild
+      - name: Run Build Script
         run: |
-          cd ${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
-          cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --prefix=${PROJ_PREFIX_LINUX_GNU}
-      - name: Build Go Code
-        run: |
-          cd ${GITHUB_WORKSPACE}/gocode
-          mkdir -p ../bin
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_LINUX_GNU}/lib/x86_64-linux-gnu/pkgconfig \
-            go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" \
-            -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/devreleaser ./cmd/devreleaser
-      - name: Autoupdate of Yara Database and Cleanup Database
-        run: |
-          cp -ar ${GITHUB_WORKSPACE}/bin/devreleaser ${GITHUB_WORKSPACE}/assets
-          cd ${GITHUB_WORKSPACE}/assets
-          ./devreleaser -compile
-          ./devreleaser -enc=true -in=./yrules/bin/unified.yar -out=../bin/unified.yar.bin
-          ./devreleaser -enc=true -in=./cramc_db.json -out=../bin/cramc_db.bin
-          rm -f ./devreleaser
-          cd ${GITHUB_WORKSPACE}/bin
-          mv ./devreleaser ./devreleaser_linux_amd64
-          upx -9 ./devreleaser_linux_amd64
-          ls -alh ${GITHUB_WORKSPACE}/bin
+          cd ${GITHUB_WORKSPACE}/cramc
+          ./assets/build.sh linux amd64
+          tree ./bin
       - name: Upload Runtime Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: database_updates
           retention-days: 30
-          path: ${{ github.workspace }}/bin/*.bin
+          path: ${{ github.workspace }}/cramc/bin/*.bin
       - name: Upload DevReleaser Artifact
         uses: actions/upload-artifact@v4
         with:
           name: devreleaser
           retention-days: 30
-          path: ${{ github.workspace }}/bin/devreleaser_linux_amd64
+          compression-level: 0
+          path: ${{ github.workspace }}/cramc/bin/devreleaser_linux_amd64
 
   build-windows-amd64:
     runs-on: ubuntu-24.04
+    needs:
+      - build-linux-amd64
     steps:
-      - uses: actions/checkout@v4
-      - name: Workaround for git describe
-        run: git fetch --prune --unshallow --tags
-      - uses: actions/setup-go@v5
+      - name: Checkout CRAMC source code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          lfs: true
+          fetch-tags: true
+          fetch-depth: 0
+          path: 'cramc'
+      - name: Checkout YARA-X source code
+        uses: actions/checkout@v4
+        with:
+          repository: 'VirusTotal/yara-x'
+          ref: 'v1.3.0'
+          path: 'yara-x'
+      - name: Setup Golang Toolchain
+        uses: actions/setup-go@v5
         with:
           go-version: '1.24.4'
-          cache-dependency-path: 'gocode/go.sum'
-      - name: Introduce Build Envvar
-        run: |
-          echo "YARAX_SRC=${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}" >> $GITHUB_ENV
-          echo "PROJ_PREFIX_WIN_AMD64=${PROJECT_DEST}/${PROJECT_NAME}/win_amd64" >> $GITHUB_ENV
-      - name: Install Build Deps
-        run: |
-          sudo apt update -y
-          sudo apt install gcc-mingw-w64-x86-64 build-essential pkg-config zip unzip git zlib1g-dev libbz2-dev libmagic-dev autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev upx libunwind-dev liblzma-dev -y
-          go install github.com/tc-hib/go-winres@latest
-          mkdir -p ${THIRD_PARTY_SRC} ${PROJ_PREFIX_WIN_AMD64} ${PROJECT_DEST}
-      - name: Fetch YaraX src
-        run: |
-          mkdir -p ${THIRD_PARTY_SRC}/yara-x
-          cd ${THIRD_PARTY_SRC}
-          curl -L -O https://github.com/VirusTotal/yara-x/archive/refs/tags/v${YARAX_VER}.tar.gz
-          mv ./v${YARAX_VER}.tar.gz ./yara-x-v${YARAX_VER}.tar.gz
-          tar -xzvf yara-x-v${YARAX_VER}.tar.gz -C ${THIRD_PARTY_SRC}/yara-x
-          rm -rf ./yara-x-v${YARAX_VER}.tar.gz
-          cd ${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
-      - uses: actions-rs/toolchain@v1
+          cache-dependency-path: 'cramc/gocode/go.sum'
+      - name: Setup Rust Toolchain
+        uses: actions-rs/toolchain@v1
         with:
           toolchain: 'stable'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
           default: true
           target: 'x86_64-pc-windows-gnu'
-      - name: Caching with Cargo
+      - name: Caching with Cargo Dependencies
         uses: actions/cache@v4
         with:
           path: |
@@ -152,70 +123,65 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
           key: ${{ runner.os }}-cargo-rust-winbuild
-      - name: Install Cargo-C
-        run: cargo install cargo-c
-      - name: Build Yara-X
-        env:
-          # https://doc.rust-lang.org/rustc/codegen-options/index.html
-          # https://github.com/VirusTotal/yara-x/issues/181
-          # https://github.com/VirusTotal/yara-x/issues/185 Damn SLOW when against glibc.
-          RUSTFLAGS: "-C target-feature=+crt-static"
-          # GNU GLIBC can be forced to be statically linked
+      - name: Install cargo-c from crates.io with cache
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: cargo-c
+          locked: false
+          cache-key: ${{ runner.os }}-cargo-cinstall-winbuild
+      - name: Run Build Script
         run: |
-          cd ${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
-          cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --target x86_64-pc-windows-gnu --prefix=${PROJ_PREFIX_WIN_AMD64}
-      - name: Workaround for Linker (Windows-RS 0.52.0)
+          cd ${GITHUB_WORKSPACE}/cramc
+          ./assets/build.sh windows amd64
+          tree ./bin
+      - name: Download artifacts previously generated
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ github.workspace }}/cramc/bin
+          merge-multiple: true
+      - name: Build Convenient Package for End Users
         run: |
-          cd "${PROJ_PREFIX_WIN_AMD64}/lib"
-          curl -L -O https://github.com/microsoft/windows-rs/raw/b62b802bae534fdaed3fa25b6838dc3001b6d084/crates/targets/x86_64_gnu/lib/libwindows.0.52.0.a
-      - name: Golang Exe WinRES
-        run: |
-          cd ${GITHUB_WORKSPACE}/gocode/cmd/aioagent
-          GOOS=windows GOARCH=amd64 go-winres make --product-version=git-tag --file-version=git-tag
-      - name: Build Go Code
-        run: |
-          cd ${GITHUB_WORKSPACE}/gocode
-          mkdir -p ../bin
-          GOOS=windows GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_WIN_AMD64}/lib/pkgconfig CC=x86_64-w64-mingw32-gcc \
-            go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" \
-            -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/cramc_aio.exe ./cmd/aioagent
-      - name: Compress of Windows Executables
-        run: |
-          cd ${GITHUB_WORKSPACE}/bin
-          upx -9 ./cramc_aio.exe
-          ls -alh ${GITHUB_WORKSPACE}/bin
-      - name: Upload Windows Artifacts
+          cd ${GITHUB_WORKSPACE}/cramc/bin
+          tree .
+          zip -1 -r cramc_go_${GITHUB_RUN_ID}.zip privhelper.exe cramc_aio.exe cramc_db.bin unified.yar.bin
+      - name: Upload All Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: cramc_win_aioagent
+          name: cramc_go
           retention-days: 30
-          path: ${{ github.workspace }}/bin/cramc_aio.exe
+          compression-level: 0
+          if-no-files-found: error
+          path: |
+            ${{ github.workspace }}/cramc/bin/cramc_go_${{ github.run_id }}.zip
+            ${{ github.workspace }}/cramc/bin/devreleaser_linux_amd64
 
   release-to-public:
     needs:
-      - build-linux-amd64
       - build-windows-amd64
     if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-24.04
     steps:
       - name: Prepare for release
         run: |
+          sudo apt update -y
+          sudo apt install tree -y
           mkdir -p /tmp/relbuild/${{ github.repository_owner }}
       - name: Download artifacts previously generated
         uses: actions/download-artifact@v4
         with:
+          name: cramc_go
           path: /tmp/relbuild/${{ github.repository_owner }}
           merge-multiple: true
       - name: List all artifacts downloaded
         run: |
-          ls -alh /tmp/relbuild/**/*
+          tree /tmp/relbuild
       - name: Craft release
         uses: ncipollo/release-action@v1
         with:
           artifactErrorsFailBuild: true
           body: |
             We recommend everyone stays on the latest version. 
-            To use, download `*.bin` and `cramc_aio.exe` together, then put them under the same new empty folder and execute under that folder. 
+            To use, download `*.zip` and extract to a new empty folder and execute under that folder. 
             Program will try auto-elevate based on your current privileges. 
             This version uses totally different scanner engine, please do not reuse rules from v0.4.x.
           allowUpdates: true

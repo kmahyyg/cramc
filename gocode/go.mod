@@ -3,10 +3,12 @@ module cramc_go
 go 1.24
 
 require (
-	github.com/VirusTotal/yara-x/go v1.2.1
+	github.com/Microsoft/go-winio v0.6.2
+	github.com/VirusTotal/yara-x/go v1.3.0
 	github.com/go-ole/go-ole v1.3.0
+	github.com/google/uuid v1.6.0
 	github.com/klauspost/compress v1.18.0
-	github.com/shirou/gopsutil/v4 v4.25.5
+	github.com/shirou/gopsutil/v4 v4.25.6
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/crypto v0.39.0
 	golang.org/x/sys v0.33.0

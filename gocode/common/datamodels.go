@@ -27,12 +27,33 @@ type YaraScanResult struct {
 	FilePath     string `json:"filePath"`
 }
 
-// IPC, single response for /fetchPendingFiles
-type IPC_SingleDocToBeSanitized struct {
+// IPC, request to sanitize
+type IPCSingleDocToBeSanitized struct {
 	Path          string `json:"path"`
 	Action        string `json:"action"`
 	DetectionName string `json:"detectionName"`
 	DestModule    string `json:"module"`
+}
+
+// IPC, server control msg
+type IPCServerControl struct {
+	ControlAction string `json:"controlAction"`
+}
+
+// IPC, general response
+type IPCMessageResp struct {
+	ClientID      string `json:"clientID"`
+	MessageID     int64  `json:"messageID"`
+	ResultCode    uint32 `json:"resultCode"`
+	AdditionalMsg string `json:"additionalMsg"`
+}
+
+// IPC, msg framework
+type IPCReqMessageBase struct {
+	ClientID  string `json:"clientID"`
+	MessageID int64  `json:"messageID"`
+	MsgType   string `json:"msgType"`
+	MsgData   []byte `json:"msgData"`
 }
 
 type HardeningAction struct {

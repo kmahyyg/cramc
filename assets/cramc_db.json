@@ -1,17 +1,27 @@
 {
-    "version": 20250624004,
+    "version": 20250701005,
     "solutions":[
         {
             "name": "VirusX97MSlackerF",
             "module": "ThisWorkbook",
-            "action": "sanitize",
+            "action": "remediate",
             "mustHarden": true,
             "allowRepeatedHarden": false,
             "hardenMeasures": [
-                {"action": "clean_setRO", "type":  "dir", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel"},
                 {"action": "rm_replaceDir_setRO", "type": "file", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1"},
                 {"action": "rm_replaceDir_setRO", "type": "file", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1.xlsm"},
                 {"action": "rm_replaceDir_setRO", "type": "file", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1.xlsb"},
+                {"action": "setRO", "type": "dir", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART"}
+            ]
+        },
+        {
+            "name": "VirusX97MLarouxCF",
+            "module": "foxz",
+            "action": "rm_module",
+            "mustHarden": true,
+            "allowRepeatedHarden": false,
+            "hardenMeasures": [
+                {"action": "rm_replaceDir_setRO", "type": "file", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\NEGS.XLS"},
                 {"action": "setRO", "type": "dir", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART"}
             ]
         }

@@ -203,7 +203,7 @@ func (w *ExcelWorker) SaveAndCloseWorkbook() error {
 	return nil
 }
 
-func (w *ExcelWorker) SanitizeWorkbook(destModuleName string) error {
+func (w *ExcelWorker) SanitizeWorkbook(targetOp string, destModuleName string) error {
 	if w.currentWorkbook == nil {
 		common.Logger.Errorln(customerrs.ErrExcelCurrentWorkbookNullPtr)
 		return customerrs.ErrExcelCurrentWorkbookNullPtr
@@ -224,24 +224,40 @@ func (w *ExcelWorker) SanitizeWorkbook(destModuleName string) error {
 			// yes, this bullsh*t index starts from 1...
 			vbComp := oleutil.MustCallMethod(vbCompsInProj, "Item", i).ToIDispatch()
 			vbCompName := oleutil.MustGetProperty(vbComp, "Name").Value().(string)
+			common.Logger.Debugln("Current VBComponent Name in iteration: ", vbCompName)
 			if vbCompName == destModuleName {
-				common.Logger.Infoln("Sanitizing Matched VBA Component: ", vbCompName)
-				// verified in powershell
-				codeMod := oleutil.MustGetProperty(vbComp, "CodeModule").ToIDispatch()
-				codeModLineCnt := (int)(oleutil.MustGetProperty(codeMod, "CountOfLines").Value().(int32))
-				// remove all lines
-				_, err := codeMod.CallMethod("DeleteLines", 1, codeModLineCnt)
-				if err != nil {
-					telemetry.CaptureException(err, "Excel.WorkbookVBACodeModule.DeleteLines_"+w.curFilePath)
-					common.Logger.Errorln(err)
-					continue
+				switch targetOp {
+				case "remediate":
+					common.Logger.Infoln("Remediating Matched VBA Component: ", vbCompName)
+					// verified in powershell
+					codeMod := oleutil.MustGetProperty(vbComp, "CodeModule").ToIDispatch()
+					codeModLineCnt := (int)(oleutil.MustGetProperty(codeMod, "CountOfLines").Value().(int32))
+					// remove all lines
+					_, err := codeMod.CallMethod("DeleteLines", 1, codeModLineCnt)
+					if err != nil {
+						telemetry.CaptureException(err, "Excel.WorkbookVBACodeModule.DeleteLines_"+w.curFilePath)
+						common.Logger.Errorln(err)
+						return err
+					}
+					_, err = codeMod.CallMethod("AddFromString", cleanupComment)
+					if err != nil {
+						common.Logger.Errorln(err)
+						return err
+					}
+					common.Logger.Infoln("Finished Remediating VBA Module: ", vbCompName)
+				case "rm_module":
+					common.Logger.Infoln("Removing VBA Module: ", vbCompName)
+					_, err = oleutil.CallMethod(vbCompsInProj, "Remove", vbComp)
+					if err != nil {
+						telemetry.CaptureException(err, "Excel.WorkbookVBAComponents.RemoveModule")
+						common.Logger.Errorln(err)
+						return err
+					}
+					common.Logger.Infoln("Finished Removal of malicious VBA Module: ", vbCompName)
+				default:
+					common.Logger.Errorln("Unknown target operation: ", targetOp)
+					return customerrs.ErrUnknownInternalError
 				}
-				_, err = codeMod.CallMethod("AddFromString", cleanupComment)
-				if err != nil {
-					common.Logger.Errorln(err)
-					continue
-				}
-				common.Logger.Infoln("Finished Sanitizing VBA Module: ", vbCompName)
 			}
 		}
 		return nil
