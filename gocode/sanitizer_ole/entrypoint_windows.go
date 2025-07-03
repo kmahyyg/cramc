@@ -84,7 +84,7 @@ func StartSanitizer() error {
 	}
 	// sleep 3 seconds for excel to startup
 	time.Sleep(3 * time.Second)
-	rpcCli := NewRPCClient(rpcAddr, clientID.String())
+	rpcCli := NewRPCClient(RpcCallAddr, clientID.String())
 	err = rpcCli.Connect()
 	if err != nil {
 		telemetry.CaptureException(err, "Main.StartSanitizer.RPCClient.Connect")

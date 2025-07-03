@@ -18,8 +18,7 @@ const (
 	betterStackURL         = "https://s1358347.eu-nbg-2.betterstackdata.com"
 	betterStackBearerToken = "26Y9ahkqDMsQgLN9yTb1JETU"
 
-	lockFile        = "privhelper.lock"
-	listenNamedPipe = `\\.\cramcPriv`
+	lockFile = "privhelper.lock"
 )
 
 func main() {
@@ -68,7 +67,7 @@ func main() {
 		}
 		defer lockFd.Close()
 		// start server
-		rServ, err2 = sanitizer_ole.NewRPCServer(listenNamedPipe)
+		rServ, err2 = sanitizer_ole.NewRPCServer(sanitizer_ole.RpcCallAddr)
 		if err2 != nil {
 			panic(err2)
 		}

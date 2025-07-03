@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const rpcAddr = `\\.\pipe\cramcPriv`
+const RpcCallAddr = `\\.\pipe\cramcPriv`
 
 type RPCClient struct {
 	dialAddr  string
