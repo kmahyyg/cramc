@@ -66,6 +66,7 @@ if [[ "$1" == "linux" ]]; then
     if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
         GOOS=linux GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_LINUX_GNU}/lib/x86_64-linux-gnu/pkgconfig \
         go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/devreleaser ./cmd/devreleaser
+        upx -9 ../bin/devreleaser
     elif [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
         GOOS=linux GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_LINUX_GNU}/lib/x86_64-linux-gnu/pkgconfig \
         go build -ldflags "-X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" \
@@ -83,7 +84,6 @@ if [[ "$1" == "linux" ]]; then
     # prepare for uploading artifacts
     cd ${GITHUB_WORKSPACE}/cramc/bin
     mv ./devreleaser ./devreleaser_linux_amd64
-    upx -9 ./devreleaser_linux_amd64
     # check results for debug
     ls -alh ${GITHUB_WORKSPACE}/cramc/bin
 elif [[ "$1" == "windows" ]]; then
@@ -110,6 +110,10 @@ elif [[ "$1" == "windows" ]]; then
 
         GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
         -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\"" -o ../bin/privhelper.exe ./cmd/privhelper
+
+        # only compress in prod release
+        upx -9 ../bin/cramc_aio.exe
+        upx -9 ../bin/privhelper.exe
     elif [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
         GOOS=windows GOARCH=amd64 CGO_ENABLED=1 \
         PKG_CONFIG_PATH=${PROJ_PREFIX_WIN_AMD64}/lib/pkgconfig CC=x86_64-w64-mingw32-gcc \
@@ -120,10 +124,6 @@ elif [[ "$1" == "windows" ]]; then
         -ldflags "-X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\"" -o ../bin/privhelper.exe ./cmd/privhelper
     fi
 
-    # compress generate files
-    cd ${GITHUB_WORKSPACE}/cramc/bin
-    upx -9 ./cramc_aio.exe
-    upx -9 ./privhelper.exe
     # check results for debug
     ls -alh ${GITHUB_WORKSPACE}/cramc/bin
 else
