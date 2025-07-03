@@ -66,14 +66,14 @@ func main() {
 			panic(err2)
 		}
 		defer lockFd.Close()
-		// start server
-		rServ, err2 = sanitizer_ole.NewRPCServer(sanitizer_ole.RpcCallAddr)
-		if err2 != nil {
-			panic(err2)
-		}
 	}()
 	// cleanup
 	defer os.Remove(lockFile)
+	// start server
+	rServ, err2 := sanitizer_ole.NewRPCServer(sanitizer_ole.RpcCallAddr)
+	if err2 != nil {
+		panic(err2)
+	}
 
 	rServ.Start()
 }
