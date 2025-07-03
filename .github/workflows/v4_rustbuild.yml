@@ -18,7 +18,7 @@ permissions:
 
 env:
   GO_VER: "1.24.4"
-  YARAX_VER: "1.2.1"
+  YARAX_VER: "1.3.0"
   PROJECT_DEST: "/opt/buildtargets"
   PROJECT_NAME: "cramc_go"
   THIRD_PARTY_SRC: "/opt/softsrcs"
