@@ -20,13 +20,13 @@ func MergeAndCompile2UnifiedRules(plainTextRulesDir string, destUnifiedBinRulesP
 	// should NOT be necessary to call, unless memory leakage occurred, explicit GC
 	// defer yrCompiler.Destroy()
 	yrCompiler.NewNamespace("ycramc")
-	common.Logger.Infoln("Yara Compiler Created.")
+	common.Logger.Info("Yara Compiler Created.")
 	// prepare buf
 	rawRulesStrBuf := bytes.NewBuffer(nil)
 	// iterate files
 	err = filepath.Walk(plainTextRulesDir, func(curPath string, curInfo os.FileInfo, err error) error {
 		if err != nil {
-			common.Logger.Errorln("Iterating Files err: ", err)
+			common.Logger.Error("Iterating Files err: " + err.Error())
 		}
 		if curInfo.IsDir() {
 			return nil
@@ -45,7 +45,7 @@ func MergeAndCompile2UnifiedRules(plainTextRulesDir string, destUnifiedBinRulesP
 			// add line break to make sure the format & syntax won't be broken
 			// currently we don't support files that require additional metadata or external variables.
 			_, _ = rawRulesStrBuf.WriteRune('\n')
-			common.Logger.Infoln("Yara Compiler - File Added: ", curPath)
+			common.Logger.Info("Yara Compiler - File Added: " + curPath)
 			return nil
 		}
 		return nil
@@ -59,16 +59,18 @@ func MergeAndCompile2UnifiedRules(plainTextRulesDir string, destUnifiedBinRulesP
 	if err != nil {
 		panic(err)
 	}
-	common.Logger.Infoln("Yara Compiler - Rules Added To Pending List.")
+	common.Logger.Info("Yara Compiler - Rules Added To Pending List.")
 	// now dump out
 	compRules := yrCompiler.Build()
 	// check compilation error
 	compErrs := yrCompiler.Errors()
 	if len(compErrs) > 0 {
-		common.Logger.Errorln("Yara Compiler - Compilation Error: ", compErrs)
+		for _, v := range compErrs {
+			common.Logger.Error("Yara Compiler - Compilation Error: " + v.Error())
+		}
 		panic(customerrs.ErrYaraXCompilationFailure)
 	}
-	common.Logger.Infoln("Yara Compiler - Rules Compiled.")
+	common.Logger.Info("Yara Compiler - Rules Compiled.")
 	// should NOT be necessary to call, explicit gc
 	// defer compRules.Destroy()
 	// open dumped out file fd
@@ -76,12 +78,12 @@ func MergeAndCompile2UnifiedRules(plainTextRulesDir string, destUnifiedBinRulesP
 	if err != nil {
 		panic(err)
 	}
-	common.Logger.Infoln("Yara Compiler - Dumped File Created: ", destUnifiedBinRulesPath)
+	common.Logger.Info("Yara Compiler - Dumped File Created: " + destUnifiedBinRulesPath)
 	defer destFd.Close()
 	defer destFd.Sync()
 	_, err = compRules.WriteTo(destFd)
 	if err != nil {
 		panic(err)
 	}
-	common.Logger.Infoln("Compiled Yara rules binary saved to: ", destUnifiedBinRulesPath)
+	common.Logger.Info("Compiled Yara rules binary saved to: " + destUnifiedBinRulesPath)
 }

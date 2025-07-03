@@ -5,6 +5,7 @@ package windoge_utils
 import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
+	"fmt"
 	"golang.org/x/sys/windows"
 	"os/user"
 	"runtime"
@@ -47,7 +48,7 @@ var (
 func CheckRunningUnderSYSTEM() (bool, error) {
 	curU, err := user.Current()
 	if err != nil {
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 		return false, err
 	}
 	if curU.Uid == WELLKNOWN_SYSTEM_SID {
@@ -85,21 +86,21 @@ func getActiveWTSSessionID() (uint32, error) {
 	var sessionIDfound bool
 	// determine if server edition first, if yes, result below is unreliable
 	if isWindowsServer() {
-		common.Logger.Warnln("[WARN] WTSActiveSession not found and running on server OS.")
+		common.Logger.Warn("[WARN] WTSActiveSession not found and running on server OS.")
 	}
 	for _, ses := range sessions {
 		// skip session ID 0 (service) & ID > 65530 special listening session
 		if ses.SessionID == 0 || ses.SessionID > 65530 {
-			common.Logger.Debugln("Special WTS Session ID Skipped.")
+			common.Logger.Debug("Special WTS Session ID Skipped.")
 			continue
 		}
 		// check console session,
 		sesName := windows.UTF16PtrToString(ses.WindowStationName)
 		// active console first
 		if ses.State == windows.WTSActive {
-			common.Logger.Debugln("Active WTS Session Found.")
+			common.Logger.Debug("Active WTS Session Found.")
 			if sesName == "Console" {
-				common.Logger.Debugln("Active WTS Session on Console.")
+				common.Logger.Debug("Active WTS Session on Console.")
 			}
 			selectedSessionID = ses.SessionID
 			sessionIDfound = true
@@ -114,10 +115,10 @@ func getActiveWTSSessionID() (uint32, error) {
 			// for precaution, check session linked username, it should not be null
 			err = wtsQuerySessionInformation(WTS_CURRENT_SERVER_HANDLE, ses.SessionID, WTSUserName, &userN, &userNsize)
 			if err != nil {
-				common.Logger.Errorln(err)
+				common.Logger.Error(err.Error())
 			}
-			defer windows.WTSFreeMemory(uintptr(unsafe.Pointer(userN)))
 			curUserName := windows.UTF16PtrToString(userN)
+			windows.WTSFreeMemory(uintptr(unsafe.Pointer(userN)))
 			if len(curUserName) != 0 {
 				selectedSessionID = ses.SessionID
 				sessionIDfound = true
@@ -125,13 +126,14 @@ func getActiveWTSSessionID() (uint32, error) {
 			} else {
 				continue
 			}
+
 		}
 		// I don't want to fallback to Connected Session, as user may not be logged-in.
 		// which I can't use for further token query and impersonation.
 	}
 	// if no active session found, means user logged-out or already disconnected.
 	if sessionIDfound {
-		common.Logger.Infof("Active WTS Session ID Found: %d", selectedSessionID)
+		common.Logger.Info(fmt.Sprintf("Active WTS Session ID Found: %d", selectedSessionID))
 		return selectedSessionID, nil
 	} else {
 		return 0, customerrs.ErrUnknownInternalError
@@ -146,25 +148,25 @@ func GetLoggedInUserToken(tokenType uint32) (uintptr, error) {
 	// get sessionID from getActiveWTSSessionID()
 	sessID, err := getActiveWTSSessionID()
 	if err != nil {
-		common.Logger.Errorln("Cannot determine current active session, abort with error: ", err)
+		common.Logger.Error("Cannot determine current active session, abort with error: " + err.Error())
 		return 0, err
 	}
 	if sessID == 0 {
-		common.Logger.Errorln("Unexpected Session ID returned, must fail.")
+		common.Logger.Error("Unexpected Session ID returned, must fail.")
 		return 0, customerrs.ErrUnknownInternalError
 	}
 	// now query logged-in session
 	var sessUserToken windows.Token
 	err = windows.WTSQueryUserToken(sessID, &sessUserToken)
 	if err != nil {
-		common.Logger.Errorln("Cannot retrieve primary user token from given session ID: ", sessID, "with Error: ", err)
+		common.Logger.Error(fmt.Sprintf("Cannot retrieve primary user token from given session ID: %d with Error: %s", sessID, err))
 		return 0, err
 	}
 	defer sessUserToken.Close()
 	// enable priv
 	err = enableNecessaryPrivilege()
 	if err != nil {
-		common.Logger.Errorln("Cannot enable necessary privilege: ", err)
+		common.Logger.Error("Cannot enable necessary privilege: " + err.Error())
 		return 0, err
 	}
 	// token retrieved, thread locked, now time to duplicate a primary token as an impersonation token,
@@ -173,7 +175,7 @@ func GetLoggedInUserToken(tokenType uint32) (uintptr, error) {
 	err = windows.DuplicateTokenEx(sessUserToken, windows.TOKEN_ALL_ACCESS, nil,
 		windows.SecurityImpersonation, tokenType, &impUserToken)
 	if err != nil {
-		common.Logger.Errorln("Cannot duplicate token from given session ID: ", sessID, "with Error: ", err)
+		common.Logger.Error(fmt.Sprintf("Cannot duplicate token from given session ID: %d , with Error:  %s", sessID, err))
 		return 0, err
 	}
 	return (uintptr)(impUserToken), nil
@@ -183,7 +185,7 @@ func PrepareForTokenImpersonation(isReverse bool) error {
 	if isReverse {
 		err := windows.RevertToSelf()
 		if err != nil {
-			common.Logger.Errorln(err)
+			common.Logger.Error(err.Error())
 		}
 		runtime.UnlockOSThread()
 		return err
@@ -194,7 +196,7 @@ func PrepareForTokenImpersonation(isReverse bool) error {
 	err := regDisablePredefinedCache()
 	if err != nil {
 		// safe to ignore and go next
-		common.Logger.Warnln("RegDisablePredefinedCacheEx returned err: ", err.Error())
+		common.Logger.Warn("RegDisablePredefinedCacheEx returned err: " + err.Error())
 		return err
 	}
 	return nil
@@ -239,7 +241,7 @@ func enableNecessaryPrivilege() error {
 	for _, priv := range []string{SE_TCB_NAME, SE_ASSIGNPRIMARYTOKEN_NAME, SE_IMPERSONATE_NAME} {
 		err3 := checkLUIDUnderPrivAndAdjust(priv, curProcToken)
 		if err3 != nil {
-			common.Logger.Errorln("Adjusting Token Privilege Error: ", err3, " When processing:", priv)
+			common.Logger.Error("Adjusting Token Privilege Error: " + err3.Error() + " When processing: " + priv)
 		}
 	}
 	return nil
@@ -257,7 +259,7 @@ func enableNecessaryPrivilege() error {
 func regDisablePredefinedCache() error {
 	ret, _, err := procRegDisablePredefinedCache.Call()
 	if LSTATUS(ret) != ERROR_SUCCESS {
-		common.Logger.Errorf("RegDisablePredefinedCache failed, with error code: %d", ret)
+		common.Logger.Error(fmt.Sprintf("RegDisablePredefinedCache failed, with error code: %d", ret))
 		return err
 	}
 	return nil
@@ -269,7 +271,7 @@ func regDisablePredefinedCache() error {
 func regDisablePredefinedCacheEx() error {
 	ret, _, _ := procRegDisablePredefinedCacheEx.Call()
 	if LSTATUS(ret) != ERROR_SUCCESS {
-		common.Logger.Errorf("RegDisablePredefinedCache failed, with error code: %d", ret)
+		common.Logger.Error(fmt.Sprintf("RegDisablePredefinedCache failed, with error code: %d", ret))
 		return syscall.Errno(ret)
 	}
 	return nil

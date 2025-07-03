@@ -12,7 +12,7 @@ func KillAllOfficeProcesses() (bool, error) {
 	coveredProcess := []string{"excel.exe"}
 	procKilled := false
 	if common.IsRunningOnWin {
-		common.Logger.Infoln("Trying to kill office processes.")
+		common.Logger.Info("Trying to kill office processes.")
 		if common.DryRunOnly {
 			common.Logger.Info("DryRun set, return true, no operation.")
 			return true, nil

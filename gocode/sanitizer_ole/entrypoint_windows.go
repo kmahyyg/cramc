@@ -6,6 +6,7 @@ import (
 	"cramc_go/common"
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/telemetry"
+	"fmt"
 	"github.com/google/uuid"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
@@ -26,7 +27,7 @@ var (
 func StartSanitizer() error {
 	// kill all office processes, to avoid any potential file lock.
 	_, _ = windoge_utils.KillAllOfficeProcesses()
-	common.Logger.Infoln("Triggered M365 Office processes killer.")
+	common.Logger.Info("Triggered M365 Office processes killer.")
 
 	// client id generation
 	clientID, err := uuid.NewUUID()
@@ -34,7 +35,7 @@ func StartSanitizer() error {
 		return err
 	}
 	telemetry.CaptureMessage("info", "Sanitizer Client ID: "+clientID.String())
-	common.Logger.Infoln("Sanitizer Client ID: " + clientID.String())
+	common.Logger.Info("Sanitizer Client ID: " + clientID.String())
 
 	// get privhelper executable path
 	exePath, _ := os.Executable()
@@ -92,31 +93,31 @@ func StartSanitizer() error {
 	}
 	// iterate through workbooks
 	for vObj := range common.SanitizeQueue {
-		common.Logger.Debugln("Sanitizer Queue Received a New File.")
+		common.Logger.Debug("Sanitizer Queue Received a New File.")
 		//  ping and check online
 		err = rpcCli.Ping()
 		if err != nil {
 			telemetry.CaptureException(err, "Main.StartSanitizer.RPCClient.StartIteratePing")
-			common.Logger.Errorln("Main.StartSanitizer.RPCClient.StartIteratePing", err)
+			common.Logger.Error("Main.StartSanitizer.RPCClient.StartIteratePing: " + err.Error())
 			continue
 		}
 		// get file from queue and send it out, waiting for response
 		var msgId int64
 		msgId, err = rpcCli.SendSanitizeMessage(vObj)
-		common.Logger.Infoln("Sanitizer Message Sent: ", msgId)
+		common.Logger.Info(fmt.Sprintf("Sanitizer Message Sent: %d", msgId))
 		if err != nil {
 			telemetry.CaptureException(err, "Main.StartSanitizer.RPCClient.SendSanitizeMessage-"+strconv.FormatInt(msgId, 10))
-			common.Logger.Errorln("Main.StartSanitizer.RPCClient.SendSanitizeMessage", err)
+			common.Logger.Error("Main.StartSanitizer.RPCClient.SendSanitizeMessage: " + err.Error())
 			continue
 		}
 	}
 
 	// send terminate message
-	common.Logger.Infoln("Sanitizer Finished, now sending control message to disconnect and terminate.")
+	common.Logger.Info("Sanitizer Finished, now sending control message to disconnect and terminate.")
 	err = rpcCli.RequestTerminateAndDisconnect()
 	if err != nil {
 		telemetry.CaptureException(err, "Main.StartSanitizer.RPCClient.TerminateAndDisconnect")
-		common.Logger.Errorln("Main.StartSanitizer.RPCClient.TerminateAndDisconnect", err)
+		common.Logger.Error("Main.StartSanitizer.RPCClient.TerminateAndDisconnect: " + err.Error())
 	}
 
 	// wait for termination of rpc server till timed out
@@ -126,16 +127,16 @@ func StartSanitizer() error {
 		tr := time.NewTimer(300 * time.Second)
 		select {
 		case <-tr.C:
-			common.Logger.Infoln("RPC Server Termination Timer Expired. You may manually reboot your system or kill it.")
+			common.Logger.Info("RPC Server Termination Timer Expired. You may manually reboot your system or kill it.")
 			telemetry.CaptureMessage("warn", "Privilege RPC Server Termination Timed Out.")
 		case <-rpcSC:
 			tr.Stop()
 		}
 	}()
-	common.Logger.Infoln("Sanitizer RPC Server Termination Started, wait for 300 seconds.")
+	common.Logger.Info("Sanitizer RPC Server Termination Started, wait for 300 seconds.")
 	_, _ = rpcProc.Wait()
 	rpcSC <- struct{}{}
-	common.Logger.Infoln("RPC Server terminated correctly.")
+	common.Logger.Info("RPC Server terminated correctly.")
 	return nil
 }
 
@@ -143,19 +144,19 @@ func LiftVBAScriptingAccess(versionStr string, componentStr string) error {
 	// this fix COM API via OLE returned null on VBProject access
 	regK, openedExists, err := registry.CreateKey(registry.CURRENT_USER, `Software\Microsoft\Office\`+versionStr+`\`+componentStr+`\Security`, registry.ALL_ACCESS)
 	if err != nil {
-		common.Logger.Errorln("Failed to create registry key to lift VBOM restriction:", err)
+		common.Logger.Error("Failed to create registry key to lift VBOM restriction: " + err.Error())
 		return err
 	}
 	if openedExists {
-		common.Logger.Debugln("Registry key already exists, opened existing one.")
+		common.Logger.Debug("Registry key already exists, opened existing one.")
 	}
-	common.Logger.Debugln("Registry key Opened.")
+	common.Logger.Debug("Registry key Opened.")
 	defer regK.Close()
 	err = regK.SetDWordValue("AccessVBOM", (uint32)(1))
 	if err != nil {
-		common.Logger.Errorln("Failed to set registry value to lift VBOM restriction:", err)
+		common.Logger.Error("Failed to set registry value to lift VBOM restriction: " + err.Error())
 		return err
 	}
-	common.Logger.Infoln("Registry value set to 1 for AccessVBOM.")
+	common.Logger.Info("Registry value set to 1 for AccessVBOM.")
 	return nil
 }

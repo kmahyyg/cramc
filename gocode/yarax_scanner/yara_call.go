@@ -31,33 +31,33 @@ func ScanFilesWithYara(yrr *yarax.Scanner, detList []string, outputChan chan *co
 	defer close(outputChan)
 	for _, filep := range detList {
 		fExt := path.Ext(filep)
-		common.Logger.Infoln("Currently processing: ", filep)
+		common.Logger.Info("Currently processing: " + filep)
 		var mr *yarax.ScanResults
 		if len(fExt) > 4 {
 			// .xlsm,.xlsb
 			vbaP, err := decompressMacroBin(filep)
 			if err != nil {
-				common.Logger.Errorln(err)
+				common.Logger.Error("Decompress Macro Failure: " + err.Error())
 				continue
 			}
-			common.Logger.Infoln("Decompressed: ", filep)
+			common.Logger.Info("Decompressed: " + filep)
 			mr, err = yrr.Scan(vbaP)
 			if err != nil {
-				common.Logger.Errorln(err)
+				common.Logger.Error("Yara Scan Error:" + err.Error())
 				continue
 			}
 		} else {
 			// .xls, OLE
 			// directly scan
-			common.Logger.Infoln("Processing OLE Object File: ", filep)
+			common.Logger.Info("Processing OLE Object File: " + filep)
 			xlFile, err := os.ReadFile(filep)
 			if err != nil {
-				common.Logger.Errorln(err)
+				common.Logger.Error("Read OLE Object:" + err.Error())
 				continue
 			}
 			mr, err = yrr.Scan(xlFile)
 			if err != nil {
-				common.Logger.Errorln(err)
+				common.Logger.Error("Scan Error: " + err.Error())
 				continue
 			}
 		}
@@ -68,7 +68,7 @@ func ScanFilesWithYara(yrr *yarax.Scanner, detList []string, outputChan chan *co
 			}
 			outputChan <- nDet
 		}
-		common.Logger.Infoln("Finished processing: ", filep)
+		common.Logger.Info("Finished processing: " + filep)
 	}
 	return nil
 }
@@ -81,7 +81,7 @@ func decompressMacroBin(fPath string) ([]byte, error) {
 	defer zRd.Close()
 	vbaProjFile, err := zRd.Open("xl/vbaProject.bin")
 	if err != nil {
-		common.Logger.Infoln("Unable to find vbaProject.bin, ignore.")
+		common.Logger.Info("Unable to find vbaProject.bin, ignore.")
 		return nil, err
 	}
 	fBytes, err := io.ReadAll(vbaProjFile)

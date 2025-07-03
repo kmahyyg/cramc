@@ -24,8 +24,8 @@ func ParseYaraScanResultText(inputfName string, outputChan chan *common.YaraScan
 		idx := strings.IndexRune(data, ' ')
 		// if not found or overlap (at least two bytes after whitespace found)
 		if idx <= 0 || idx+3 >= len(data) {
-			common.Logger.Errorln("IGNORED - Current Line does NOT contain valid input: ", data)
-			common.Logger.Errorln(customerrs.ErrInvalidInput)
+			common.Logger.Error("IGNORED - Current Line does NOT contain valid input: " + data)
+			common.Logger.Error(customerrs.ErrInvalidInput.Error())
 			continue
 		}
 		nYRResult := &common.YaraScanResult{

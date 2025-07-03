@@ -3,6 +3,7 @@ package hardener
 import (
 	"cramc_go/common"
 	"cramc_go/platform/windoge_utils"
+	"fmt"
 	"golang.org/x/sys/windows"
 	"os"
 	"os/user"
@@ -14,12 +15,12 @@ func f_harden_rmReplaceDirSetRO(aType string, filep string) {
 	switch aType {
 	case "file":
 		err := os.RemoveAll(filep)
-		common.Logger.Infoln("remove file: ", filep, ", err: ", err)
+		common.Logger.Info(fmt.Sprintf("remove file: %s, err: %v", filep, err))
 		err = os.MkdirAll(filep, 0400)
-		common.Logger.Infoln("replace with dir: ", filep, ", err: ", err)
+		common.Logger.Info(fmt.Sprintf("replace with dir: %s, err: %v", filep, err))
 		f_harden_SetRO(filep, "dir")
 	default:
-		common.Logger.Warnln("unsupported operation for type: ", aType)
+		common.Logger.Warn("unsupported operation for type: " + aType)
 	}
 }
 
@@ -27,15 +28,15 @@ func f_harden_replaceFileSetRO(aType string, filep string) {
 	switch aType {
 	case "dir":
 		err := os.RemoveAll(filep)
-		common.Logger.Infoln("remove dir: ", filep, ", err: ", err)
+		common.Logger.Info(fmt.Sprintf("remove dir: %s, err: %v ", filep, err))
 		fd, err := os.Create(filep)
-		common.Logger.Infoln("create file: ", filep, ", err: ", err)
+		common.Logger.Info(fmt.Sprintf("create file: %s, err: %v ", filep, err))
 		if err == nil {
 			_ = fd.Close()
 		}
 		f_harden_SetRO(filep, "file")
 	default:
-		common.Logger.Warnln("unsupported operation for type: ", aType)
+		common.Logger.Warn("unsupported operation for type: " + aType)
 	}
 }
 
@@ -43,16 +44,16 @@ func f_harden_CleanSetRO(aType string, filep string) {
 	switch aType {
 	case "file":
 		fd, err := os.Create(filep)
-		common.Logger.Infoln("Recreate File first, Err: ", err)
+		common.Logger.Info(fmt.Sprintf("Recreate File first, Err: %v", err))
 		if err == nil {
 			_ = fd.Close()
 		}
-		common.Logger.Infoln("Truncate File Err: ", os.Truncate(filep, 0))
+		common.Logger.Info(fmt.Sprintf("Truncate File Err: %v", os.Truncate(filep, 0)))
 	case "dir":
-		common.Logger.Infoln("Remove All, Err: ", os.RemoveAll(filep))
-		common.Logger.Infoln("Recreate Dir, Err: ", os.Mkdir(filep, 0400))
+		common.Logger.Info(fmt.Sprintf("Remove All, Err: %v", os.RemoveAll(filep)))
+		common.Logger.Info(fmt.Sprintf("Recreate Dir, Err: %v", os.Mkdir(filep, 0400)))
 	default:
-		common.Logger.Warnln("Unsupported type: ", aType)
+		common.Logger.Warn("Unsupported type: " + aType)
 	}
 	f_harden_SetRO(aType, filep)
 }
@@ -60,24 +61,24 @@ func f_harden_CleanSetRO(aType string, filep string) {
 func f_harden_SetRO(aType string, filep string) {
 	switch aType {
 	case "file":
-		common.Logger.Infoln("Chmod 0400 (RO): ", os.Chmod(filep, 0400))
+		common.Logger.Info(fmt.Sprintf("Chmod 0400 (RO): %v", os.Chmod(filep, 0400)))
 	case "dir":
 		fStat, err := os.Stat(filep)
 		if err != nil {
-			common.Logger.Errorln(err)
+			common.Logger.Error(err.Error())
 			return
 		}
 		if fStat.IsDir() {
 			err = filepath.Walk(filep, func(eachfPath string, eachInfo os.FileInfo, err error) error {
 				err = os.Chmod(eachfPath, 0400)
 				if err != nil {
-					common.Logger.Errorln(err)
+					common.Logger.Error(err.Error())
 				}
 				return nil
 			})
-			common.Logger.Infoln("Chmod 0400 (RO) on Dir Recursively: ", err)
+			common.Logger.Info(fmt.Sprintf("Chmod 0400 (RO) on Dir Recursively: %v", err))
 		} else {
-			common.Logger.Warnln("Mismatched Action Type: ", aType)
+			common.Logger.Warn("Mismatched Action Type: " + aType)
 		}
 	}
 }

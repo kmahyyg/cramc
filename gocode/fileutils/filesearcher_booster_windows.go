@@ -6,6 +6,8 @@ import (
 	"context"
 	"cramc_go/common"
 	"cramc_go/customerrs"
+	"cramc_go/logging"
+	"fmt"
 	"golang.org/x/sys/windows"
 	"os"
 	"os/user"
@@ -21,11 +23,12 @@ func CheckProcessElevated() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	common.Logger.Infof("Current running as: %s (%s) ", u.Name, u.Username)
+	common.Logger.Info(fmt.Sprintf("Current running as: %s (%s) ", u.Name, u.Username))
 	var curProcTokenR windows.Token
 	err = windows.OpenProcessToken(windows.CurrentProcess(), windows.TOKEN_QUERY, &curProcTokenR)
 	if err != nil {
-		common.Logger.Fatalln(err)
+		common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
+		os.Exit(5)
 	}
 	defer curProcTokenR.Close()
 	if curProcTokenR.IsElevated() {
@@ -82,59 +85,59 @@ func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outpu
 	// Extract drive letter from the first character
 	volDiskLetter := actionPath[0]
 
-	common.Logger.Debugln("Check Drive Letter.")
+	common.Logger.Debug("Check Drive Letter.")
 	// check user input
 	var IsDiskLetter = regexp.MustCompile(`^[a-zA-Z]$`).MatchString
 	if !IsDiskLetter(string(volDiskLetter)) {
 		return -1, customerrs.ErrInvalidInput
 	}
 
-	common.Logger.Debugln("Open Raw Device Handle.")
+	common.Logger.Debug("Open Raw Device Handle.")
 	// use UNC path to access raw device to bypass limitation of file lock, e.g. \\.\C:
 	volFd, err := os.Open("\\\\.\\" + string(volDiskLetter) + ":")
 	if err != nil {
-		common.Logger.Errorln("Triggered Fallback Error: ", customerrs.ErrDeviceInaccessible)
+		common.Logger.Error("Triggered Fallback Error: " + customerrs.ErrDeviceInaccessible.Error())
 		return -1, customerrs.ErrFallbackToCompatibleSolution
 	}
 	defer volFd.Close()
 
-	common.Logger.Debugln("Create PagedReader with page 4096, cache size 65536.")
+	common.Logger.Debug("Create PagedReader with page 4096, cache size 65536.")
 	// build a pagedReader for raw device to feed the NTFSContext initializor
 	ntfsPagedReader, err := ntfs.NewPagedReader(volFd, 0x1000, 0x10000)
 	if err != nil {
-		common.Logger.Errorln("Triggered Fallback Error: ", err)
+		common.Logger.Error("Triggered Fallback Error: " + err.Error())
 		return -1, customerrs.ErrFallbackToCompatibleSolution
 	}
 
-	common.Logger.Debugln("Create NTFSContext.")
+	common.Logger.Debug("Create NTFSContext.")
 	// build NTFS context for root device
 	ntfsVolCtx, err := ntfs.GetNTFSContext(ntfsPagedReader, 0)
 	if err != nil {
-		common.Logger.Errorln("Triggered Fallback Error: ", err)
+		common.Logger.Error("Triggered Fallback Error: " + err.Error())
 		return -1, customerrs.ErrFallbackToCompatibleSolution
 	}
 
-	common.Logger.Debugln("Try to get $MFT $DATA stream.")
+	common.Logger.Debug("Try to get $MFT $DATA stream.")
 	volMFTEntry, err := ntfsVolCtx.GetMFT(0)
 	if err != nil {
-		common.Logger.Errorln("Triggered Fallback Error: ", err)
+		common.Logger.Error("Triggered Fallback Error: " + err.Error())
 		return -1, customerrs.ErrFallbackToCompatibleSolution
 	}
 
 	// open $DATA attr of $MFT, https://github.com/Velocidex/go-ntfs/blob/master/bin/mft.go
 	mftReader, err := ntfs.OpenStream(ntfsVolCtx, volMFTEntry, uint64(128), ntfs.WILDCARD_STREAM_ID, ntfs.WILDCARD_STREAM_NAME)
 	if err != nil {
-		common.Logger.Errorln("Triggered Fallback Error: ", err)
+		common.Logger.Error("Triggered Fallback Error: " + err.Error())
 		return -1, customerrs.ErrFallbackToCompatibleSolution
 	}
-	common.Logger.Debugln("Successfully opened $MFT:$DATA.")
+	common.Logger.Debug("Successfully opened $MFT:$DATA.")
 
 	// check if prefix matched the actionPath
 	residentialPathDir := strings.Split(strings.ReplaceAll(actionPath, "\\", "/"), ":")
 	if len(residentialPathDir) != 2 {
 		// windows filename doesn't allow ':' char
 		// result should be: []string{"C", "/Users"}
-		common.Logger.Warningf("actionPath contains invalid char: %s", customerrs.ErrInvalidInput.Error())
+		common.Logger.Warn("actionPath contains invalid char, " + customerrs.ErrInvalidInput.Error())
 		return -1, customerrs.ErrInvalidInput
 	}
 

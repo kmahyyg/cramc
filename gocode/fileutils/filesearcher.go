@@ -21,7 +21,7 @@ func GeneralWalkthroughSearch(actionPath string, allowedExts []string, outputCha
 		if err != nil {
 			// safely ignore errors as you can't access these file under current privilege
 			// neither virus nor you can access
-			common.Logger.Warningln(err.Error())
+			common.Logger.Warn(err.Error())
 			return nil
 		}
 		if d.IsDir() {

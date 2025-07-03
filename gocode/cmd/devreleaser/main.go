@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"cramc_go/common"
 	"cramc_go/cryptutils"
 	"cramc_go/customerrs"
@@ -33,66 +34,66 @@ func main() {
 	defer logFd.Close()
 	defer logFd.Sync()
 	common.Logger = logger
-	logger.Infoln("DevReleaser for CRAMC, Don't Forget to Bump Database/UpdateChecker Version!")
-	logger.Infoln("Current Version: ", common.VersionStr)
-	logger.Infoln("Please put this binary with the same folder of yrules/ and cramc_db.json before continue.")
+	common.Logger.Info("DevReleaser for CRAMC, Don't Forget to Bump Database/UpdateChecker Version!")
+	common.Logger.Info("Current Version: " + common.VersionStr)
+	common.Logger.Info("Please put this binary with the same folder of yrules/ and cramc_db.json before continue.")
 	if *fComp {
 		err := os.MkdirAll("yrules/bin/", 0755)
 		if err != nil {
 			panic(err)
 		}
-		common.Logger.Infoln("Binary rules folder created!")
+		common.Logger.Info("Binary rules folder created!")
 		_ = os.Remove("yrules/bin/unified.yar")
-		common.Logger.Infoln("Tried to remove previously compiled rules!")
+		common.Logger.Info("Tried to remove previously compiled rules!")
 		yarax_scanner.MergeAndCompile2UnifiedRules("yrules/", "yrules/bin/unified.yar")
-		common.Logger.Infoln("Operation finished.")
+		common.Logger.Info("Operation finished.")
 		return
 	}
 	if *fDec && *fEnc {
-		common.Logger.Infoln("Conflicted flag supplied. Refuse to continue.")
+		common.Logger.Info("Conflicted flag supplied. Refuse to continue.")
 		panic(customerrs.ErrInvalidInput)
 	}
 	if *fDec || *fEnc {
 		if !fileutils.CheckFileLogicalExists(*fInFile) {
-			common.Logger.Fatalln("Input file not found", *fInFile)
+			common.Logger.Log(context.TODO(), logging.LevelFatal, "Input file not found"+*fInFile)
 			panic(customerrs.ErrInvalidInput)
 		}
 		inData, err := os.ReadFile(*fInFile)
 		if err != nil {
 			panic(err)
 		}
-		common.Logger.Infoln("Input file Read Into Memory:", *fInFile)
+		common.Logger.Info("Input file Read Into Memory: " + *fInFile)
 		outFd, err := os.Create(*fOutFile)
 		if err != nil {
 			panic(err)
 		}
 		defer outFd.Close()
-		common.Logger.Infoln("Output file Created:", *fOutFile)
+		common.Logger.Info("Output file Created: " + *fOutFile)
 		passwd, err := hex.DecodeString(common.HexEncryptionPassword)
 		if err != nil {
 			panic(err)
 		}
-		common.Logger.Infoln("Password Prepared.")
+		common.Logger.Info("Password Prepared.")
 		var outD []byte
 		if *fEnc {
 			outD, err = cryptutils.XChacha20Encrypt(passwd, inData)
 			if err != nil {
 				panic(err)
 			}
-			common.Logger.Infoln("Input file Encrypted.")
+			common.Logger.Info("Input file Encrypted.")
 		} else if *fDec {
 			outD, err = cryptutils.XChacha20Decrypt(passwd, inData)
 			if err != nil {
 				panic(err)
 			}
-			common.Logger.Infoln("Input file Decrypted.")
+			common.Logger.Info("Input file Decrypted.")
 		}
 		_, err = outFd.Write(outD)
 		if err != nil {
 			panic(err)
 		}
 		outFd.Sync()
-		common.Logger.Infoln("Successfully wrote output binary!")
+		common.Logger.Info("Successfully wrote output binary!")
 		return
 	}
 }

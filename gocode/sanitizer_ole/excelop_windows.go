@@ -5,6 +5,7 @@ import (
 	"cramc_go/customerrs"
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/telemetry"
+	"fmt"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	"sync"
@@ -27,43 +28,43 @@ func (w *ExcelWorker) excelInstanceStartupConfig() {
 	if w.inDbg {
 		_, err = oleutil.PutProperty(w.currentExcelObj, "Visible", true)
 		if err != nil {
-			common.Logger.Errorln(err)
+			common.Logger.Error(err.Error())
 		}
 		_, err = oleutil.PutProperty(w.currentExcelObj, "DisplayAlerts", true)
 		if err != nil {
-			common.Logger.Errorln(err)
+			common.Logger.Error(err.Error())
 		}
 		// boost runtime speed
 		_, err = oleutil.PutProperty(w.currentExcelObj, "ScreenUpdating", true)
 		if err != nil {
-			common.Logger.Errorln(err)
+			common.Logger.Error(err.Error())
 		}
 	} else {
 		// security and ux optimize
 		_, err = oleutil.PutProperty(w.currentExcelObj, "Visible", false)
 		if err != nil {
-			common.Logger.Errorln(err)
+			common.Logger.Error(err.Error())
 		}
 		_, err = oleutil.PutProperty(w.currentExcelObj, "DisplayAlerts", false)
 		if err != nil {
-			common.Logger.Errorln(err)
+			common.Logger.Error(err.Error())
 		}
 		// boost runtime speed
 		_, err = oleutil.PutProperty(w.currentExcelObj, "ScreenUpdating", false)
 		if err != nil {
-			common.Logger.Errorln(err)
+			common.Logger.Error(err.Error())
 		}
 	}
 	// ignore remote dde update requests
 	_, err = oleutil.PutProperty(w.currentExcelObj, "IgnoreRemoteRequests", true)
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.Application.SetIgnoreRemoteRequests")
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 	}
 	// prevent async OLAP data queries from executing
 	_, err = oleutil.PutProperty(w.currentExcelObj, "DeferAsyncQueries", true)
 	if err != nil {
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 	}
 	// avoid any macro to execute
 	_ = oleutil.MustPutProperty(w.currentExcelObj, "AutomationSecurity", MsoAutomationSecurityForceDisable)
@@ -71,7 +72,7 @@ func (w *ExcelWorker) excelInstanceStartupConfig() {
 	_, err = oleutil.PutProperty(w.currentExcelObj, "ODBCTimeout", 10)
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.Application.SetODBCTimeout10s")
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 	}
 	return
 }
@@ -90,12 +91,12 @@ func (w *ExcelWorker) Init(inDbg bool) error {
 	w.currentExcelObj, err = createExcelInstance()
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.Application.Create")
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 		return err
 	}
 	w.inDbg = inDbg
 	w.excelInstanceStartupConfig()
-	common.Logger.Infoln("Excel.Application object initialized.")
+	common.Logger.Info("Excel.Application object initialized.")
 	w.mu = &sync.Mutex{}
 	return nil
 }
@@ -105,27 +106,27 @@ func (w *ExcelWorker) Quit(isForced bool) {
 	w.currentExcelObj.Release()
 	if isForced {
 		_, _ = windoge_utils.KillAllOfficeProcesses()
-		common.Logger.Infoln("ExcelWorker Force Terminated.")
+		common.Logger.Info("ExcelWorker Force Terminated.")
 	}
 	w.currentExcelObj = nil
 	w.workbooksHandle = nil
-	common.Logger.Infoln("ExcelWorker Quit.")
+	common.Logger.Info("ExcelWorker Quit.")
 	return
 }
 
 func (w *ExcelWorker) GetWorkbooks() error {
 	if w.currentExcelObj == nil {
-		common.Logger.Errorln(customerrs.ErrExcelWorkerUninitialized)
+		common.Logger.Error(customerrs.ErrExcelWorkerUninitialized.Error())
 		return customerrs.ErrExcelWorkerUninitialized
 	}
 	w.workbooksHandle = oleutil.MustGetProperty(w.currentExcelObj, "Workbooks").ToIDispatch()
-	common.Logger.Debugln("Workbooks handle requested.")
+	common.Logger.Debug("Workbooks handle requested.")
 	return nil
 }
 
 func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 	if w.workbooksHandle == nil {
-		common.Logger.Errorln(customerrs.ErrExcelWorkbooksUnable2Fetch)
+		common.Logger.Error(customerrs.ErrExcelWorkbooksUnable2Fetch.Error())
 		return customerrs.ErrExcelWorkbooksUnable2Fetch
 	}
 	//
@@ -143,24 +144,24 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 	}
 	w.currentWorkbook = currentWorkbook.ToIDispatch()
 	w.curFilePath = fPath
-	common.Logger.Infoln("Workbook currently opened: ", fPath)
+	common.Logger.Info("Workbook currently opened: " + fPath)
 	// try to eliminate slow workbook
 	_, err = oleutil.PutProperty(w.currentWorkbook, "ForceFullCalculation", false)
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.ThisWorkbook.SetForceFullCalculationFalse")
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 	}
 	// disable update embedded ole links
 	_, err = oleutil.PutProperty(w.currentWorkbook, "UpdateLinks", XlUpdateLinksNever)
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.Workbook.SetUpdateLinksNever")
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 	}
 	// disable update remote ref in workbook
 	_, err = oleutil.PutProperty(w.currentWorkbook, "UpdateRemoteReferences", false)
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.Workbook.SetUpdateRemoteReferencesFalse")
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 	}
 	// in rare cases, e.g. a ~30M xlsm file may fail to open in 1 min, thus timed out.
 	// try to eliminate such cases, these two properties must be set after opening any workbook and
@@ -168,49 +169,49 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 	_, err = oleutil.PutProperty(w.currentExcelObj, "Calculation", XlCalculationManual)
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.Workbook.ParentApp.SetCalculationManual")
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 	}
 	_, err = oleutil.PutProperty(w.currentExcelObj, "CalculateBeforeSave", false)
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.Workbook.ParentApp.SetCalculateBeforeSaveFalse")
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 	}
 	// also do not prompt for format conversion
 	// https://learn.microsoft.com/en-us/dotnet/api/microsoft.office.tools.excel.workbook.donotpromptforconvert
 	_, err = oleutil.PutProperty(w.currentWorkbook, "DoNotPromptForConvert", false)
 	if err != nil {
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 	}
 	_, err = oleutil.PutProperty(w.currentWorkbook, "CheckCompatibility", false)
 	if err != nil {
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 	}
-	common.Logger.Infoln("Workbook slowness workarounds applied.")
+	common.Logger.Info("Workbook slowness workarounds applied.")
 	return nil
 
 }
 
 func (w *ExcelWorker) SaveAndCloseWorkbook() error {
 	if w.currentWorkbook == nil {
-		common.Logger.Errorln(customerrs.ErrExcelCurrentWorkbookNullPtr)
+		common.Logger.Error(customerrs.ErrExcelCurrentWorkbookNullPtr.Error())
 		return customerrs.ErrExcelCurrentWorkbookNullPtr
 	}
 	_, _ = w.currentWorkbook.CallMethod("Save")
 	_, _ = w.currentWorkbook.CallMethod("Close", true)
 	w.currentWorkbook.Release()
-	common.Logger.Infoln("Workbook save and closed.")
+	common.Logger.Info("Workbook save and closed.")
 	w.currentWorkbook = nil
 	return nil
 }
 
 func (w *ExcelWorker) SanitizeWorkbook(targetOp string, destModuleName string) error {
 	if w.currentWorkbook == nil {
-		common.Logger.Errorln(customerrs.ErrExcelCurrentWorkbookNullPtr)
+		common.Logger.Error(customerrs.ErrExcelCurrentWorkbookNullPtr.Error())
 		return customerrs.ErrExcelCurrentWorkbookNullPtr
 	}
 	wbHasVBA := oleutil.MustGetProperty(w.currentWorkbook, "HasVBProject").Value().(bool)
 	if wbHasVBA {
-		common.Logger.Infoln("Workbook has VBProject.")
+		common.Logger.Info("Workbook has VBProject.")
 		wbVbaProjRes, err := oleutil.GetProperty(w.currentWorkbook, "VBProject")
 		if err != nil {
 			telemetry.CaptureException(err, "Excel.Workbook.VBProject.VBOMAccess")
@@ -219,16 +220,16 @@ func (w *ExcelWorker) SanitizeWorkbook(targetOp string, destModuleName string) e
 		wbVbaProj := wbVbaProjRes.ToIDispatch()
 		vbCompsInProj := oleutil.MustGetProperty(wbVbaProj, "VBComponents").ToIDispatch()
 		vbCompsCount := (int)(oleutil.MustGetProperty(vbCompsInProj, "Count").Value().(int32))
-		common.Logger.Debugln("VBComponents Count: ", vbCompsCount)
+		common.Logger.Debug(fmt.Sprintf("VBComponents Count: %d", vbCompsCount))
 		for i := 1; i <= vbCompsCount; i++ {
 			// yes, this bullsh*t index starts from 1...
 			vbComp := oleutil.MustCallMethod(vbCompsInProj, "Item", i).ToIDispatch()
 			vbCompName := oleutil.MustGetProperty(vbComp, "Name").Value().(string)
-			common.Logger.Debugln("Current VBComponent Name in iteration: ", vbCompName)
+			common.Logger.Debug("Current VBComponent Name in iteration: " + vbCompName)
 			if vbCompName == destModuleName {
 				switch targetOp {
 				case "remediate":
-					common.Logger.Infoln("Remediating Matched VBA Component: ", vbCompName)
+					common.Logger.Info("Remediating Matched VBA Component: " + vbCompName)
 					// verified in powershell
 					codeMod := oleutil.MustGetProperty(vbComp, "CodeModule").ToIDispatch()
 					codeModLineCnt := (int)(oleutil.MustGetProperty(codeMod, "CountOfLines").Value().(int32))
@@ -236,26 +237,26 @@ func (w *ExcelWorker) SanitizeWorkbook(targetOp string, destModuleName string) e
 					_, err := codeMod.CallMethod("DeleteLines", 1, codeModLineCnt)
 					if err != nil {
 						telemetry.CaptureException(err, "Excel.WorkbookVBACodeModule.DeleteLines_"+w.curFilePath)
-						common.Logger.Errorln(err)
+						common.Logger.Error(err.Error())
 						return err
 					}
 					_, err = codeMod.CallMethod("AddFromString", cleanupComment)
 					if err != nil {
-						common.Logger.Errorln(err)
+						common.Logger.Error(err.Error())
 						return err
 					}
-					common.Logger.Infoln("Finished Remediating VBA Module: ", vbCompName)
+					common.Logger.Info("Finished Remediating VBA Module: " + vbCompName)
 				case "rm_module":
-					common.Logger.Infoln("Removing VBA Module: ", vbCompName)
+					common.Logger.Info("Removing VBA Module: " + vbCompName)
 					_, err = oleutil.CallMethod(vbCompsInProj, "Remove", vbComp)
 					if err != nil {
 						telemetry.CaptureException(err, "Excel.WorkbookVBAComponents.RemoveModule")
-						common.Logger.Errorln(err)
+						common.Logger.Error(err.Error())
 						return err
 					}
-					common.Logger.Infoln("Finished Removal of malicious VBA Module: ", vbCompName)
+					common.Logger.Info("Finished Removal of malicious VBA Module: " + vbCompName)
 				default:
-					common.Logger.Errorln("Unknown target operation: ", targetOp)
+					common.Logger.Error("Unknown target operation: " + targetOp)
 					return customerrs.ErrUnknownInternalError
 				}
 			}

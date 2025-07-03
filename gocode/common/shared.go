@@ -1,13 +1,13 @@
 package common
 
 import (
-	"github.com/sirupsen/logrus"
+	"log/slog"
 	"runtime"
 	"sync"
 )
 
 var (
-	Logger *logrus.Logger
+	Logger *slog.Logger
 
 	CleanupDB *CRAMCCleanupDB
 

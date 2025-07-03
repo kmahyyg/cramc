@@ -17,7 +17,7 @@ type BetterStackSender struct {
 
 func NewBetterStackSender(serverUrl string, authToken string) *BetterStackSender {
 	if !hostInited.Load() {
-		common.Logger.Errorln(customerrs.ErrTelemetryMustBeInitedFirst)
+		common.Logger.Error(customerrs.ErrTelemetryMustBeInitedFirst.Error())
 		return nil
 	}
 	return &BetterStackSender{sendURL: serverUrl, bearerToken: authToken}
@@ -42,13 +42,13 @@ func (bs *BetterStackSender) CaptureMessage(level string, message string) {
 	}
 	sendBody, err := json.Marshal(tsEv)
 	if err != nil {
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 		return
 	}
 	postBodyRd := bytes.NewReader(sendBody)
 	hReq, err := http.NewRequest("POST", bs.sendURL, postBodyRd)
 	if err != nil {
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 		return
 	}
 	hReq.Header.Set("Content-Type", "application/json")
@@ -56,11 +56,11 @@ func (bs *BetterStackSender) CaptureMessage(level string, message string) {
 	hReq.Header.Set("User-Agent", "Mozilla/5.0 Chrome/137.0.0.0 Go-CRAMC-Telemetry/1.0")
 	resp, err := http.DefaultClient.Do(hReq)
 	if err != nil {
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 		return
 	}
 	defer resp.Body.Close()
-	common.Logger.Debugln("Telemetry sent, response: ", resp.Status)
+	common.Logger.Debug("Telemetry sent, response: " + resp.Status)
 	return
 }
 

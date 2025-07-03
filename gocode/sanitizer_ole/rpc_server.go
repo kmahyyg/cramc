@@ -8,6 +8,7 @@ import (
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/telemetry"
 	"encoding/json"
+	"fmt"
 	"github.com/Microsoft/go-winio"
 	"github.com/go-ole/go-ole"
 	"net"
@@ -61,22 +62,22 @@ func NewRPCServer(laddr string) (*RPCServer, error) {
 }
 
 func (r *RPCServer) Start() {
-	common.Logger.Infoln("Server started, listening on: ", r.listener.Addr().String())
+	common.Logger.Info("Server started, listening on: " + r.listener.Addr().String())
 
 	// -------- initialize excel worker -------- //
 	// enable scripting access to VBAObject Model
 	err := LiftVBAScriptingAccess("16.0", "Excel")
 	if err != nil {
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 		return
 	}
 	// kill all office processes, to avoid any potential file lock.
 	_, _ = windoge_utils.KillAllOfficeProcesses()
-	common.Logger.Infoln("Triggered M365 Office processes killer.")
+	common.Logger.Info("Triggered M365 Office processes killer.")
 	// prepare to call ole
 	err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
 	if err != nil {
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 		return
 	}
 	defer ole.CoUninitialize()
@@ -90,16 +91,16 @@ func (r *RPCServer) Start() {
 	r.eWorker = &ExcelWorker{}
 	err = r.eWorker.Init(inDebugging)
 	if err != nil {
-		common.Logger.Errorln("Failed to initialize excel worker:", err)
+		common.Logger.Error("Failed to initialize excel worker:" + err.Error())
 		return
 	}
 	defer r.eWorker.Quit(false)
 	err = r.eWorker.GetWorkbooks()
 	if err != nil {
-		common.Logger.Errorln("Failed to get workbooks:", err)
+		common.Logger.Error("Failed to get workbooks:" + err.Error())
 		return
 	}
-	common.Logger.Infoln("Excel.Application worker initialized.")
+	common.Logger.Info("Excel.Application worker initialized.")
 	r.eWorkerSet.Store(true)
 
 	// -------- connection handling -------- //
@@ -111,16 +112,16 @@ func (r *RPCServer) Start() {
 
 	select {
 	case <-sigChan:
-		common.Logger.Infoln("Received SYS Signal, shutting down")
+		common.Logger.Info("Received SYS Signal, shutting down")
 	case <-r.quit:
-		common.Logger.Infoln("Received QUIT control, shutting down")
+		common.Logger.Info("Received QUIT control, shutting down")
 	}
 
 	r.Stop()
 }
 
 func (r *RPCServer) Stop() {
-	common.Logger.Infoln("Server stopping...")
+	common.Logger.Info("Server stopping...")
 
 	if r.listener != nil {
 		r.listener.Close()
@@ -142,12 +143,12 @@ func (r *RPCServer) Stop() {
 
 	select {
 	case <-waitD:
-		common.Logger.Infoln("All goroutines stopped gracefully")
+		common.Logger.Info("All goroutines stopped gracefully")
 	case <-time.After(15 * time.Second):
-		common.Logger.Warnln("Timed out 15 seconds, waiting for goroutines to stop")
+		common.Logger.Warn("Timed out 15 seconds, waiting for goroutines to stop")
 	}
 
-	common.Logger.Infoln("Server stopped")
+	common.Logger.Info("Server stopped")
 }
 
 func (r *RPCServer) acceptRPCConnection() {
@@ -162,7 +163,7 @@ func (r *RPCServer) acceptRPCConnection() {
 				// Expected error during shutdown
 				return
 			default:
-				common.Logger.Errorf("Error accepting RPC connection: %v", err)
+				common.Logger.Error(fmt.Sprintf("Error accepting RPC connection: %v", err))
 				// Add a small delay to prevent tight loop in case of persistent errors
 				time.Sleep(100 * time.Millisecond)
 				continue
@@ -175,7 +176,7 @@ func (r *RPCServer) acceptRPCConnection() {
 			conn.Close()
 			return
 		default:
-			common.Logger.Infoln("Accepted RPC connection.")
+			common.Logger.Info("Accepted RPC connection.")
 			r.wg.Add(1)
 			go r.handleRPCConnection(conn)
 		}
@@ -186,7 +187,7 @@ func (r *RPCServer) acceptRPCConnection() {
 func (r *RPCServer) handleRPCConnection(conn net.Conn) {
 	defer r.wg.Done()
 	defer conn.Close()
-	common.Logger.Infoln("Connection established, now handling.")
+	common.Logger.Info("Connection established, now handling.")
 
 	// create a context that gets cancelled when quit is signaled
 	ctx, cancelF := context.WithCancel(context.Background())
@@ -238,23 +239,23 @@ func (r *RPCServer) handleRPCConnection(conn net.Conn) {
 			}
 			var rpcMsg = &common.IPCReqMessageBase{}
 			if err := json.Unmarshal([]byte(curMsg), rpcMsg); err != nil {
-				common.Logger.Errorf("Error unmarshalling message: %v", err)
+				common.Logger.Error(fmt.Sprintf("Error unmarshalling message: %v", err))
 				continue
 			}
 			if rpcMsg.ClientID == "" {
-				common.Logger.Infoln("Illegal RPC Message, ignoring...")
+				common.Logger.Info("Illegal RPC Message, ignoring...")
 				continue
 			}
-			common.Logger.Infoln("Connection from client ID: ", rpcMsg.ClientID, " MessageID: ", rpcMsg.MessageID)
-			common.Logger.Debugln("Recved msg: ", curMsg)
+			common.Logger.Info(fmt.Sprintf("Connection from client ID: %s , MessageID: %d ", rpcMsg.ClientID, rpcMsg.MessageID))
+			common.Logger.Debug("Recved msg: " + curMsg)
 			err2 := r.handleMessage(conn, rpcMsg)
 			select {
 			case <-r.quit:
-				common.Logger.Infoln("Received QUIT control, shutting down from HandleFunc")
+				common.Logger.Info("Received QUIT control, shutting down from HandleFunc")
 				return
 			default:
 				if err2 != nil {
-					common.Logger.Errorf("Error handling message: %v", err2)
+					common.Logger.Error(fmt.Sprintf("Error handling message: %v", err2))
 				}
 			}
 		case err := <-errChan:
@@ -263,7 +264,7 @@ func (r *RPCServer) handleRPCConnection(conn net.Conn) {
 				// expected error
 				return
 			default:
-				common.Logger.Errorf("Error reading from connection: %v", err)
+				common.Logger.Error(fmt.Sprintf("Error reading from connection: %v", err))
 				return
 			}
 		}
@@ -276,7 +277,7 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 		var controlMsg = &common.IPCServerControl{}
 		err := json.Unmarshal(msg.MsgData, controlMsg)
 		if err != nil {
-			common.Logger.Errorf("Error unmarshalling control message: %v", err)
+			common.Logger.Error(fmt.Sprintf("Error unmarshalling control message: %v", err))
 			return err
 		}
 		switch controlMsg.ControlAction {
@@ -287,7 +288,7 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 			_, err = conn.Write(buildServerRespInBytes(msg, 200, "ack"))
 			return err
 		case "quit":
-			common.Logger.Infoln("Received QUIT control msg")
+			common.Logger.Info("Received QUIT control msg")
 			_, err = conn.Write(buildServerRespInBytes(msg, 200, "ack"))
 			r.quit <- struct{}{}
 			r.quitOnce.Do(func() {
@@ -296,39 +297,39 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 			return err
 		default:
 			_, err = conn.Write(buildServerRespInBytes(msg, 400, "invalid request"))
-			common.Logger.Infoln("Received unknown control action: ", controlMsg.ControlAction)
+			common.Logger.Info("Received unknown control action: " + controlMsg.ControlAction)
 			return err
 		}
 	case "sanitize":
 		var docSanitizeMsg = &common.IPCSingleDocToBeSanitized{}
 		err := json.Unmarshal(msg.MsgData, docSanitizeMsg)
 		if err != nil {
-			common.Logger.Errorf("Error unmarshalling sanitize message: %v", err)
+			common.Logger.Error(fmt.Sprintf("Error unmarshalling sanitize message: %v", err))
 			return err
 		}
 		if !r.eWorkerSet.Load() || r.eWorker == nil {
-			common.Logger.Errorln("eWorker does not initialized correctly.")
+			common.Logger.Error("eWorker does not initialized correctly.")
 			r.quit <- struct{}{}
 			return customerrs.ErrExcelWorkerUninitialized
 		}
 		// change path separator, make sure consistent in os-level
 		fPathNonVariant, err2 := filepath.Abs(docSanitizeMsg.Path)
 		if err2 != nil {
-			common.Logger.Errorln("Failed to get absolute path:", err2)
+			common.Logger.Error("Failed to get absolute path: " + err2.Error())
 			return err2
 		}
 		// backup file
 		err = gzBakFile(fPathNonVariant)
 		if err != nil {
-			common.Logger.Errorln("Backup file failed:", err.Error())
+			common.Logger.Error("Backup file failed: " + err.Error())
 		}
-		common.Logger.Infoln("Original file backup succeeded: ", docSanitizeMsg.Path)
+		common.Logger.Info("Original file backup succeeded: " + docSanitizeMsg.Path)
 		// sleep 1 second to leave space for saving
 		time.Sleep(1 * time.Second)
 		// send response and processing using another goroutine
 		_, err = conn.Write(buildServerRespInBytes(msg, 202, "file enqueued"))
 		if err != nil {
-			common.Logger.Errorf("Error writing to connection: %v", err)
+			common.Logger.Error(fmt.Sprintf("Error writing to connection: %v", err))
 			return err
 		}
 		r.wg.Add(1)
@@ -341,9 +342,9 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 			ctx, cancelF := context.WithTimeout(context.TODO(), 180*time.Second)
 			defer cancelF()
 			errC := make(chan error, 1)
-			common.Logger.Infoln("Waiting for file to be cleaned up: ", fPathNonVariant)
+			common.Logger.Info("Waiting for file to be cleaned up: " + fPathNonVariant)
 			r.excelFileCleanProcedure(ctx, fPathNonVariant, docSanitizeMsg.Action, docSanitizeMsg.DestModule, errC)
-			common.Logger.Debugln("excelFileCleanProcedure finished.")
+			common.Logger.Debug("excelFileCleanProcedure finished.")
 		}()
 	}
 	return nil
@@ -369,51 +370,51 @@ func (r *RPCServer) excelFileCleanProcedure(ctx context.Context, fPath string, t
 		r.eWorker.Lock()
 		defer r.eWorker.Unlock()
 		// open workbook
-		common.Logger.Infoln("Opening workbook in sanitizer: ", fPath)
+		common.Logger.Info("Opening workbook in sanitizer: " + fPath)
 		err3 := r.eWorker.OpenWorkbook(fPath)
 		if err3 != nil {
-			common.Logger.Errorln("Failed to open workbook in sanitizer:", err3)
+			common.Logger.Error("Failed to open workbook in sanitizer: " + err3.Error())
 			errC <- err3
 			return
 		}
-		common.Logger.Debugln("Workbook opened: ", fPath)
+		common.Logger.Debug("Workbook opened: " + fPath)
 		// defer save and close
 		defer func() {
 			err4 := r.eWorker.SaveAndCloseWorkbook()
 			if err4 != nil {
-				common.Logger.Errorln("Failed to save and close workbook in defer Sanitizer:", err4)
+				common.Logger.Error("Failed to save and close workbook in defer Sanitizer: " + err4.Error())
 			}
 			time.Sleep(1 * time.Second)
 			// rename file and save to clean state cache of cloud-storage provider
 			err4 = renameFileAndSave(fPath)
 			if err4 != nil {
-				common.Logger.Errorln("Rename file failed in sanitizer:", err4)
+				common.Logger.Error("Rename file failed in sanitizer: " + err4.Error())
 			}
-			common.Logger.Infoln("Workbook Sanitized: ", fPath)
+			common.Logger.Info("Workbook Sanitized: " + fPath)
 		}()
 		// sanitize
-		common.Logger.Debugln("Sanitize Workbook VBA Module now.")
+		common.Logger.Debug("Sanitize Workbook VBA Module now.")
 		err3 = r.eWorker.SanitizeWorkbook(targetOp, targetMod)
 		if err3 != nil {
-			common.Logger.Errorln("Failed to sanitize workbook:", err3)
+			common.Logger.Error("Failed to sanitize workbook: " + err3.Error())
 			errC <- err3
 			return
 		}
-		common.Logger.Infoln("Finished Sanitizing Workbook: ", fPath)
-		common.Logger.Debugln("Sanitize Workbook VBA Module finished, doneC returned.")
+		common.Logger.Info("Finished Sanitizing Workbook: " + fPath)
+		common.Logger.Debug("Sanitize Workbook VBA Module finished, doneC returned.")
 		errC <- nil
 	}()
 	select {
 	case err := <-errC:
 		if err != nil {
-			common.Logger.Errorln("Failed to sanitize workbook, errC returned:", err)
+			common.Logger.Error("Failed to sanitize workbook, errC returned: " + err.Error())
 			telemetry.CaptureException(err, "RPCServer.excelFileCleanProcedure.ErrC")
 			telemetry.CaptureMessage("error", "RPCServer.excelFileCleanProcedure.ErrC: "+fPath)
 			return
 		}
 		// properly remediated
 		// go ahead
-		common.Logger.Debugln("Sanitize workbook finished, doneC returned correctly.")
+		common.Logger.Debug("Sanitize workbook finished, doneC returned correctly.")
 		return
 	case <-ctx.Done():
 		// timed out or error
@@ -421,9 +422,9 @@ func (r *RPCServer) excelFileCleanProcedure(ctx context.Context, fPath string, t
 		if err5 != nil {
 			telemetry.CaptureException(err5, "RPCServer.excelFileCleanProcedure.CtxTimedOut")
 			telemetry.CaptureMessage("error", "RPCServer.excelFileCleanProcedure.CtxTimedOut: "+fPath)
-			common.Logger.Errorln("Failed to sanitize workbook, timed out:", err5)
+			common.Logger.Error("Failed to sanitize workbook, timed out: " + err5.Error())
 		}
-		common.Logger.Infoln("Sanitize workbook timed out, ctx.Done() returned, go to force clean.")
+		common.Logger.Info("Sanitize workbook timed out, ctx.Done() returned, go to force clean.")
 		// set mark for recreation
 		r.eWorkerSet.Store(false)
 		// for GC, cleanup and rebuild excel instance

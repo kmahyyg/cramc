@@ -16,7 +16,7 @@ var (
 	currentHostname   string
 	currentUsername   string
 	currentIP         string
-	currentSender     TelemetrySender
+	currentSender     TSender
 	currentRelVersion string
 )
 
@@ -33,7 +33,7 @@ type telemetryEvent struct {
 	LocalUnixTimestamp int64  `json:"localUnixTs,omitempty"`
 }
 
-type TelemetrySender interface {
+type TSender interface {
 	CaptureMessage(level string, message string)
 	CaptureException(err error, source string)
 	SetDefaultSender()
@@ -44,13 +44,17 @@ func Init(relVersion string) {
 	currentRelVersion = relVersion
 	currentHostname, err = os.Hostname()
 	if err != nil {
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 	}
 	curUser, err := user.Current()
 	if err != nil {
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 	}
-	currentUsername = curUser.Username
+	if curUser != nil {
+		currentUsername = curUser.Username
+	} else {
+		currentUsername = "unknown-user"
+	}
 	currentIP = getCurrentPublicIP()
 	hostInited.Store(true)
 }
@@ -58,14 +62,14 @@ func Init(relVersion string) {
 func getCurrentPublicIP() string {
 	resp, err := http.Get("https://myip.ipip.net")
 	if err != nil {
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 		return ""
 	}
 	defer resp.Body.Close()
 	var buf = bytes.NewBuffer(nil)
 	_, err = buf.ReadFrom(resp.Body)
 	if err != nil {
-		common.Logger.Errorln(err)
+		common.Logger.Error(err.Error())
 		return ""
 	}
 	finalIp := buf.String()

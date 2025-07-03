@@ -34,8 +34,8 @@ func main() {
 	bsSender.SetDefaultSender()
 
 	// startup behavior
-	logger.Infoln("Welcome to CRAMC Privilege Helper RPC Server!")
-	logger.Infoln("Current Version: ", common.VersionStr)
+	common.Logger.Info("Welcome to CRAMC Privilege Helper RPC Server!")
+	common.Logger.Info("Current Version: " + common.VersionStr)
 
 	// detect if started as SYSTEM, if yes, abort
 	runAsSys, err := windoge_utils.CheckRunningUnderSYSTEM()

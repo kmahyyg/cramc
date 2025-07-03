@@ -5,6 +5,7 @@ import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
 	"encoding/json"
+	"fmt"
 	"github.com/Microsoft/go-winio"
 	"net"
 	"sync/atomic"
@@ -39,17 +40,17 @@ func (c *RPCClient) Connect() error {
 	var lastErr error
 	timeOut := time.Duration(5 * time.Second)
 	for i := 0; i < 3; i++ {
-		common.Logger.Infof("Connecting, attempt %d / 3...", i)
+		common.Logger.Info(fmt.Sprintf("Connecting, attempt %d / 3...", i))
 		conn, err := winio.DialPipe(c.dialAddr, &timeOut)
 		if err != nil {
-			common.Logger.Errorln("Attempt to connect, encountered error: ", err)
+			common.Logger.Error("Attempt to connect, encountered error: " + err.Error())
 			lastErr = err
 			continue
 		}
 		c.currConn = conn
 		c.scanner = bufio.NewScanner(conn)
 		c.connected.Store(true)
-		common.Logger.Infof("Successfully connected to %s", c.dialAddr)
+		common.Logger.Info(fmt.Sprintf("Successfully connected to %s", c.dialAddr))
 		return nil
 	}
 	if lastErr != nil && !c.connected.Load() {
@@ -63,14 +64,14 @@ func (c *RPCClient) Disconnect() error {
 	if err != nil {
 		return err
 	}
-	common.Logger.Infof("Disconnect Triggered, Send Control Message with ID: %d ", msgID)
+	common.Logger.Info(fmt.Sprintf("Disconnect Triggered, Send Control Message with ID: %d ", msgID))
 	resp, err := c.procRespData()
 	if err != nil {
 		return err
 	}
-	common.Logger.Infof("Received Control Message Response: %v", resp)
+	common.Logger.Info(fmt.Sprintf("Received Control Message Response: %v", resp))
 	_ = c.ConnClose()
-	common.Logger.Infoln("Disconnected")
+	common.Logger.Info("Disconnected")
 	return nil
 }
 
@@ -119,8 +120,7 @@ func (c *RPCClient) SendSanitizeMessage(docSanitizeMsg *common.IPCSingleDocToBeS
 		return -1, err
 	}
 	finalMsg = append(finalMsg, byte('\n'))
-	common.Logger.Infof("Sending sanitize message, ID: %d, File: %s, Detection: %s",
-		msgbase.MessageID, docSanitizeMsg.Path, docSanitizeMsg.DetectionName)
+	common.Logger.Info(fmt.Sprintf("Sending sanitize message, ID: %d, File: %s, Detection: %s", msgbase.MessageID, docSanitizeMsg.Path, docSanitizeMsg.DetectionName))
 	_, err = c.currConn.Write(finalMsg)
 	if err != nil {
 		return -1, err
@@ -129,7 +129,7 @@ func (c *RPCClient) SendSanitizeMessage(docSanitizeMsg *common.IPCSingleDocToBeS
 	if err != nil {
 		return -1, err
 	}
-	common.Logger.Infof("Sanitize message response: %v ", respObj)
+	common.Logger.Info(fmt.Sprintf("Sanitize message response: %v ", respObj))
 	return msgbase.MessageID, err
 }
 
@@ -150,7 +150,7 @@ func (c *RPCClient) SendControlMessage(action string) (int64, error) {
 		return -1, err
 	}
 	finalMsg = append(finalMsg, byte('\n'))
-	common.Logger.Infof("Sending control message: %s, ID: %d", action, msgbase.MessageID)
+	common.Logger.Info(fmt.Sprintf("Sending control message: %s, ID: %d", action, msgbase.MessageID))
 	_, err = c.currConn.Write(finalMsg)
 	if err != nil {
 		return -1, err
@@ -159,7 +159,7 @@ func (c *RPCClient) SendControlMessage(action string) (int64, error) {
 	if err != nil {
 		return -1, err
 	}
-	common.Logger.Infof("Control message response: %v ", respObj)
+	common.Logger.Info(fmt.Sprintf("Control message response: %v ", respObj))
 	return msgbase.MessageID, err
 }
 
@@ -175,7 +175,7 @@ func (c *RPCClient) procRespData() (*common.IPCMessageResp, error) {
 		return nil, customerrs.ErrRpcConnectionNotEstablished
 	}
 	if !c.scanner.Scan() {
-		common.Logger.Errorf("Error scanning response: %v", c.scanner.Err())
+		common.Logger.Error(fmt.Sprintf("Error scanning response: %v", c.scanner.Err()))
 		return nil, customerrs.ErrUnknownInternalError
 	}
 	respBytes := c.scanner.Bytes()
@@ -197,13 +197,13 @@ func (c *RPCClient) RequestTerminateAndDisconnect() error {
 	if err != nil {
 		return err
 	}
-	common.Logger.Infof("Request Terminate and Disconnect Triggered, Send Control Message with ID: %d ", msgId)
+	common.Logger.Info(fmt.Sprintf("Request Terminate and Disconnect Triggered, Send Control Message with ID: %d ", msgId))
 	resp, err := c.procRespData()
 	if err != nil {
 		return err
 	}
-	common.Logger.Infof("Received Quit Message Response: %v", resp)
+	common.Logger.Info(fmt.Sprintf("Received Quit Message Response: %v", resp))
 	_ = c.ConnClose()
-	common.Logger.Infoln("Quit initiated and now terminating connection. Waiting for server cleanup.")
+	common.Logger.Info("Quit initiated and now terminating connection. Waiting for server cleanup.")
 	return nil
 }

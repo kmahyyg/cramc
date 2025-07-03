@@ -4,31 +4,32 @@ import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
 	"cramc_go/telemetry"
+	"fmt"
 )
 
 func DispatchHardenAction(hAction *common.HardeningAction) error {
 	if common.DryRunOnly {
-		common.Logger.Infof("DryRun Set, No action, Information received: %v \n", hAction)
+		common.Logger.Info(fmt.Sprintf("DryRun Set, No action, Information received: %v ", hAction))
 		return nil
 	}
 	if !common.IsRunningOnWin {
 		return customerrs.ErrUnsupportedPlatform
 	}
-	common.Logger.Debugln("DEBUG: About to acquire HardenedDetectionTypesLock for: ", hAction.Name)
+	common.Logger.Debug("DEBUG: About to acquire HardenedDetectionTypesLock for: " + hAction.Name)
 
 	// Check if already hardened and decide whether to proceed
 	common.HardenedDetectionTypesLock.Lock()
-	common.Logger.Debugln("DEBUG: Successfully acquired HardenedDetectionTypesLock for: ", hAction.Name)
+	common.Logger.Debug("DEBUG: Successfully acquired HardenedDetectionTypesLock for: " + hAction.Name)
 	_, ok := common.HardenedDetectionTypes[hAction.Name]
 	shouldProceed := true
 	if ok && !hAction.AllowRepeatedHarden {
 		shouldProceed = false
-		common.Logger.Infoln("This detection does NOT allow repeated hardening action. Continue.")
+		common.Logger.Info("This detection does NOT allow repeated hardening action. Continue.")
 	} else {
 		common.HardenedDetectionTypes[hAction.Name] = true
 	}
 	common.HardenedDetectionTypesLock.Unlock()
-	common.Logger.Debugln("DEBUG: Released HardenedDetectionTypesLock for: ", hAction.Name)
+	common.Logger.Debug("DEBUG: Released HardenedDetectionTypesLock for: " + hAction.Name)
 
 	if !shouldProceed {
 		return nil
@@ -48,7 +49,7 @@ func takeProperHardenAction(hAction *common.HardeningAction) {
 	for _, act := range hAction.ActionLst {
 		fStr, err := applyTextTemplate(act.Dest)
 		if err != nil {
-			common.Logger.Errorln(err)
+			common.Logger.Error(err.Error())
 			continue
 		}
 		switch act.Action {
@@ -62,7 +63,7 @@ func takeProperHardenAction(hAction *common.HardeningAction) {
 			f_harden_SetRO(act.Type, fStr)
 		default:
 			telemetry.CaptureMessage("error", "Unsupported hardening action type: "+act.Action)
-			common.Logger.Warnln("Unsupported action type: ", act.Action)
+			common.Logger.Warn("Unsupported action type: " + act.Action)
 		}
 	}
 	return
