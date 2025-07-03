@@ -154,6 +154,7 @@ func (r *RPCServer) acceptRPCConnection() {
 					continue
 				}
 			}
+			common.Logger.Infoln("Accepted RPC connection.")
 			r.wg.Add(1)
 			go r.handleRPCConnection(conn)
 		}
@@ -195,6 +196,7 @@ func (r *RPCServer) handleRPCConnection(conn net.Conn) {
 			err2 := r.handleMessage(conn, rpcMsg)
 			select {
 			case <-r.quit:
+				common.Logger.Infoln("Received QUIT control, shutting down from HandleFunc")
 				return
 			default:
 				if err2 != nil {
