@@ -34,6 +34,7 @@ type RPCServer struct {
 	listener net.Listener
 	wg       *sync.WaitGroup
 	quit     chan struct{}
+	quitOnce sync.Once
 
 	eWorker    *ExcelWorker
 	eWorkerSet atomic.Bool
@@ -128,10 +129,24 @@ func (r *RPCServer) Stop() {
 	select {
 	case <-r.quit:
 	default:
-		close(r.quit)
+		r.quitOnce.Do(func() {
+			close(r.quit)
+		})
 	}
 
-	r.wg.Wait()
+	waitD := make(chan struct{})
+	go func() {
+		r.wg.Wait()
+		close(waitD)
+	}()
+
+	select {
+	case <-waitD:
+		common.Logger.Infoln("All goroutines stopped gracefully")
+	case <-time.After(15 * time.Second):
+		common.Logger.Warnln("Timed out 15 seconds, waiting for goroutines to stop")
+	}
+
 	common.Logger.Infoln("Server stopped")
 }
 
@@ -140,45 +155,84 @@ func (r *RPCServer) acceptRPCConnection() {
 
 	// -------- connection handling -------- //
 	for {
+		conn, err := r.listener.Accept()
+		if err != nil {
+			select {
+			case <-r.quit:
+				// Expected error during shutdown
+				return
+			default:
+				common.Logger.Errorf("Error accepting RPC connection: %v", err)
+				// Add a small delay to prevent tight loop in case of persistent errors
+				time.Sleep(100 * time.Millisecond)
+				continue
+			}
+		}
+
 		select {
 		case <-r.quit:
+			// If we're shutting down, close the connection and return
+			conn.Close()
 			return
 		default:
-			conn, err := r.listener.Accept()
-			if err != nil {
-				select {
-				case <-r.quit:
-					return
-				default:
-					common.Logger.Errorf("Error accepting RPC connection: %v", err)
-					continue
-				}
-			}
 			common.Logger.Infoln("Accepted RPC connection.")
 			r.wg.Add(1)
 			go r.handleRPCConnection(conn)
 		}
 	}
+
 }
 
 func (r *RPCServer) handleRPCConnection(conn net.Conn) {
 	defer r.wg.Done()
 	defer conn.Close()
 	common.Logger.Infoln("Connection established, now handling.")
+
+	// create a context that gets cancelled when quit is signaled
+	ctx, cancelF := context.WithCancel(context.Background())
+	defer cancelF()
+	// monitor any quit
+	go func() {
+		select {
+		case <-r.quit:
+			cancelF()
+		case <-ctx.Done():
+		}
+	}()
+
 	// line delimited json
 	scanner := bufio.NewScanner(conn)
+	msgChan := make(chan string, 100)
+	errChan := make(chan error, 1)
+
+	go func() {
+		defer close(msgChan)
+		for scanner.Scan() {
+			select {
+			case msgChan <- scanner.Text():
+			case <-ctx.Done():
+				return
+			}
+		}
+		if err := scanner.Err(); err != nil {
+			select {
+			case errChan <- err:
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 	for {
 		select {
 		case <-r.quit:
 			return
-		default:
-			if !scanner.Scan() {
-				if err := scanner.Err(); err != nil {
-					common.Logger.Errorf("Error reading from connection: %v", err)
-					return
-				}
+		case curMsg, ok := <-msgChan:
+			if !ok {
+				// Channel closed, connection ended
+				return
 			}
-			curMsg := strings.TrimSpace(scanner.Text())
+			curMsg = strings.TrimSpace(curMsg)
 			if curMsg == "" {
 				continue
 			}
@@ -202,6 +256,15 @@ func (r *RPCServer) handleRPCConnection(conn net.Conn) {
 				if err2 != nil {
 					common.Logger.Errorf("Error handling message: %v", err2)
 				}
+			}
+		case err := <-errChan:
+			select {
+			case <-r.quit:
+				// expected error
+				return
+			default:
+				common.Logger.Errorf("Error reading from connection: %v", err)
+				return
 			}
 		}
 	}
@@ -227,7 +290,9 @@ func (r *RPCServer) handleMessage(conn net.Conn, msg *common.IPCReqMessageBase) 
 			common.Logger.Infoln("Received QUIT control msg")
 			_, err = conn.Write(buildServerRespInBytes(msg, 200, "ack"))
 			r.quit <- struct{}{}
-			close(r.quit)
+			r.quitOnce.Do(func() {
+				close(r.quit)
+			})
 			return err
 		default:
 			_, err = conn.Write(buildServerRespInBytes(msg, 400, "invalid request"))
