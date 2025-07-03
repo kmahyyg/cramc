@@ -151,9 +151,7 @@ jobs:
           retention-days: 30
           compression-level: 0
           if-no-files-found: error
-          path: |
-            ${{ github.workspace }}/cramc/bin/cramc_go_${{ github.run_id }}.zip
-            ${{ github.workspace }}/cramc/bin/devreleaser_linux_amd64
+          path: ${{ github.workspace }}/cramc/bin/cramc_go_${{ github.run_id }}.zip
 
   release-to-public:
     needs:
@@ -186,4 +184,4 @@ jobs:
             This version uses totally different scanner engine, please do not reuse rules from v0.4.x.
           allowUpdates: true
           prerelease: true
-          artifacts: /tmp/relbuild/${{ github.repository_owner }}/*
+          artifacts: /tmp/relbuild/${{ github.repository_owner }}/cramc_go_${{ github.run_id }}.zip,/tmp/relbuild/${{ github.repository_owner }}/devreleaser_linux_amd64,/tmp/relbuild/${{ github.repository_owner }}/*.bin
