@@ -82,7 +82,6 @@ jobs:
         with:
           name: devreleaser
           retention-days: 30
-          compression-level: 0
           path: ${{ github.workspace }}/cramc/bin/devreleaser_linux_amd64
 
   build-windows-amd64:
@@ -143,13 +142,12 @@ jobs:
         run: |
           cd ${GITHUB_WORKSPACE}/cramc/bin
           tree .
-          zip -1 -r cramc_go_${GITHUB_RUN_ID}.zip privhelper.exe cramc_aio.exe cramc_db.bin unified.yar.bin
+          zip -r cramc_go_${GITHUB_RUN_ID}.zip privhelper.exe cramc_aio.exe cramc_db.bin unified.yar.bin
       - name: Upload All Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: cramc_go
           retention-days: 30
-          compression-level: 0
           if-no-files-found: error
           path: ${{ github.workspace }}/cramc/bin/cramc_go_${{ github.run_id }}.zip
 
