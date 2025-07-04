@@ -22,6 +22,7 @@ var (
 	procCoInitializeSecurity = modOle32.NewProc("CoInitializeSecurity")
 	nullptr                  = uintptr(0)
 	rpcHelperExe             = "privhelper.exe"
+	RpcPipeAddr              = `\\.\pipe\cramcPriv`
 )
 
 func StartSanitizer() error {
