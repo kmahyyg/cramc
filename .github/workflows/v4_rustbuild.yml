@@ -4,14 +4,11 @@ on:
   push:
     branches:
       - 'v4_yarax'
-      - 'v4_2_grpc'
     tags:
       - 'v0.5.*'
-      - 'v0.6.*'
   pull_request:
     branches:
       - 'v4_yarax'
-      - 'v4_2_grpc'
     types:
       - ready_for_review
       - opened
