@@ -22,6 +22,8 @@ sudo apt install gcc-mingw-w64-x86-64 build-essential pkg-config zip unzip git z
      autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev upx \
      libunwind-dev liblzma-dev tree -y
 go install github.com/tc-hib/go-winres@latest
+# Dev Dependencies: brew install protobuf
+# Dev Dependencies: go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 # prepare golang code
 cd ${GITHUB_WORKSPACE}/cramc/gocode
