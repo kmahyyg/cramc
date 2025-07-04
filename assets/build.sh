@@ -21,7 +21,7 @@ sudo apt update -y
 sudo apt install gcc-mingw-w64-x86-64 build-essential pkg-config zip unzip git zlib1g-dev libbz2-dev libmagic-dev \
      autoconf libtool curl ca-certificates libjansson-dev flex bison libzstd-dev libssl-dev upx \
      libunwind-dev liblzma-dev tree -y
-go install github.com/tc-hib/go-winres@latest
+CGO_ENABLED=0 go install github.com/tc-hib/go-winres@latest
 # Dev Dependencies: brew install protobuf
 # Dev Dependencies: go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
@@ -100,7 +100,7 @@ elif [[ "$1" == "windows" ]]; then
     # curl -L -O https://github.com/microsoft/windows-rs/raw/b62b802bae534fdaed3fa25b6838dc3001b6d084/crates/targets/x86_64_gnu/lib/libwindows.0.52.0.a
     # generate exe winres
     cd ${GITHUB_WORKSPACE}/cramc/gocode/cmd/aioagent
-    GOOS=windows GOARCH=amd64 go-winres make --product-version=git-tag --file-version=git-tag
+    GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go-winres make --product-version=git-tag --file-version=git-tag
     # build golang code - aioagent & privhelper rpc server
     cd ${GITHUB_WORKSPACE}/cramc/gocode
 

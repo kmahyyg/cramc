@@ -25,7 +25,6 @@ env:
   PROJECT_DEST: "/opt/buildtargets"
   PROJECT_NAME: "cramc_go"
   THIRD_PARTY_SRC: "/opt/softsrcs"
-  CGO_ENABLED: 1
 
 jobs:
   build-linux-amd64:
