@@ -1,7 +1,7 @@
 //go:build windows
 
 //go:generate go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-//go:generate protoc --go_out=./sanitizer_ole --proto_path=protos --go_opt=paths=source_relative --go-grpc_out=./sanitizer_ole --go-grpc_opt=paths=source_relative excel_unpriv_rpc.proto
+//go:generate protoc --go_out=./sanitizer_ole/pbrpc --proto_path=protos --go_opt=paths=source_relative --go-grpc_out=./sanitizer_ole/pbrpc --go-grpc_opt=paths=source_relative excel_unpriv_rpc.proto
 
 package main
 

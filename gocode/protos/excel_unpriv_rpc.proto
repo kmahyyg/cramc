@@ -42,7 +42,5 @@ message GeneralMessageMeta {
 enum ControlAction {
   CONTROL_ACTION_UNKNOWN = 0;
   PING = 1;
-  PONG = 2;
-  DISCONN = 3;
-  QUIT = 4;
+  QUIT = 2;
 }

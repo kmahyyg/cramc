@@ -26,9 +26,7 @@ type ControlAction int32
 const (
 	ControlAction_CONTROL_ACTION_UNKNOWN ControlAction = 0
 	ControlAction_PING                   ControlAction = 1
-	ControlAction_PONG                   ControlAction = 2
-	ControlAction_DISCONN                ControlAction = 3
-	ControlAction_QUIT                   ControlAction = 4
+	ControlAction_QUIT                   ControlAction = 2
 )
 
 // Enum value maps for ControlAction.
@@ -36,16 +34,12 @@ var (
 	ControlAction_name = map[int32]string{
 		0: "CONTROL_ACTION_UNKNOWN",
 		1: "PING",
-		2: "PONG",
-		3: "DISCONN",
-		4: "QUIT",
+		2: "QUIT",
 	}
 	ControlAction_value = map[string]int32{
 		"CONTROL_ACTION_UNKNOWN": 0,
 		"PING":                   1,
-		"PONG":                   2,
-		"DISCONN":                3,
-		"QUIT":                   4,
+		"QUIT":                   2,
 	}
 )
 
@@ -641,13 +635,11 @@ const file_excel_unpriv_rpc_proto_rawDesc = "" +
 	"\rAdditionalMsg\x18\x03 \x01(\tR\rAdditionalMsg\"N\n" +
 	"\x12GeneralMessageMeta\x12\x1c\n" +
 	"\tMessageID\x18\x01 \x01(\x04R\tMessageID\x12\x1a\n" +
-	"\bClientID\x18\x02 \x01(\tR\bClientID*V\n" +
+	"\bClientID\x18\x02 \x01(\tR\bClientID*?\n" +
 	"\rControlAction\x12\x1a\n" +
 	"\x16CONTROL_ACTION_UNKNOWN\x10\x00\x12\b\n" +
 	"\x04PING\x10\x01\x12\b\n" +
-	"\x04PONG\x10\x02\x12\v\n" +
-	"\aDISCONN\x10\x03\x12\b\n" +
-	"\x04QUIT\x10\x042\xc2\x01\n" +
+	"\x04QUIT\x10\x022\xc2\x01\n" +
 	"\x11ExcelSanitizerRPC\x12N\n" +
 	"\rControlServer\x12\x19.sanitizer_ole.ControlMsg\x1a .sanitizer_ole.UniversalResponse\"\x00\x12]\n" +
 	"\x10SanitizeDocument\x12!.sanitizer_ole.SanitizeDocRequest\x1a .sanitizer_ole.UniversalResponse\"\x00(\x010\x01B\x11Z\a./pbrpc\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
