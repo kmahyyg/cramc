@@ -1,0 +1,43 @@
+edition = "2023";
+
+package sanitizer_ole;
+
+// for golang: https://chromium.googlesource.com/infra/infra/go/src/infra/+/refs/heads/main/build/siso/execute/reproxyexec/dial_windows.go
+
+option go_package = "sanitizer_ole";
+
+service ExcelSanitizerRPC {
+  rpc ControlServer(ControlMsg) returns (UniversalResponse) {}
+  rpc SanitizeDocument(stream SanitizeDocRequest) returns (stream UniversalResponse) {}
+}
+
+message ControlMsg {
+  GeneralMessageMeta Meta = 1;
+  ControlAction Action = 2;
+}
+
+message SanitizeDocRequest {
+  GeneralMessageMeta Meta = 1;
+  string Path = 2;
+  string Action = 3;
+  string DetectionName = 4;
+  string DestModule = 5;
+}
+
+message UniversalResponse {
+  GeneralMessageMeta Meta = 1;
+  uint32 ResultCode = 2;
+  string AdditionalMsg = 3;
+}
+
+message GeneralMessageMeta {
+  uint64 MessageID = 1;
+  string ClientID = 2;
+}
+
+enum ControlAction {
+  PING = 1;
+  PONG = 2;
+  DISCONN = 3;
+  QUIT = 4;
+}
