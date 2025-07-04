@@ -11,6 +11,14 @@ import (
 	"sync"
 )
 
+const (
+	cleanupComment = `' Sanitized by CRAMC
+Private Sub CRAMCPlaceholder()
+    ' This ensures the comment above persists
+End Sub
+`
+)
+
 func createExcelInstance() (*ole.IDispatch, error) {
 	// https://learn.microsoft.com/en-us/dotnet/api/microsoft.office.interop.excel?view=excel-pia
 	// init excel, no exit before finish all files
