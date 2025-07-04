@@ -4,7 +4,7 @@ package sanitizer_ole;
 
 // for golang: https://chromium.googlesource.com/infra/infra/go/src/infra/+/refs/heads/main/build/siso/execute/reproxyexec/dial_windows.go
 
-option go_package = "./sanitizer_ole";
+option go_package = "./pbrpc";
 
 import "google/protobuf/go_features.proto";
 option features.(pb.go).api_level = API_OPAQUE;
