@@ -93,27 +93,44 @@ func (s *SimpleRPCServer) SanitizeDocument(stream pbrpc.ExcelSanitizerRPC_Saniti
 		uniResp.SetMeta(respMeta)
 		common.Logger.Info(fmt.Sprintf("Processing Document: %s, Detection: %s", inObj.GetPath(), inObj.GetDetectionName()))
 		if s.eWorker == nil {
+			uniResp.SetResultCode(409)
+			uniResp.SetAdditionalMsg("Sanitizer Excel Worker not initialized.")
+			_ = stream.Send(uniResp)
 			return customerrs.ErrUnknownInternalError
 		}
 		// change path separator, make sure consistent in os-level
 		fPathNonVariant, err2 := filepath.Abs(inObj.GetPath())
 		if err2 != nil {
 			common.Logger.Error("Failed to get absolute path: " + err2.Error())
-			return err2
+			uniResp.SetResultCode(400)
+			uniResp.SetAdditionalMsg("Failed to get absolute path. ")
+			_ = stream.Send(uniResp)
+			continue
 		}
 		// backup file
 		err = gzBakFile(fPathNonVariant)
 		if err != nil {
 			common.Logger.Error("Backup file failed: " + err.Error())
+			uniResp.SetResultCode(412)
+			uniResp.SetAdditionalMsg("Failed to backup original file. ")
+			_ = stream.Send(uniResp)
+			continue
 		}
 		common.Logger.Info("Original file backup succeeded: " + inObj.GetPath())
-		// remove file in queue notice, just processing one by one, as there's already queueing in grpc
+		// just processing files in queue one by one, as there's already queueing in grpc
 		func() {
 			ctxForSani, cancelF := context.WithTimeout(context.TODO(), 180*time.Second)
 			defer cancelF()
-			errC := make(chan error, 1)
 			common.Logger.Info("Waiting for file to be cleaned up: " + fPathNonVariant)
-			s.excelFileCleanProcedure(ctxForSani, fPathNonVariant, inObj.GetAction(), inObj.GetDestModule(), errC)
+			errN := s.excelFileCleanProcedure(ctxForSani, fPathNonVariant, inObj.GetAction(), inObj.GetDestModule())
+			if errN != nil {
+				common.Logger.Error("excelFileCleanProcedure Reported Error: " + errN.Error())
+				uniResp.SetResultCode(422)
+				uniResp.SetAdditionalMsg("excelFileCleanProcedure Reported Error:  " + errN.Error())
+				_ = stream.Send(uniResp)
+				return
+			}
+			common.Logger.Info("Sanitized workbook: " + fPathNonVariant)
 			common.Logger.Info("excelFileCleanProcedure finished.")
 		}()
 		uniResp.SetResultCode(202)
@@ -127,7 +144,8 @@ func (s *SimpleRPCServer) SanitizeDocument(stream pbrpc.ExcelSanitizerRPC_Saniti
 	}
 }
 
-func (s *SimpleRPCServer) excelFileCleanProcedure(ctx context.Context, fPath string, targetOp string, targetMod string, errC chan error) {
+func (s *SimpleRPCServer) excelFileCleanProcedure(ctx context.Context, fPath string, targetOp string, targetMod string) error {
+	errC := make(chan error, 1)
 	// start actual processing
 	s.wg.Add(1)
 	defer close(errC)
@@ -173,22 +191,22 @@ func (s *SimpleRPCServer) excelFileCleanProcedure(ctx context.Context, fPath str
 	select {
 	case err := <-errC:
 		if err != nil {
-			common.Logger.Error("Failed to sanitize workbook, errC returned: " + err.Error())
+			common.Logger.Error(fmt.Sprintf("Failed to sanitize workbook %s, errC returned: %s", fPath, err.Error()))
 			telemetry.CaptureException(err, "RPCServer.excelFileCleanProcedure.ErrC")
 			telemetry.CaptureMessage("error", "RPCServer.excelFileCleanProcedure.ErrC: "+fPath)
-			return
+			return err
 		}
 		// properly remediated
 		// go ahead
 		common.Logger.Debug("Sanitize workbook finished, doneC returned correctly.")
-		return
+		return nil
 	case <-ctx.Done():
 		// timed out or error
 		err5 := ctx.Err()
 		if err5 != nil {
 			telemetry.CaptureException(err5, "RPCServer.excelFileCleanProcedure.CtxTimedOut")
 			telemetry.CaptureMessage("error", "RPCServer.excelFileCleanProcedure.CtxTimedOut: "+fPath)
-			common.Logger.Error("Failed to sanitize workbook, timed out: " + err5.Error())
+			common.Logger.Error(fmt.Sprintf("Failed to sanitize workbook %s, timed out: %s", fPath, err5.Error()))
 		}
 		common.Logger.Info("Sanitize workbook timed out, ctx.Done() returned, go to force clean.")
 		// set mark for recreation
@@ -201,6 +219,6 @@ func (s *SimpleRPCServer) excelFileCleanProcedure(ctx context.Context, fPath str
 		_ = s.eWorker.GetWorkbooks()
 		// set mark again for ready to use
 		s.eWorkerSet.Store(true)
-		return
+		return err5
 	}
 }
