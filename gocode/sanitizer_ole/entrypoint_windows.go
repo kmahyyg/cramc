@@ -133,8 +133,8 @@ func StartSanitizer() error {
 			telemetry.CaptureMessage("warn", "Privilege RPC Server Termination Timed Out.")
 			// close chan and force terminate process
 			rpcSCOnce.Do(func() {
-				_ = rpcProc.Kill()
-				common.Logger.Warn("RPC Server Force Terminated.")
+				err4 := rpcProc.Kill()
+				common.Logger.Warn("RPC Server Force Terminated, returned: " + err4.Error())
 				close(rpcSC)
 			})
 		case <-rpcSC:
@@ -142,10 +142,18 @@ func StartSanitizer() error {
 		}
 	}()
 	common.Logger.Info("Sanitizer RPC Server Termination Started, wait for 300 seconds.")
-	_, _ = rpcProc.Wait()
+	procStat, err2 := rpcProc.Wait()
+	if err2 != nil {
+		common.Logger.Error("rpcProcWait: Sanitizer RPC Server Termination Failed: " + err2.Error())
+	}
 	rpcSCOnce.Do(func() {
 		rpcSC <- struct{}{}
 		close(rpcSC)
+		if procStat != nil && !procStat.Exited() {
+			err3 := rpcProc.Kill()
+			common.Logger.Info("rpcProcWait failed, check proc state != exited, force kill issued.")
+			common.Logger.Warn("rpcProcWait, force-kill returned: " + err3.Error())
+		}
 	})
 	common.Logger.Info("RPC Server terminated correctly.")
 	return nil
