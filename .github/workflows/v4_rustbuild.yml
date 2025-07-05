@@ -54,13 +54,15 @@ jobs:
         with:
           toolchain: 'stable'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
           default: true
-      - name: Caching with Cargo Dependencies
+      - name: Caching with Cargo Dependencies And Yara-X build
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
+            ${{ github.workspace }}/yara-x/target
+            /opt/buildtargets/cramc_go/linux_amd64
           key: ${{ runner.os }}-cargo-rust-linuxbuild
       - name: Install cargo-c from crates.io with cache
         uses: baptiste0928/cargo-install@v3
@@ -116,13 +118,15 @@ jobs:
           toolchain: 'stable'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
           default: true
           target: 'x86_64-pc-windows-gnu'
-      - name: Caching with Cargo Dependencies
+      - name: Caching with Cargo Dependencies And Yara-X Build
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
+            ${{ github.workspace }}/yara-x/target
+            /opt/buildtargets/cramc_go/win_amd64
           key: ${{ runner.os }}-cargo-rust-winbuild
       - name: Install cargo-c from crates.io with cache
         uses: baptiste0928/cargo-install@v3
