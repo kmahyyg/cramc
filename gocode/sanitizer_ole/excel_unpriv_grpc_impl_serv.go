@@ -7,7 +7,6 @@ import (
 	"cramc_go/sanitizer_ole/pbrpc"
 	"cramc_go/telemetry"
 	"fmt"
-	"io"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -75,73 +74,60 @@ func (s *SimpleRPCServer) ControlServer(_ context.Context, cMsg *pbrpc.ControlMs
 	}
 }
 
-func (s *SimpleRPCServer) SanitizeDocument(stream pbrpc.ExcelSanitizerRPC_SanitizeDocumentServer) error {
-	for {
-		inObj, err := stream.Recv()
-		if err == io.EOF {
-			common.Logger.Info("Client disconnected in SanitizeDocumentCall.")
-			return nil
-		}
-		if err != nil {
-			return err
-		}
-		common.Logger.Info(fmt.Sprintf("Received SanitizeDocument request from client ID: %s , MessageID: %d ", inObj.GetMeta().GetClientID(), inObj.GetMeta().GetMessageID()))
-		respMeta := &pbrpc.GeneralMessageMeta{}
-		respMeta.SetMessageID(inObj.GetMeta().GetMessageID())
-		respMeta.SetClientID(inObj.GetMeta().GetClientID())
-		uniResp := &pbrpc.UniversalResponse{}
-		uniResp.SetMeta(respMeta)
-		common.Logger.Info(fmt.Sprintf("Processing Document: %s, Detection: %s", inObj.GetPath(), inObj.GetDetectionName()))
-		if s.eWorker == nil {
-			uniResp.SetResultCode(409)
-			uniResp.SetAdditionalMsg("Sanitizer Excel Worker not initialized.")
-			_ = stream.Send(uniResp)
-			return customerrs.ErrUnknownInternalError
-		}
-		// change path separator, make sure consistent in os-level
-		fPathNonVariant, err2 := filepath.Abs(inObj.GetPath())
-		if err2 != nil {
-			common.Logger.Error("Failed to get absolute path: " + err2.Error())
-			uniResp.SetResultCode(400)
-			uniResp.SetAdditionalMsg("Failed to get absolute path. ")
-			_ = stream.Send(uniResp)
-			continue
-		}
-		// backup file
-		err = gzBakFile(fPathNonVariant)
-		if err != nil {
-			common.Logger.Error("Backup file failed: " + err.Error())
-			uniResp.SetResultCode(412)
-			uniResp.SetAdditionalMsg("Failed to backup original file. ")
-			_ = stream.Send(uniResp)
-			continue
-		}
-		common.Logger.Info("Original file backup succeeded: " + inObj.GetPath())
-		// just processing files in queue one by one, as there's already queueing in grpc
-		func() {
-			ctxForSani, cancelF := context.WithTimeout(context.TODO(), 180*time.Second)
-			defer cancelF()
-			common.Logger.Info("Waiting for file to be cleaned up: " + fPathNonVariant)
-			errN := s.excelFileCleanProcedure(ctxForSani, fPathNonVariant, inObj.GetAction(), inObj.GetDestModule())
-			if errN != nil {
-				common.Logger.Error("excelFileCleanProcedure Reported Error: " + errN.Error())
-				uniResp.SetResultCode(422)
-				uniResp.SetAdditionalMsg("excelFileCleanProcedure Reported Error:  " + errN.Error())
-				_ = stream.Send(uniResp)
-				return
-			}
-			common.Logger.Info("Sanitized workbook: " + fPathNonVariant)
-			common.Logger.Info("excelFileCleanProcedure finished.")
-		}()
-		uniResp.SetResultCode(202)
-		uniResp.SetAdditionalMsg("File Proceeded. Please check log for more details.")
-		err = stream.Send(uniResp)
-		if err != nil {
-			common.Logger.Error("Failed to send response to client: " + err.Error())
-			return err
-		}
-		common.Logger.Info("Response Sent to End User: " + inObj.GetPath())
+func (s *SimpleRPCServer) SanitizeDocument(_ context.Context, inObj *pbrpc.SanitizeDocRequest) (*pbrpc.UniversalResponse, error) {
+	// error in this function always return nil to make sure message could be passed to client
+	common.Logger.Info(fmt.Sprintf("Received SanitizeDocument request from client ID: %s , MessageID: %d ", inObj.GetMeta().GetClientID(), inObj.GetMeta().GetMessageID()))
+	respMeta := &pbrpc.GeneralMessageMeta{}
+	respMeta.SetMessageID(inObj.GetMeta().GetMessageID())
+	respMeta.SetClientID(inObj.GetMeta().GetClientID())
+	uniResp := &pbrpc.UniversalResponse{}
+	uniResp.SetMeta(respMeta)
+	common.Logger.Info(fmt.Sprintf("Processing Document: %s, Detection: %s", inObj.GetPath(), inObj.GetDetectionName()))
+	if s.eWorker == nil {
+		uniResp.SetResultCode(409)
+		uniResp.SetAdditionalMsg("Sanitizer Excel Worker not initialized.")
+		return uniResp, nil
 	}
+	// change path separator, make sure consistent in os-level
+	fPathNonVariant, err := filepath.Abs(inObj.GetPath())
+	if err != nil {
+		common.Logger.Error("Failed to get absolute path: " + err.Error())
+		uniResp.SetResultCode(400)
+		uniResp.SetAdditionalMsg("Failed to get absolute path. ")
+		return uniResp, nil
+	}
+	// backup file
+	err = gzBakFile(fPathNonVariant)
+	if err != nil {
+		common.Logger.Error("Backup file failed: " + err.Error())
+		uniResp.SetResultCode(412)
+		uniResp.SetAdditionalMsg("Failed to backup original file. ")
+		return uniResp, nil
+	}
+	common.Logger.Info("Original file backup succeeded: " + inObj.GetPath())
+	// just processing files in queue one by one, as there's already queueing in grpc
+	err = func() error {
+		ctxForSani, cancelF := context.WithTimeout(context.TODO(), 180*time.Second)
+		defer cancelF()
+		common.Logger.Info("Waiting for file to be cleaned up: " + fPathNonVariant)
+		errN := s.excelFileCleanProcedure(ctxForSani, fPathNonVariant, inObj.GetAction(), inObj.GetDestModule())
+		if errN != nil {
+			common.Logger.Error("excelFileCleanProcedure Reported Error: " + errN.Error())
+			return errN
+		}
+		common.Logger.Info("Sanitized workbook: " + fPathNonVariant)
+		common.Logger.Info("excelFileCleanProcedure finished.")
+		return nil
+	}()
+	if err != nil {
+		uniResp.SetResultCode(422)
+		uniResp.SetAdditionalMsg("excelFileCleanProcedure Reported Error:  " + err.Error())
+		return uniResp, nil
+	}
+	uniResp.SetResultCode(202)
+	uniResp.SetAdditionalMsg("File Proceeded. Please check log for more details.")
+	common.Logger.Info(fmt.Sprintf("Response to MsgID %d Sent to End User, Involved File: %s ", respMeta.GetMessageID(), inObj.GetPath()))
+	return uniResp, nil
 }
 
 func (s *SimpleRPCServer) excelFileCleanProcedure(ctx context.Context, fPath string, targetOp string, targetMod string) error {
