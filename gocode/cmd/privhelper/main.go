@@ -97,6 +97,7 @@ func main() {
 	// kill all office processes, to avoid any potential file lock.
 	_, _ = windoge_utils.KillAllOfficeProcesses()
 	common.Logger.Info("Triggered M365 Office processes killer.")
+	defer windoge_utils.KillAllOfficeProcesses()
 	// prepare to call ole
 	err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
 	if err != nil {
