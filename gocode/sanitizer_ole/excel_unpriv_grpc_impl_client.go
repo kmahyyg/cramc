@@ -61,7 +61,7 @@ func (c *SimpleRPCClient) sendControlMsg(actionType pbrpc.ControlAction) error {
 	ctrlMsg := &pbrpc.ControlMsg{}
 	metaMsg := c.PrepareMsgMeta()
 	ctrlMsg.SetMeta(metaMsg)
-	common.Logger.Info(fmt.Sprintf("%s Control Message with MsgID: %d", actionType.String(), metaMsg.GetMessageID()))
+	common.Logger.Info(fmt.Sprintf("%s Control Message with MsgID: %d Prepared.", actionType.String(), metaMsg.GetMessageID()))
 	ctrlMsg.SetAction(actionType)
 	resp, err := c.rpcClient.ControlServer(ctx, ctrlMsg)
 	if err != nil {
@@ -113,8 +113,8 @@ func generateMessageId() uint64 {
 // the code is grabbed from the Chromium project:
 // https://chromium.googlesource.com/infra/infra/go/src/infra/+/refs/heads/main/build/siso/execute/reproxyexec/dial_windows.go
 func dialContext(ctx context.Context, serverAddr string) (*grpc.ClientConn, error) {
-	if strings.HasPrefix(serverAddr, `\\.pipe\`) {
-		return dialPipe(ctx, serverAddr)
+	if strings.HasPrefix(serverAddr, `winiopipe://`) {
+		return dialPipe(ctx, strings.TrimPrefix(serverAddr, `winiopipe://`))
 	}
 	var opts = []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -124,13 +124,14 @@ func dialContext(ctx context.Context, serverAddr string) (*grpc.ClientConn, erro
 		serverAddr, opts...)
 }
 
-func dialPipe(ctx context.Context, dialaddr string) (*grpc.ClientConn, error) {
+func dialPipe(ctx context.Context, pipeName string) (*grpc.ClientConn, error) {
+	finalAddr := `\\.\pipe\` + pipeName
 	var opts = []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(4 * 1024 * 1024)),
-		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
-			return winio.DialPipeContext(ctx, addr)
+		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
+			return winio.DialPipeContext(ctx, finalAddr)
 		}),
 	}
-	return grpc.NewClient("passthrough:"+dialaddr, opts...)
+	return grpc.NewClient("passthrough:///"+finalAddr, opts...)
 }

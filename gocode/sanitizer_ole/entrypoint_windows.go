@@ -23,7 +23,7 @@ var (
 	procCoInitializeSecurity = modOle32.NewProc("CoInitializeSecurity")
 	nullptr                  = uintptr(0)
 	rpcHelperExe             = "privhelper.exe"
-	RpcPipeAddr              = `\\.\pipe\cramcPriv`
+	clientConnPipeAddr       = "winiopipe://cramcPriv"
 )
 
 func StartSanitizer() error {
@@ -88,7 +88,7 @@ func StartSanitizer() error {
 	// sleep 3 seconds for excel to startup
 	time.Sleep(3 * time.Second)
 	// Connect to RPC Client and ping
-	rpCli, err := InitSimpleRPCClient(clientID.String(), RpcPipeAddr)
+	rpCli, err := InitSimpleRPCClient(clientID.String(), clientConnPipeAddr)
 	if err != nil {
 		common.Logger.Error("Failed to initialize RPC Client: " + err.Error())
 		return err
@@ -99,7 +99,7 @@ func StartSanitizer() error {
 		common.Logger.Error("Failed to connect to RPC endpoint: " + err.Error())
 		return err
 	}
-	common.Logger.Info("Sanitizer RPC Client Connected.")
+	common.Logger.Info("Sanitizer RPC Client Connected (ignore this message if using local named pipe).")
 	// ping and check online
 	err = rpCli.Ping()
 	if err != nil {
@@ -121,7 +121,7 @@ func StartSanitizer() error {
 		common.Logger.Debug("Sanitizer Queue Received a New File.")
 		// get file from queue and send it out, waiting for response
 		msgMeta := rpCli.PrepareMsgMeta()
-		common.Logger.Info(fmt.Sprintf("New File Sanitize Request with MsgID: %d , FilePath: %s ", msgMeta.GetMessageID(), vObj.Path))
+		common.Logger.Info(fmt.Sprintf("New File Sanitize Request Prepared with MsgID: %d , FilePath: %s ", msgMeta.GetMessageID(), vObj.Path))
 		sanReq := &pbrpc.SanitizeDocRequest{}
 		sanReq.SetMeta(msgMeta)
 		sanReq.SetAction(vObj.Action)

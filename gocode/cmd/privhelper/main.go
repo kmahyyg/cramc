@@ -34,7 +34,8 @@ const (
 	betterStackURL         = "https://s1358347.eu-nbg-2.betterstackdata.com"
 	betterStackBearerToken = "26Y9ahkqDMsQgLN9yTb1JETU"
 
-	lockFile = "privhelper.lock"
+	lockFile        = "privhelper.lock"
+	listenWinIOPipe = `\\.\pipe\cramcPriv`
 )
 
 func main() {
@@ -156,7 +157,7 @@ func main() {
 			}
 		} else {
 			// listen on named pipe
-			wPipe, err := winio.ListenPipe(sanitizer_ole.RpcPipeAddr, &winio.PipeConfig{
+			wPipe, err := winio.ListenPipe(listenWinIOPipe, &winio.PipeConfig{
 				InputBufferSize:  65536,
 				OutputBufferSize: 65536,
 			})
