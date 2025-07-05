@@ -5,13 +5,13 @@ package sanitizer_ole
 import (
 	"context"
 	"cramc_go/common"
+	"cramc_go/customerrs"
 	"cramc_go/sanitizer_ole/pbrpc"
-	"errors"
+	"cramc_go/telemetry"
 	"fmt"
 	"github.com/Microsoft/go-winio"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"io"
 	"net"
 	"strings"
 	"time"
@@ -72,29 +72,32 @@ func (c *SimpleRPCClient) sendControlMsg(actionType pbrpc.ControlAction) error {
 	return nil
 }
 
-func (c *SimpleRPCClient) CallDocSanitizeReqSender(ctrlChan chan struct{}) (pbrpc.ExcelSanitizerRPC_SanitizeDocumentClient, error) {
-	ctx := context.Background()
-	stream, err := c.rpcClient.SanitizeDocument(ctx)
+func (c *SimpleRPCClient) SendDocumentSanitizeRequest(reqDoc *common.IPCSingleDocToBeSanitized) error {
+	// get file from queue and send it out, waiting for response
+	msgMeta := c.PrepareMsgMeta()
+	common.Logger.Info(fmt.Sprintf("New File Sanitize Request Prepared with MsgID: %d , FilePath: %s ", msgMeta.GetMessageID(), reqDoc.Path))
+	sanReq := &pbrpc.SanitizeDocRequest{}
+	sanReq.SetMeta(msgMeta)
+	sanReq.SetAction(reqDoc.Action)
+	sanReq.SetDestModule(reqDoc.DestModule)
+	sanReq.SetDetectionName(reqDoc.DetectionName)
+	sanReq.SetPath(reqDoc.Path)
+	ctx, cancelF := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancelF()
+	resp, err := c.rpcClient.SanitizeDocument(ctx, sanReq)
 	if err != nil {
-		close(ctrlChan)
-		return nil, err
+		msg := fmt.Sprintf("SimpleRPCClient.SendDocumentSanitizeRequest Failure: %s, Doc: %s, MsgID: %d", err.Error(), reqDoc.Path, msgMeta.GetMessageID())
+		telemetry.CaptureMessage("error", msg)
+		common.Logger.Error("Sanitize Request for" + reqDoc.Path + " via GRPC failed: " + err.Error())
+		return err
 	}
-	go func() {
-		for {
-			recvObj, err3 := stream.Recv()
-			if errors.Is(err, io.EOF) {
-				common.Logger.Info("Client disconnected in SanitizeDocumentCall.")
-				ctrlChan <- struct{}{}
-				close(ctrlChan)
-				return
-			} else if err3 != nil {
-				common.Logger.Error("Failed to receive response to SanitizeDocReq: " + err3.Error())
-				continue
-			}
-			common.Logger.Info(fmt.Sprintf("In Response To SanitizeDocReq ID %d , Response Code - %d, Msg - %s", recvObj.GetMeta().GetMessageID(), recvObj.GetResultCode(), recvObj.GetAdditionalMsg()))
-		}
-	}()
-	return stream, nil
+	if resp.GetResultCode() >= 400 {
+		msg := fmt.Sprintf("SimpleRPCClient.SendDocumentSanitizeReq_RESP: MsgID: %d, Path: %s, RespCode: %d, RespInfo: %s", resp.GetMeta().GetMessageID(), reqDoc.Path, resp.GetResultCode(), resp.GetAdditionalMsg())
+		telemetry.CaptureMessage("error", msg)
+		return customerrs.ErrUnknownInternalError
+	}
+	common.Logger.Info(fmt.Sprintf("Sanitize Response Successfully Received: %s, RespCode: %d, RespInfo: %s, MsgID: %d", reqDoc.Path, resp.GetResultCode(), resp.GetAdditionalMsg(), resp.GetMeta().GetMessageID()))
+	return nil
 }
 
 func (c *SimpleRPCClient) PrepareMsgMeta() *pbrpc.GeneralMessageMeta {

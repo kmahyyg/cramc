@@ -5,9 +5,7 @@ package sanitizer_ole
 import (
 	"cramc_go/common"
 	"cramc_go/platform/windoge_utils"
-	"cramc_go/sanitizer_ole/pbrpc"
 	"cramc_go/telemetry"
-	"fmt"
 	"github.com/google/uuid"
 	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
@@ -109,35 +107,16 @@ func StartSanitizer() error {
 	}
 	common.Logger.Info("ping RPC endpoint succeeded.")
 
-	// Create stream object
-	sanReqCtrlC := make(chan struct{}, 1)
-	biDStream, err := rpCli.CallDocSanitizeReqSender(sanReqCtrlC)
-	if err != nil {
-		common.Logger.Error("Failed to start streaming sanitize request: " + err.Error())
-		return err
-	}
 	// iterate through workbooks
 	for vObj := range common.SanitizeQueue {
 		common.Logger.Debug("Sanitizer Queue Received a New File.")
-		// get file from queue and send it out, waiting for response
-		msgMeta := rpCli.PrepareMsgMeta()
-		common.Logger.Info(fmt.Sprintf("New File Sanitize Request Prepared with MsgID: %d , FilePath: %s ", msgMeta.GetMessageID(), vObj.Path))
-		sanReq := &pbrpc.SanitizeDocRequest{}
-		sanReq.SetMeta(msgMeta)
-		sanReq.SetAction(vObj.Action)
-		sanReq.SetDestModule(vObj.DestModule)
-		sanReq.SetDetectionName(vObj.DetectionName)
-		sanReq.SetPath(vObj.Path)
-		err = biDStream.Send(sanReq)
+		err = rpCli.SendDocumentSanitizeRequest(vObj)
 		if err != nil {
-			common.Logger.Error("Failed to send sanitize request: " + err.Error())
+			common.Logger.Error("Sanitize Request Failure: " + err.Error())
 			continue
 		}
-		common.Logger.Info(fmt.Sprintf("New File Sanitize Request Sent, MsgID: %d .", msgMeta.GetMessageID()))
+		common.Logger.Info("Successfully pushed document to sanitizer RPC server.")
 	}
-
-	// after all document had been sent, close stream
-	_ = biDStream.CloseSend()
 
 	// send a termination message and close connection
 	_ = rpCli.SendQuit()
