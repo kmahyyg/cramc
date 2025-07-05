@@ -105,6 +105,7 @@ func StartSanitizer() error {
 	if err != nil {
 		common.Logger.Error("Failed to ping RPC endpoint: " + err.Error())
 		return err
+		// in rare cases, if the RPC cannot connect correctly, privHelper cannot successfully exit.
 	}
 	common.Logger.Info("ping RPC endpoint succeeded.")
 
