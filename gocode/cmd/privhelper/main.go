@@ -20,6 +20,7 @@ import (
 	"github.com/go-ole/go-ole"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"net"
 	"os"
 	"os/signal"
 	"os/user"
@@ -122,17 +123,6 @@ func main() {
 	}
 	common.Logger.Info("Excel.Application worker initialized.")
 
-	// listen on named pipe
-	wPipe, err := winio.ListenPipe(sanitizer_ole.RpcPipeAddr, &winio.PipeConfig{
-		InputBufferSize:  65536,
-		OutputBufferSize: 65536,
-	})
-	if err != nil {
-		common.Logger.Log(context.TODO(), logging.LevelFatal, "Failed to listen on pipe: "+err.Error())
-		os.Exit(-1)
-		return
-	}
-
 	// prepare for simpleGRPC
 	quitMsgChan := make(chan struct{}, 1)
 	quitMsgOnce := &sync.Once{}
@@ -148,9 +138,32 @@ func main() {
 	gRSrv := grpc.NewServer(servOpts...)
 	pbrpc.RegisterExcelSanitizerRPCServer(gRSrv, sGRPCsrv)
 	go func() {
-		if err3 := gRSrv.Serve(wPipe); err3 != nil && !errors.Is(err3, grpc.ErrServerStopped) {
-			common.Logger.Error("GRPC Server Listen Returned Error:" + err3.Error())
-			return
+		if os.Getenv("RunEnv") == "DEBUG" {
+			tcpLis, err := net.Listen("tcp", "127.0.0.1:0")
+			if err != nil {
+				common.Logger.Info("Failed to listen on tcp: " + err.Error())
+				return
+			}
+			common.Logger.Info("RunEnv==DEBUG detected, listen on TCP: " + tcpLis.Addr().String() + " for debugging.")
+			if err3 := gRSrv.Serve(tcpLis); err3 != nil && !errors.Is(err3, grpc.ErrServerStopped) {
+				common.Logger.Error("GRPC Server Listen Returned Error:" + err3.Error())
+				return
+			}
+		} else {
+			// listen on named pipe
+			wPipe, err := winio.ListenPipe(sanitizer_ole.RpcPipeAddr, &winio.PipeConfig{
+				InputBufferSize:  65536,
+				OutputBufferSize: 65536,
+			})
+			if err != nil {
+				common.Logger.Log(context.TODO(), logging.LevelFatal, "Failed to listen on pipe: "+err.Error())
+				os.Exit(-1)
+				return
+			}
+			if err3 := gRSrv.Serve(wPipe); err3 != nil && !errors.Is(err3, grpc.ErrServerStopped) {
+				common.Logger.Error("GRPC Server Listen Returned Error:" + err3.Error())
+				return
+			}
 		}
 		common.Logger.Info("GRPC Server Stopped.")
 	}()
