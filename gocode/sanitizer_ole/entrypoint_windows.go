@@ -54,15 +54,15 @@ func StartSanitizer() error {
 		}
 		impTkn := (windows.Token)(userTkn)
 		defer impTkn.Close()
-		procEnvBlk, err2 := impTkn.Environ(false)
-		if err2 != nil {
-			return err2
-		}
+		// https://learn.microsoft.com/en-us/windows/console/creation-of-a-console
+		// https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
+		// /opt/homebrew/opt/go/libexec/src/os/exec/exec.go:703 go1.24.4
 		rpcSProcAddr := &os.ProcAttr{
-			Env: procEnvBlk,
+			// if you set token and leave `Env` empty, it will auto create.
+			Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
 			Sys: &syscall.SysProcAttr{
 				HideWindow:    true,
-				CreationFlags: windows.CREATE_NEW_PROCESS_GROUP,
+				CreationFlags: windows.CREATE_NEW_PROCESS_GROUP, // detach from original proc group
 				Token:         syscall.Token(impTkn),
 			},
 		}
