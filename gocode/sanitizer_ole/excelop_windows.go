@@ -111,6 +111,7 @@ func (w *ExcelWorker) Init(inDbg bool) error {
 
 func (w *ExcelWorker) Quit(isForced bool) {
 	_, _ = w.currentExcelObj.CallMethod("Quit")
+	w.workbooksHandle.Release()
 	w.currentExcelObj.Release()
 	if isForced {
 		_, _ = windoge_utils.KillAllOfficeProcesses()
