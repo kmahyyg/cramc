@@ -171,7 +171,6 @@ jobs:
       - name: Download artifacts previously generated
         uses: actions/download-artifact@v4
         with:
-          name: cramc_go
           path: /tmp/relbuild/${{ github.repository_owner }}
           merge-multiple: true
       - name: List all artifacts downloaded
@@ -188,4 +187,4 @@ jobs:
             This version uses totally different scanner engine, please do not reuse rules from v0.4.x.
           allowUpdates: true
           prerelease: true
-          artifacts: /tmp/relbuild/${{ github.repository_owner }}/cramc_go_${{ github.run_id }}.zip,/tmp/relbuild/${{ github.repository_owner }}/devreleaser_linux_amd64,/tmp/relbuild/${{ github.repository_owner }}/*.bin
+          artifacts: /tmp/relbuild/${{ github.repository_owner }}/*
