@@ -61,7 +61,7 @@ func (c *SimpleRPCClient) sendControlMsg(actionType pbrpc.ControlAction) error {
 	ctrlMsg := &pbrpc.ControlMsg{}
 	metaMsg := c.PrepareMsgMeta()
 	ctrlMsg.SetMeta(metaMsg)
-	common.Logger.Info(fmt.Sprintf("Quit Control Message with MsgID: %d", metaMsg.GetMessageID()))
+	common.Logger.Info(fmt.Sprintf("%s Control Message with MsgID: %d", actionType.String(), metaMsg.GetMessageID()))
 	ctrlMsg.SetAction(actionType)
 	resp, err := c.rpcClient.ControlServer(ctx, ctrlMsg)
 	if err != nil {
