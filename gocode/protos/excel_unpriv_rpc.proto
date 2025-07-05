@@ -12,7 +12,7 @@ option features.(pb.go).api_level = API_OPAQUE;
 
 service ExcelSanitizerRPC {
   rpc ControlServer(ControlMsg) returns (UniversalResponse) {}
-  rpc SanitizeDocument(stream SanitizeDocRequest) returns (stream UniversalResponse) {}
+  rpc SanitizeDocument(SanitizeDocRequest) returns (UniversalResponse) {}
 }
 
 message ControlMsg {

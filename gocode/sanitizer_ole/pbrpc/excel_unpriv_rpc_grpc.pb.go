@@ -28,7 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ExcelSanitizerRPCClient interface {
 	ControlServer(ctx context.Context, in *ControlMsg, opts ...grpc.CallOption) (*UniversalResponse, error)
-	SanitizeDocument(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SanitizeDocRequest, UniversalResponse], error)
+	SanitizeDocument(ctx context.Context, in *SanitizeDocRequest, opts ...grpc.CallOption) (*UniversalResponse, error)
 }
 
 type excelSanitizerRPCClient struct {
@@ -49,25 +49,22 @@ func (c *excelSanitizerRPCClient) ControlServer(ctx context.Context, in *Control
 	return out, nil
 }
 
-func (c *excelSanitizerRPCClient) SanitizeDocument(ctx context.Context, opts ...grpc.CallOption) (grpc.BidiStreamingClient[SanitizeDocRequest, UniversalResponse], error) {
+func (c *excelSanitizerRPCClient) SanitizeDocument(ctx context.Context, in *SanitizeDocRequest, opts ...grpc.CallOption) (*UniversalResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &ExcelSanitizerRPC_ServiceDesc.Streams[0], ExcelSanitizerRPC_SanitizeDocument_FullMethodName, cOpts...)
+	out := new(UniversalResponse)
+	err := c.cc.Invoke(ctx, ExcelSanitizerRPC_SanitizeDocument_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[SanitizeDocRequest, UniversalResponse]{ClientStream: stream}
-	return x, nil
+	return out, nil
 }
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ExcelSanitizerRPC_SanitizeDocumentClient = grpc.BidiStreamingClient[SanitizeDocRequest, UniversalResponse]
 
 // ExcelSanitizerRPCServer is the server API for ExcelSanitizerRPC service.
 // All implementations must embed UnimplementedExcelSanitizerRPCServer
 // for forward compatibility.
 type ExcelSanitizerRPCServer interface {
 	ControlServer(context.Context, *ControlMsg) (*UniversalResponse, error)
-	SanitizeDocument(grpc.BidiStreamingServer[SanitizeDocRequest, UniversalResponse]) error
+	SanitizeDocument(context.Context, *SanitizeDocRequest) (*UniversalResponse, error)
 	mustEmbedUnimplementedExcelSanitizerRPCServer()
 }
 
@@ -81,8 +78,8 @@ type UnimplementedExcelSanitizerRPCServer struct{}
 func (UnimplementedExcelSanitizerRPCServer) ControlServer(context.Context, *ControlMsg) (*UniversalResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ControlServer not implemented")
 }
-func (UnimplementedExcelSanitizerRPCServer) SanitizeDocument(grpc.BidiStreamingServer[SanitizeDocRequest, UniversalResponse]) error {
-	return status.Errorf(codes.Unimplemented, "method SanitizeDocument not implemented")
+func (UnimplementedExcelSanitizerRPCServer) SanitizeDocument(context.Context, *SanitizeDocRequest) (*UniversalResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SanitizeDocument not implemented")
 }
 func (UnimplementedExcelSanitizerRPCServer) mustEmbedUnimplementedExcelSanitizerRPCServer() {}
 func (UnimplementedExcelSanitizerRPCServer) testEmbeddedByValue()                           {}
@@ -123,12 +120,23 @@ func _ExcelSanitizerRPC_ControlServer_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ExcelSanitizerRPC_SanitizeDocument_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(ExcelSanitizerRPCServer).SanitizeDocument(&grpc.GenericServerStream[SanitizeDocRequest, UniversalResponse]{ServerStream: stream})
+func _ExcelSanitizerRPC_SanitizeDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SanitizeDocRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExcelSanitizerRPCServer).SanitizeDocument(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ExcelSanitizerRPC_SanitizeDocument_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExcelSanitizerRPCServer).SanitizeDocument(ctx, req.(*SanitizeDocRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type ExcelSanitizerRPC_SanitizeDocumentServer = grpc.BidiStreamingServer[SanitizeDocRequest, UniversalResponse]
 
 // ExcelSanitizerRPC_ServiceDesc is the grpc.ServiceDesc for ExcelSanitizerRPC service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -141,14 +149,11 @@ var ExcelSanitizerRPC_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "ControlServer",
 			Handler:    _ExcelSanitizerRPC_ControlServer_Handler,
 		},
-	},
-	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "SanitizeDocument",
-			Handler:       _ExcelSanitizerRPC_SanitizeDocument_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
+			MethodName: "SanitizeDocument",
+			Handler:    _ExcelSanitizerRPC_SanitizeDocument_Handler,
 		},
 	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "excel_unpriv_rpc.proto",
 }

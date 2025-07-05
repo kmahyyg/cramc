@@ -639,10 +639,10 @@ const file_excel_unpriv_rpc_proto_rawDesc = "" +
 	"\rControlAction\x12\x1a\n" +
 	"\x16CONTROL_ACTION_UNKNOWN\x10\x00\x12\b\n" +
 	"\x04PING\x10\x01\x12\b\n" +
-	"\x04QUIT\x10\x022\xc2\x01\n" +
+	"\x04QUIT\x10\x022\xbe\x01\n" +
 	"\x11ExcelSanitizerRPC\x12N\n" +
-	"\rControlServer\x12\x19.sanitizer_ole.ControlMsg\x1a .sanitizer_ole.UniversalResponse\"\x00\x12]\n" +
-	"\x10SanitizeDocument\x12!.sanitizer_ole.SanitizeDocRequest\x1a .sanitizer_ole.UniversalResponse\"\x00(\x010\x01B\x11Z\a./pbrpc\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
+	"\rControlServer\x12\x19.sanitizer_ole.ControlMsg\x1a .sanitizer_ole.UniversalResponse\"\x00\x12Y\n" +
+	"\x10SanitizeDocument\x12!.sanitizer_ole.SanitizeDocRequest\x1a .sanitizer_ole.UniversalResponse\"\x00B\x11Z\a./pbrpc\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
 
 var file_excel_unpriv_rpc_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_excel_unpriv_rpc_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
