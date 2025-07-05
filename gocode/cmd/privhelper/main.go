@@ -20,6 +20,7 @@ import (
 	"github.com/go-ole/go-ole"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/reflection"
 	"net"
 	"os"
 	"os/signal"
@@ -139,6 +140,10 @@ func main() {
 	pbrpc.RegisterExcelSanitizerRPCServer(gRSrv, sGRPCsrv)
 	go func() {
 		if os.Getenv("RunEnv") == "DEBUG" {
+			// enable service reflection
+			// https://github.com/grpc/grpc-go/blob/master/Documentation/server-reflection-tutorial.md#enable-server-reflection
+			reflection.Register(gRSrv)
+			// listen on tcp, call using `grpcurl -plaintext`
 			tcpLis, err := net.Listen("tcp", "127.0.0.1:0")
 			if err != nil {
 				common.Logger.Info("Failed to listen on tcp: " + err.Error())
