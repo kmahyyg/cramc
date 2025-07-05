@@ -254,6 +254,7 @@ func (w *ExcelWorker) SanitizeWorkbook(targetOp string, destModuleName string) e
 						return err
 					}
 					common.Logger.Info("Finished Remediating VBA Module: " + vbCompName)
+					return nil
 				case "rm_module":
 					common.Logger.Info("Removing VBA Module: " + vbCompName)
 					_, err = oleutil.CallMethod(vbCompsInProj, "Remove", vbComp)
@@ -263,6 +264,7 @@ func (w *ExcelWorker) SanitizeWorkbook(targetOp string, destModuleName string) e
 						return err
 					}
 					common.Logger.Info("Finished Removal of malicious VBA Module: " + vbCompName)
+					return nil
 				default:
 					common.Logger.Error("Unknown target operation: " + targetOp)
 					return customerrs.ErrUnknownInternalError
