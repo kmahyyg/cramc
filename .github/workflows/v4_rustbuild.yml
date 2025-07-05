@@ -62,7 +62,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             ${{ github.workspace }}/yara-x/target
-            /opt/buildtargets/cramc_go/linux_amd64
+            ${{ env.PROJECT_DEST }}/${{ env.PROJECT_NAME }}/linux_amd64
           key: ${{ runner.os }}-cargo-rust-linuxbuild
       - name: Install cargo-c from crates.io with cache
         uses: baptiste0928/cargo-install@v3
@@ -126,7 +126,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             ${{ github.workspace }}/yara-x/target
-            /opt/buildtargets/cramc_go/win_amd64
+            ${{ env.PROJECT_DEST }}/${{ env.PROJECT_NAME }}/win_amd64
           key: ${{ runner.os }}-cargo-rust-winbuild
       - name: Install cargo-c from crates.io with cache
         uses: baptiste0928/cargo-install@v3
