@@ -152,8 +152,10 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 		// check count
 		ret, err := oleutil.GetProperty(w.workbooksHandle, "Count")
 		if err != nil {
-			telemetry.CaptureException(err, "Excel.Workbooks.Open.Count")
-			return err
+			telemetry.CaptureException(err, "Excel.Workbooks.Open.QueryCount")
+			common.Logger.Error("Retrieving Count Error, most likely program in use, retry due to: " + err.Error())
+			wait4CloseCnt.Add(1)
+			time.Sleep(7 * time.Second)
 		}
 		retVal := ret.Value().(int32)
 		if retVal == 0 {
@@ -235,24 +237,28 @@ func (w *ExcelWorker) SaveAndCloseWorkbook() error {
 	_, _ = w.currentWorkbook.CallMethod("Save")
 	_, _ = w.currentWorkbook.CallMethod("Close", true)
 	common.Logger.Debug("Current Workbook Save & Close Methods called.")
-	waitCnt := &atomic.Uint32{}
+	wait4CloseCnt := &atomic.Uint32{}
+	wait4CloseCnt.Store(0)
 	for {
+		if wait4CloseCnt.Load() > 12 {
+			common.Logger.Error("Waiting for more than 120s to save previous workbook, cannot close.")
+			return customerrs.ErrExcelWaitingOpTimedOut
+		}
 		ret, err := oleutil.GetProperty(w.workbooksHandle, "Count")
 		if err != nil {
-			return err
+			telemetry.CaptureException(err, "Excel.Workbooks.SaveAndClose.QueryCount")
+			common.Logger.Error("Retrieving Count Error, most likely program in use, retry due to: " + err.Error())
+			wait4CloseCnt.Add(1)
+			time.Sleep(8 * time.Second)
 		} else {
 			retVal := ret.Value().(int32)
 			if retVal == 0 {
 				break
 			} else {
 				common.Logger.Debug("Opened Workbooks included " + fmt.Sprintf("%d", ret.Value().(int32)) + " workbooks opened.")
-				waitCnt.Add(1)
+				wait4CloseCnt.Add(1)
 				common.Logger.Info("Waiting for Excel to close all existing workbooks... sleep 10 seconds...")
 				time.Sleep(10 * time.Second)
-				if waitCnt.Load() > 12 {
-					common.Logger.Error("Waiting for more than 120s to save previous workbook, cannot close.")
-					return customerrs.ErrExcelWaitingOpTimedOut
-				}
 			}
 		}
 	}
