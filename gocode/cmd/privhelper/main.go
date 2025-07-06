@@ -106,10 +106,8 @@ func main() {
 	defer ole.CoUninitialize()
 	// new approach: bundled
 	inDebugging := false
-	if data, ok := os.LookupEnv("RunEnv"); ok {
-		if data == "DEBUG" {
-			inDebugging = true
-		}
+	if data := os.Getenv("RunEnv"); data == "DEBUG" || data == "NOSPAWN" {
+		inDebugging = true
 	}
 	eWorker := &sanitizer_ole.ExcelWorker{}
 	err = eWorker.Init(inDebugging)

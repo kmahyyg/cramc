@@ -17,11 +17,9 @@ func NewLogger(logFilename string) (*slog.Logger, *os.File) {
 	imw := io.MultiWriter(os.Stdout, fd)
 
 	defaultLevel := slog.LevelInfo
-	if data, ok := os.LookupEnv("RunEnv"); ok {
-		if data == "DEBUG" {
-			// set debug level log
-			defaultLevel = slog.LevelDebug
-		}
+	if data := os.Getenv("RunEnv"); data == "DEBUG" || data == "NOSPAWN" {
+		// set debug level log
+		defaultLevel = slog.LevelDebug
 	}
 	jsonH := slog.NewJSONHandler(imw, &slog.HandlerOptions{
 		AddSource: true,

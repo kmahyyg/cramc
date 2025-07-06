@@ -42,46 +42,50 @@ func StartSanitizer() error {
 	privHelperPath := filepath.Join(filepath.Dir(exePath), rpcHelperExe)
 
 	var rpcProc *os.Process
-	// check if run as system
-	runAsSystem, _ := windoge_utils.CheckRunningUnderSYSTEM()
-	if runAsSystem {
-		// impersonate then start process, otherwise directly spawn
-		userTkn, err2 := windoge_utils.GetLoggedInUserToken(windows.TokenPrimary)
-		if err2 != nil {
-			return err2
-		}
-		impTkn := (windows.Token)(userTkn)
-		defer impTkn.Close()
-		// https://learn.microsoft.com/en-us/windows/console/creation-of-a-console
-		// https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
-		// /opt/homebrew/opt/go/libexec/src/os/exec/exec.go:703 go1.24.4
-		rpcSProcAddr := &os.ProcAttr{
-			// if you set token and leave `Env` empty, it will auto create.
-			Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
-			Sys: &syscall.SysProcAttr{
-				HideWindow:    true,
-				CreationFlags: windows.CREATE_NEW_PROCESS_GROUP, // detach from original proc group
-				Token:         syscall.Token(impTkn),
-			},
-		}
-		rpcProc, err2 = os.StartProcess(privHelperPath, nil, rpcSProcAddr)
-		if err2 != nil {
-			telemetry.CaptureException(err2, "Main.StartSanitizer.RPCServer.Impersonate")
-			return err2
+	if os.Getenv("RunEnv") != "NOSPAWN" {
+		// check if run as system
+		runAsSystem, _ := windoge_utils.CheckRunningUnderSYSTEM()
+		if runAsSystem {
+			// impersonate then start process, otherwise directly spawn
+			userTkn, err2 := windoge_utils.GetLoggedInUserToken(windows.TokenPrimary)
+			if err2 != nil {
+				return err2
+			}
+			impTkn := (windows.Token)(userTkn)
+			defer impTkn.Close()
+			// https://learn.microsoft.com/en-us/windows/console/creation-of-a-console
+			// https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
+			// /opt/homebrew/opt/go/libexec/src/os/exec/exec.go:703 go1.24.4
+			rpcSProcAddr := &os.ProcAttr{
+				// if you set token and leave `Env` empty, it will auto create.
+				Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
+				Sys: &syscall.SysProcAttr{
+					HideWindow:    true,
+					CreationFlags: windows.CREATE_NEW_PROCESS_GROUP, // detach from original proc group
+					Token:         syscall.Token(impTkn),
+				},
+			}
+			rpcProc, err2 = os.StartProcess(privHelperPath, nil, rpcSProcAddr)
+			if err2 != nil {
+				telemetry.CaptureException(err2, "Main.StartSanitizer.RPCServer.Impersonate")
+				return err2
+			}
+		} else {
+			var err2 error
+			rpcSProcAddr := &os.ProcAttr{
+				Sys: &syscall.SysProcAttr{
+					HideWindow:    true,
+					CreationFlags: windows.CREATE_NEW_PROCESS_GROUP,
+				},
+			}
+			rpcProc, err2 = os.StartProcess(privHelperPath, nil, rpcSProcAddr)
+			if err2 != nil {
+				telemetry.CaptureException(err2, "Main.StartSanitizer.RPCServer.Normal")
+				return err2
+			}
 		}
 	} else {
-		var err2 error
-		rpcSProcAddr := &os.ProcAttr{
-			Sys: &syscall.SysProcAttr{
-				HideWindow:    true,
-				CreationFlags: windows.CREATE_NEW_PROCESS_GROUP,
-			},
-		}
-		rpcProc, err2 = os.StartProcess(privHelperPath, nil, rpcSProcAddr)
-		if err2 != nil {
-			telemetry.CaptureException(err2, "Main.StartSanitizer.RPCServer.Normal")
-			return err2
-		}
+		common.Logger.Warn("RunEnv==NOSPAWN detected, you take the responsibility to spawn privhelper yourself.")
 	}
 	// sleep 3 seconds for excel to startup
 	time.Sleep(3 * time.Second)
@@ -128,7 +132,7 @@ func StartSanitizer() error {
 	rpcSC := make(chan struct{}, 1)
 	waitC := make(chan struct{}, 1)
 
-	timeOutTimer := time.NewTimer(300 * time.Second)
+	timeOutTimer := time.NewTimer(240 * time.Second)
 	defer timeOutTimer.Stop()
 
 	handleTimeOut := func() {
