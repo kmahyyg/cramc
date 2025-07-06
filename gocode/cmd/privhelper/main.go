@@ -148,6 +148,7 @@ func main() {
 				common.Logger.Info("Failed to listen on tcp: " + err.Error())
 				return
 			}
+			defer tcpLis.Close()
 			common.Logger.Info("RunEnv==DEBUG detected, listen on TCP: " + tcpLis.Addr().String() + " for debugging.")
 			if err3 := gRSrv.Serve(tcpLis); err3 != nil && !errors.Is(err3, grpc.ErrServerStopped) {
 				common.Logger.Error("GRPC Server Listen Returned Error:" + err3.Error())
@@ -164,6 +165,8 @@ func main() {
 				os.Exit(-1)
 				return
 			}
+			defer wPipe.Close()
+			common.Logger.Info("Listening on named pipe: " + listenWinIOPipe + " for RPC.")
 			if err3 := gRSrv.Serve(wPipe); err3 != nil && !errors.Is(err3, grpc.ErrServerStopped) {
 				common.Logger.Error("GRPC Server Listen Returned Error:" + err3.Error())
 				return

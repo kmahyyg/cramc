@@ -46,6 +46,7 @@ func StartSanitizer() error {
 		// check if run as system
 		runAsSystem, _ := windoge_utils.CheckRunningUnderSYSTEM()
 		if runAsSystem {
+			common.Logger.Info("RunAsSystem Detected.")
 			// impersonate then start process, otherwise directly spawn
 			userTkn, err2 := windoge_utils.GetLoggedInUserToken(windows.TokenPrimary)
 			if err2 != nil {
@@ -70,6 +71,7 @@ func StartSanitizer() error {
 				telemetry.CaptureException(err2, "Main.StartSanitizer.RPCServer.Impersonate")
 				return err2
 			}
+			common.Logger.Info("RPC Server Started with Impersonation.")
 		} else {
 			var err2 error
 			rpcSProcAddr := &os.ProcAttr{
@@ -83,6 +85,7 @@ func StartSanitizer() error {
 				telemetry.CaptureException(err2, "Main.StartSanitizer.RPCServer.Normal")
 				return err2
 			}
+			common.Logger.Info("RPC Server Started As Unprivileged User In General Way.")
 		}
 	} else {
 		common.Logger.Warn("RunEnv==NOSPAWN detected, you take the responsibility to spawn privhelper yourself.")
@@ -102,14 +105,28 @@ func StartSanitizer() error {
 		return err
 	}
 	common.Logger.Info("Sanitizer RPC Client Connected (ignore this message if using local named pipe).")
-	// ping and check online
-	err = rpCli.Ping()
-	if err != nil {
-		common.Logger.Error("Failed to ping RPC endpoint: " + err.Error())
-		return err
-		// in rare cases, if the RPC cannot connect correctly, privHelper cannot successfully exit.
+
+	retryCnt := 0
+	retrySucceeded := false
+	retryLastErr := error(nil)
+	for retryCnt = 0; retryCnt < 3; retryCnt++ {
+		// ping and check online
+		err = rpCli.Ping()
+		if err != nil {
+			common.Logger.Error("Failed to ping RPC endpoint: " + err.Error())
+			common.Logger.Info("Retrying to connect to RPC endpoint...")
+			time.Sleep(5 * time.Second)
+			retryLastErr = err
+			continue
+			// in rare cases, if the RPC cannot connect correctly, privHelper cannot successfully exit.
+		}
+		common.Logger.Info("ping RPC endpoint succeeded.")
+		retrySucceeded = true
+		break
 	}
-	common.Logger.Info("ping RPC endpoint succeeded.")
+	if retrySucceeded == false && retryCnt > 3 {
+		return retryLastErr
+	}
 
 	// iterate through workbooks
 	for vObj := range common.SanitizeQueue {
