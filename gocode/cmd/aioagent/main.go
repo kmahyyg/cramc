@@ -405,6 +405,6 @@ func main() {
 	wg.Wait()
 	// wait for 5 seconds for cleanup
 	runtime.GC()
-	time.Sleep(5 * time.Second)
+	time.Sleep(3 * time.Second)
 	common.Logger.Info("All done. Program exited.")
 }
