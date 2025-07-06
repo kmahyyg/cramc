@@ -4,11 +4,16 @@ import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
 	psutil "github.com/shirou/gopsutil/v4/process"
+	"os"
 	"slices"
 	"strings"
 )
 
 func KillAllOfficeProcesses() (bool, error) {
+	if os.Getenv("RunEnv") != "" {
+		common.Logger.Info("RunEnv is set, return true, no operation.")
+		return true, nil
+	}
 	coveredProcess := []string{"excel.exe"}
 	procKilled := false
 	if common.IsRunningOnWin {
