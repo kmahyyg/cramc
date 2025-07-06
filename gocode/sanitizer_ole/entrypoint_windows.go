@@ -123,20 +123,35 @@ func StartSanitizer() error {
 	_ = rpCli.Disconnect()
 
 	// wait for termination of rpc server till timed out
+	corWg := &sync.WaitGroup{}
 	rpcSCOnce := &sync.Once{}
 	rpcSC := make(chan struct{}, 1)
+	waitC := make(chan struct{}, 1)
+
+	timeOutTimer := time.NewTimer(300 * time.Second)
+	defer timeOutTimer.Stop()
+
+	handleTimeOut := func() {
+		common.Logger.Info("RPC Server Termination Timed out for 300 seconds. You may manually reboot your system or kill it.")
+		telemetry.CaptureMessage("warn", "Privilege RPC Server Termination Timed Out.")
+		// close chan and force terminate process
+		rpcSCOnce.Do(func() {
+			err4 := rpcProc.Kill()
+			common.Logger.Warn("RPC Server ForceKill Issued, returned: " + err4.Error())
+			close(rpcSC)
+		})
+	}
+
+	corWg.Add(1)
 	go func() {
+		defer corWg.Done()
 		// if terminating info sent, after 300 seconds, force kill process
 		select {
-		case <-time.After(300 * time.Second):
-			common.Logger.Info("RPC Server Termination Timed out for 300 seconds. You may manually reboot your system or kill it.")
-			telemetry.CaptureMessage("warn", "Privilege RPC Server Termination Timed Out.")
-			// close chan and force terminate process
-			rpcSCOnce.Do(func() {
-				err4 := rpcProc.Kill()
-				common.Logger.Warn("RPC Server Force Terminated, returned: " + err4.Error())
-				close(rpcSC)
-			})
+		case <-waitC:
+			<-timeOutTimer.C
+			handleTimeOut()
+		case <-timeOutTimer.C:
+			handleTimeOut()
 		case <-rpcSC:
 			common.Logger.Info("Sanitizer RPC Server Gracefully shutdown - done.")
 		}
@@ -146,16 +161,21 @@ func StartSanitizer() error {
 	if err2 != nil {
 		common.Logger.Error("rpcProcWait: Sanitizer RPC Server Termination Failed: " + err2.Error())
 	}
+	if procStat != nil && !procStat.Exited() {
+		common.Logger.Info("rpcProcWait failed, check proc state != exited, force kill issued.")
+		waitC <- struct{}{}
+		close(waitC)
+	}
 	rpcSCOnce.Do(func() {
 		rpcSC <- struct{}{}
 		close(rpcSC)
-		if procStat != nil && !procStat.Exited() {
-			err3 := rpcProc.Kill()
-			common.Logger.Info("rpcProcWait failed, check proc state != exited, force kill issued.")
-			common.Logger.Warn("rpcProcWait, force-kill returned: " + err3.Error())
-		}
+		close(waitC)
 	})
+	corWg.Wait()
 	common.Logger.Info("RPC Server terminated correctly.")
+	// kill all o365 processes for gc
+	_, _ = windoge_utils.KillAllOfficeProcesses()
+	common.Logger.Info("Triggered M365 Office processes killer.")
 	return nil
 }
 
