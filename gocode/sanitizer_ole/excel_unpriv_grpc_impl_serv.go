@@ -155,6 +155,8 @@ func (s *SimpleRPCServer) excelFileCleanProcedure(ctx context.Context, fPath str
 			if err4 != nil {
 				common.Logger.Error("Failed to save and close workbook in defer Sanitizer: " + err4.Error())
 			}
+			// sleep for 2 seconds to let excel save before rename
+			time.Sleep(2 * time.Second)
 			// rename file and save to clean state cache of cloud-storage provider
 			err4 = renameFileAndSave(fPath)
 			if err4 != nil {
