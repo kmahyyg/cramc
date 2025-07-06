@@ -137,26 +137,32 @@ func main() {
 	var servOpts = []grpc.ServerOption{grpc.Creds(insecure.NewCredentials())}
 	gRSrv := grpc.NewServer(servOpts...)
 	pbrpc.RegisterExcelSanitizerRPCServer(gRSrv, sGRPCsrv)
+	var fListener net.Listener
+	defer func() {
+		if fListener != nil {
+			common.Logger.Info("Closing listener in defer func as cleanup.")
+			_ = fListener.Close()
+		}
+	}()
 	go func() {
 		if os.Getenv("RunEnv") == "DEBUG" {
 			// enable service reflection
 			// https://github.com/grpc/grpc-go/blob/master/Documentation/server-reflection-tutorial.md#enable-server-reflection
 			reflection.Register(gRSrv)
 			// listen on tcp, call using `grpcurl -plaintext`
-			tcpLis, err := net.Listen("tcp", "127.0.0.1:0")
+			fListener, err = net.Listen("tcp", "127.0.0.1:0")
 			if err != nil {
 				common.Logger.Info("Failed to listen on tcp: " + err.Error())
 				return
 			}
-			defer tcpLis.Close()
-			common.Logger.Info("RunEnv==DEBUG detected, listen on TCP: " + tcpLis.Addr().String() + " for debugging.")
-			if err3 := gRSrv.Serve(tcpLis); err3 != nil && !errors.Is(err3, grpc.ErrServerStopped) {
+			common.Logger.Info("RunEnv==DEBUG detected, listen on TCP: " + fListener.Addr().String() + " for debugging.")
+			if err3 := gRSrv.Serve(fListener); err3 != nil && !errors.Is(err3, grpc.ErrServerStopped) {
 				common.Logger.Error("GRPC Server Listen Returned Error:" + err3.Error())
 				return
 			}
 		} else {
 			// listen on named pipe
-			wPipe, err := winio.ListenPipe(listenWinIOPipe, &winio.PipeConfig{
+			fListener, err = winio.ListenPipe(listenWinIOPipe, &winio.PipeConfig{
 				InputBufferSize:  65536,
 				OutputBufferSize: 65536,
 			})
@@ -165,9 +171,8 @@ func main() {
 				os.Exit(-1)
 				return
 			}
-			defer wPipe.Close()
 			common.Logger.Info("Listening on named pipe: " + listenWinIOPipe + " for RPC.")
-			if err3 := gRSrv.Serve(wPipe); err3 != nil && !errors.Is(err3, grpc.ErrServerStopped) {
+			if err3 := gRSrv.Serve(fListener); err3 != nil && !errors.Is(err3, grpc.ErrServerStopped) {
 				common.Logger.Error("GRPC Server Listen Returned Error:" + err3.Error())
 				return
 			}
