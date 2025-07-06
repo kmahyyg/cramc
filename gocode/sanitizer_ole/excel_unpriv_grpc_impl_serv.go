@@ -135,11 +135,11 @@ func (s *SimpleRPCServer) excelFileCleanProcedure(ctx context.Context, fPath str
 	// start actual processing
 	s.wg.Add(1)
 	defer close(errC)
+	// get lock first, locker can't be released after either rebuilt or save to ensure subsiding requests with usable RPC server.
+	s.eWorker.Lock()
+	defer s.eWorker.Unlock()
 	go func() {
 		defer s.wg.Done()
-		// get lock first
-		s.eWorker.Lock()
-		defer s.eWorker.Unlock()
 		// open workbook
 		common.Logger.Info("Opening workbook in sanitizer: " + fPath)
 		err3 := s.eWorker.OpenWorkbook(fPath)
