@@ -156,15 +156,17 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 			common.Logger.Error("Retrieving Count Error, most likely program in use, retry due to: " + err.Error())
 			wait4CloseCnt.Add(1)
 			time.Sleep(7 * time.Second)
-		}
-		retVal := ret.Value().(int32)
-		if retVal == 0 {
-			break
+			continue
 		} else {
-			common.Logger.Debug("Opened Workbooks included " + fmt.Sprintf("%d", retVal) + " workbooks opened.")
-			common.Logger.Info("Waiting for Excel to close all existing workbooks... sleep 10 seconds...")
-			time.Sleep(10 * time.Second)
-			wait4CloseCnt.Add(1)
+			retVal := ret.Value().(int32)
+			if retVal == 0 {
+				break
+			} else {
+				common.Logger.Debug("Opened Workbooks included " + fmt.Sprintf("%d", retVal) + " workbooks opened.")
+				common.Logger.Info("Waiting for Excel to close all existing workbooks... sleep 10 seconds...")
+				time.Sleep(10 * time.Second)
+				wait4CloseCnt.Add(1)
+			}
 		}
 	}
 	//
@@ -250,6 +252,7 @@ func (w *ExcelWorker) SaveAndCloseWorkbook() error {
 			common.Logger.Error("Retrieving Count Error, most likely program in use, retry due to: " + err.Error())
 			wait4CloseCnt.Add(1)
 			time.Sleep(8 * time.Second)
+			continue
 		} else {
 			retVal := ret.Value().(int32)
 			if retVal == 0 {
