@@ -148,7 +148,7 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 	// https://stackoverflow.com/questions/14908372/how-to-suppress-update-links-warning
 	currentWorkbook, err := oleutil.CallMethod(w.workbooksHandle, "Open", fPath, 0)
 	if err != nil {
-		telemetry.CaptureException(err, "Excel.Application.Workbooks.Open")
+		telemetry.CaptureException(err, "Excel.Application.Workbooks.Open: "+fPath)
 		return err
 	}
 	w.currentWorkbook = currentWorkbook.ToIDispatch()
