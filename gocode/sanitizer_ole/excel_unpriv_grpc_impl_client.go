@@ -82,7 +82,7 @@ func (c *SimpleRPCClient) SendDocumentSanitizeRequest(reqDoc *common.IPCSingleDo
 	sanReq.SetDestModule(reqDoc.DestModule)
 	sanReq.SetDetectionName(reqDoc.DetectionName)
 	sanReq.SetPath(reqDoc.Path)
-	ctx, cancelF := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancelF := context.WithTimeout(context.Background(), 300*time.Second)
 	defer cancelF()
 	resp, err := c.rpcClient.SanitizeDocument(ctx, sanReq)
 	if err != nil {

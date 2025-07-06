@@ -9,6 +9,8 @@ import (
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
 const (
@@ -138,6 +140,31 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 		common.Logger.Error(customerrs.ErrExcelWorkbooksUnable2Fetch.Error())
 		return customerrs.ErrExcelWorkbooksUnable2Fetch
 	}
+	// get current workbooks in collection, repeatively wait until it's 0
+	wait4CloseCnt := &atomic.Uint32{}
+	wait4CloseCnt.Store(0)
+	for {
+		// 120 seconds wait.
+		if wait4CloseCnt.Load() > 12 {
+			common.Logger.Error("Waiting for more than 120s to save previous workbook, cannot open.")
+			return customerrs.ErrExcelWaitingOpTimedOut
+		}
+		// check count
+		ret, err := oleutil.GetProperty(w.workbooksHandle, "Count")
+		if err != nil {
+			telemetry.CaptureException(err, "Excel.Workbooks.Open.Count")
+			return err
+		}
+		retVal := ret.Value().(int32)
+		if retVal == 0 {
+			break
+		} else {
+			common.Logger.Debug("Opened Workbooks included " + fmt.Sprintf("%d", retVal) + " workbooks opened.")
+			common.Logger.Info("Waiting for Excel to close all existing workbooks... sleep 10 seconds...")
+			time.Sleep(10 * time.Second)
+			wait4CloseCnt.Add(1)
+		}
+	}
 	//
 	// https://learn.microsoft.com/en-us/dotnet/api/microsoft.office.interop.excel.workbooks.open?view=excel-pia#microsoft-office-interop-excel-workbooks-open(system-string-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object-system-object)
 	// Microsoft.Office.Interop.Excel.Workbook Open(string Filename, object UpdateLinks, object ReadOnly,
@@ -207,6 +234,28 @@ func (w *ExcelWorker) SaveAndCloseWorkbook() error {
 	}
 	_, _ = w.currentWorkbook.CallMethod("Save")
 	_, _ = w.currentWorkbook.CallMethod("Close", true)
+	common.Logger.Debug("Current Workbook Save & Close Methods called.")
+	waitCnt := &atomic.Uint32{}
+	for {
+		ret, err := oleutil.GetProperty(w.workbooksHandle, "Count")
+		if err != nil {
+			return err
+		} else {
+			retVal := ret.Value().(int32)
+			if retVal == 0 {
+				break
+			} else {
+				common.Logger.Debug("Opened Workbooks included " + fmt.Sprintf("%d", ret.Value().(int32)) + " workbooks opened.")
+				waitCnt.Add(1)
+				common.Logger.Info("Waiting for Excel to close all existing workbooks... sleep 10 seconds...")
+				time.Sleep(10 * time.Second)
+				if waitCnt.Load() > 12 {
+					common.Logger.Error("Waiting for more than 120s to save previous workbook, cannot close.")
+					return customerrs.ErrExcelWaitingOpTimedOut
+				}
+			}
+		}
+	}
 	w.currentWorkbook.Release()
 	common.Logger.Info("Workbook save and closed.")
 	w.currentWorkbook = nil

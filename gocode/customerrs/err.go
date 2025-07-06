@@ -27,6 +27,7 @@ var (
 	ErrExcelWorkbooksUnable2Fetch  = errors.New("excel workbooks handle is failed to fetch")
 	ErrExcelCurrentWorkbookNullPtr = errors.New("excel current workbook pointer is nil")
 	ErrExcelNoMacroFound           = errors.New("no macro found in current workbook")
+	ErrExcelWaitingOpTimedOut      = errors.New("waiting for excel execution timed out")
 
 	ErrYaraXCompilationFailure = errors.New("yara-x rule compilation failed")
 
