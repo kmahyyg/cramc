@@ -96,17 +96,8 @@ type ExcelWorker struct {
 	inDbg           bool
 }
 
-func (w *ExcelWorker) Init(inDbg bool, callOLEInit bool) error {
+func (w *ExcelWorker) Init(inDbg bool) error {
 	var err error
-	if callOLEInit {
-		// https://learn.microsoft.com/en-us/visualstudio/vsto/development-best-practices-for-com-vsto-and-vba-add-ins-in-office?view=vs-2019
-		// https://learn.microsoft.com/en-us/visualstudio/vsto/threading-support-in-office?view=vs-2019&tabs=csharp
-		err = ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
-		if err != nil {
-			common.Logger.Error(err.Error())
-			return err
-		}
-	}
 	w.currentExcelObj, err = createExcelInstance()
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.Application.Create")
@@ -120,7 +111,7 @@ func (w *ExcelWorker) Init(inDbg bool, callOLEInit bool) error {
 	return nil
 }
 
-func (w *ExcelWorker) Quit(isForced bool, callOLEDeInit bool) {
+func (w *ExcelWorker) Quit(isForced bool) {
 	_, _ = w.currentExcelObj.CallMethod("Quit")
 	w.workbooksHandle.Release()
 	w.currentExcelObj.Release()
@@ -130,9 +121,6 @@ func (w *ExcelWorker) Quit(isForced bool, callOLEDeInit bool) {
 	}
 	w.currentExcelObj = nil
 	w.workbooksHandle = nil
-	if callOLEDeInit {
-		ole.CoUninitialize()
-	}
 	common.Logger.Info("ExcelWorker Quit.")
 	return
 }

@@ -201,9 +201,9 @@ func (s *SimpleRPCServer) excelFileCleanProcedure(ctx context.Context, fPath str
 		s.eWorkerSet.Store(false)
 		// for GC, cleanup and rebuild excel instance
 		originalDbgStatus := s.eWorker.inDbg
-		s.eWorker.Quit(true, false)
+		s.eWorker.Quit(true)
 		// safely ignore errors as it's already built correctly before
-		_ = s.eWorker.Init(originalDbgStatus, false)
+		_ = s.eWorker.Init(originalDbgStatus)
 		_ = s.eWorker.GetWorkbooks()
 		// set mark again for ready to use
 		s.eWorkerSet.Store(true)
