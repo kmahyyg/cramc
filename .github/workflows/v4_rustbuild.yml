@@ -74,6 +74,7 @@ jobs:
         run: |
           cd ${GITHUB_WORKSPACE}/cramc
           ./assets/build.sh linux amd64
+          sha256sum ./bin/*
           tree ./bin
       - name: Upload Runtime Artifacts
         uses: actions/upload-artifact@v4
@@ -148,6 +149,7 @@ jobs:
         run: |
           cd ${GITHUB_WORKSPACE}/cramc/bin
           tree .
+          sha256sum ./*
           zip -r cramc_go_${GITHUB_RUN_ID}.zip privhelper.exe cramc_aio.exe cramc_db.bin unified.yar.bin
       - name: Upload All Artifacts
         uses: actions/upload-artifact@v4
@@ -175,7 +177,9 @@ jobs:
           merge-multiple: true
       - name: List all artifacts downloaded
         run: |
-          tree /tmp/relbuild
+          cd /tmp/relbuild
+          tree .
+          sha256sum ./* > SHA256SUM
       - name: Craft release
         uses: ncipollo/release-action@v1
         with:
