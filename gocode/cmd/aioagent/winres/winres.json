@@ -46,7 +46,7 @@
           "0409": {
             "Comments": "No Comment",
             "CompanyName": "PatMeow Inc.",
-            "FileDescription": "CRAMC Golang",
+            "FileDescription": "CRAMC Go @ https://github.com/kmahyyg/cramc",
             "FileVersion": "0.0.0.0",
             "InternalName": "cramc-go",
             "LegalCopyright": "AGPL v3",
