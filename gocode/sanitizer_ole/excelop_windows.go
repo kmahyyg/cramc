@@ -99,7 +99,9 @@ type ExcelWorker struct {
 func (w *ExcelWorker) Init(inDbg bool, callOLEInit bool) error {
 	var err error
 	if callOLEInit {
-		err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
+		// https://learn.microsoft.com/en-us/visualstudio/vsto/development-best-practices-for-com-vsto-and-vba-add-ins-in-office?view=vs-2019
+		// https://learn.microsoft.com/en-us/visualstudio/vsto/threading-support-in-office?view=vs-2019&tabs=csharp
+		err = ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
 		if err != nil {
 			common.Logger.Error(err.Error())
 			return err
