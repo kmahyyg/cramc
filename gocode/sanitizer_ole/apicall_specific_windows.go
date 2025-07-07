@@ -1,10 +1,5 @@
 package sanitizer_ole
 
-import (
-	"syscall"
-	"unsafe"
-)
-
 // -------- Excel COM API Call Constants Enum -------- //
 
 type MsoAutomationSecurity int
@@ -114,17 +109,17 @@ type SOLEAuthenticationInfo struct {
 //	[in, optional] void                        *pReserved3
 //
 // );
-func CoInitializeSecurity(psecDesc uintptr, cAuthsvc *int32, asAuthSvc *SOLEAuthenticationService,
-	pReserved1 uintptr, dwAuthnLevel RpcCallAuthenticationLevel, dwImpLevel RpcCallImpersonationLevel,
-	pAuthList **SOLEAuthenticationInfo, dwCapabilities EOLEAuthenticationCapabilities,
-	pReserved3 uintptr) error {
-	ret, _, _ := syscall.SyscallN(procCoInitializeSecurity.Addr(), 9,
-		psecDesc, uintptr(unsafe.Pointer(cAuthsvc)), uintptr(unsafe.Pointer(asAuthSvc)),
-		nullptr, uintptr(dwAuthnLevel), uintptr(dwImpLevel), uintptr(unsafe.Pointer(pAuthList)),
-		uintptr(dwCapabilities), nullptr)
-	if uint32(ret) == 0 {
-		// S_OK, Operation Successful == 0
-		return nil
-	}
-	return syscall.Errno(ret)
-}
+//func CoInitializeSecurity(psecDesc uintptr, cAuthsvc *int32, asAuthSvc *SOLEAuthenticationService,
+//	pReserved1 uintptr, dwAuthnLevel RpcCallAuthenticationLevel, dwImpLevel RpcCallImpersonationLevel,
+//	pAuthList **SOLEAuthenticationInfo, dwCapabilities EOLEAuthenticationCapabilities,
+//	pReserved3 uintptr) error {
+//	ret, _, _ := syscall.SyscallN(procCoInitializeSecurity.Addr(), 9,
+//		psecDesc, uintptr(unsafe.Pointer(cAuthsvc)), uintptr(unsafe.Pointer(asAuthSvc)),
+//		nullptr, uintptr(dwAuthnLevel), uintptr(dwImpLevel), uintptr(unsafe.Pointer(pAuthList)),
+//		uintptr(dwCapabilities), nullptr)
+//	if uint32(ret) == 0 {
+//		// S_OK, Operation Successful == 0
+//		return nil
+//	}
+//	return syscall.Errno(ret)
+//}

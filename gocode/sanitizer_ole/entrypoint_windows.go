@@ -17,11 +17,11 @@ import (
 )
 
 var (
-	modOle32                 = syscall.NewLazyDLL("ole32.dll")
-	procCoInitializeSecurity = modOle32.NewProc("CoInitializeSecurity")
-	nullptr                  = uintptr(0)
-	rpcHelperExe             = "privhelper.exe"
-	clientConnPipeAddr       = "winiopipe://cramcPriv"
+	// modOle32                 = syscall.NewLazyDLL("ole32.dll")
+	// procCoInitializeSecurity = modOle32.NewProc("CoInitializeSecurity")
+	// nullptr            = uintptr(0)
+	rpcHelperExe       = "privhelper.exe"
+	clientConnPipeAddr = "winiopipe://cramcPriv"
 )
 
 func StartSanitizer() error {
