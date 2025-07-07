@@ -16,6 +16,7 @@ import (
 	"cramc_go/sanitizer_ole/pbrpc"
 	"cramc_go/telemetry"
 	"errors"
+	"fmt"
 	"github.com/Microsoft/go-winio"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -24,6 +25,7 @@ import (
 	"os"
 	"os/signal"
 	"os/user"
+	"runtime/debug"
 	"sync"
 	"syscall"
 	"time"
@@ -52,6 +54,15 @@ func main() {
 	// startup behavior
 	common.Logger.Info("Welcome to CRAMC Privilege Helper RPC Server!")
 	common.Logger.Info("Current Version: " + common.VersionStr)
+
+	// panic capture
+	defer func() {
+		if r := recover(); r != nil {
+			telemetry.CaptureMessage("panic", fmt.Sprintf("%v", r))
+			telemetry.CaptureMessage("panic-stack", string(debug.Stack()))
+			os.Exit(1)
+		}
+	}()
 
 	// detect if started as SYSTEM, if yes, abort
 	runAsSys, err := windoge_utils.CheckRunningUnderSYSTEM()

@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"sync"
 	"time"
 )
@@ -70,6 +71,17 @@ func main() {
 	// startup behavior
 	common.Logger.Info("Welcome to CRAMC!")
 	common.Logger.Info("Current Version: " + common.VersionStr)
+
+	// panic capture
+	defer func() {
+		if r := recover(); r != nil {
+			telemetry.CaptureMessage("panic", fmt.Sprintf("%v", r))
+			telemetry.CaptureMessage("panic-stack", string(debug.Stack()))
+			os.Exit(1)
+		}
+	}()
+
+	// startup check
 	if finfo, err := os.Stat(*flActionPath); err != nil || !finfo.IsDir() {
 		common.Logger.Log(context.TODO(), logging.LevelFatal, customerrs.ErrActionPathMustBeDir.Error())
 		os.Exit(-1)
