@@ -5,6 +5,7 @@ package windoge_utils
 import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
+	"cramc_go/telemetry"
 	"fmt"
 	"golang.org/x/sys/windows"
 	"os/user"
@@ -33,15 +34,16 @@ var (
 // why do I need this? https://github.com/kmahyyg/cramc/issues/11
 
 var (
-	modAdvapi32 = syscall.NewLazyDLL("advapi32.dll")
+	modAdvapi32 = windows.NewLazyDLL("advapi32.dll")
 	// https://learn.microsoft.com/en-us/windows/win32/secauthz/client-impersonation
 	procRegDisablePredefinedCache   = modAdvapi32.NewProc("RegDisablePredefinedCache")
 	procRegDisablePredefinedCacheEx = modAdvapi32.NewProc("RegDisablePredefinedCacheEx")
+	procImpersonateLoggedOnUser     = modAdvapi32.NewProc("ImpersonateLoggedOnUser")
 
-	modWtsapi32                    = syscall.NewLazyDLL("wtsapi32.dll")
+	modWtsapi32                    = windows.NewLazyDLL("wtsapi32.dll")
 	procWTSQuerySessionInformation = modWtsapi32.NewProc("WTSQuerySessionInformationA")
 
-	modShlwapi = syscall.NewLazyDLL("shlwapi.dll")
+	modShlwapi = windows.NewLazyDLL("shlwapi.dll")
 	procIsOS   = modShlwapi.NewProc("IsOS")
 )
 
@@ -86,7 +88,7 @@ func getActiveWTSSessionID() (uint32, error) {
 	var sessionIDfound bool
 	// determine if server edition first, if yes, result below is unreliable
 	if isWindowsServer() {
-		common.Logger.Warn("[WARN] WTSActiveSession not found and running on server OS.")
+		common.Logger.Warn("[WARN] possibly running on server OS.")
 	}
 	for _, ses := range sessions {
 		// skip session ID 0 (service) & ID > 65530 special listening session
@@ -140,7 +142,7 @@ func getActiveWTSSessionID() (uint32, error) {
 	}
 }
 
-func GetLoggedInUserToken(tokenType uint32) (uintptr, error) {
+func GetLoggedInUserToken(tokenType uint32) (windows.Token, error) {
 	if tokenType != windows.TokenPrimary && tokenType != windows.TokenImpersonation {
 		return 0, customerrs.ErrInvalidInput
 	}
@@ -178,13 +180,14 @@ func GetLoggedInUserToken(tokenType uint32) (uintptr, error) {
 		common.Logger.Error(fmt.Sprintf("Cannot duplicate token from given session ID: %d , with Error:  %s", sessID, err))
 		return 0, err
 	}
-	return (uintptr)(impUserToken), nil
+	return impUserToken, nil
 }
 
-func PrepareForTokenImpersonation(isReverse bool) error {
+func ImpersonateInCurrentThread(hToken windows.Token, isReverse bool) error {
 	if isReverse {
 		err := windows.RevertToSelf()
 		if err != nil {
+			telemetry.CaptureMessage("ImpersonateInCurrentThread.Revert2Self", err.Error())
 			common.Logger.Error(err.Error())
 		}
 		runtime.UnlockOSThread()
@@ -195,8 +198,18 @@ func PrepareForTokenImpersonation(isReverse bool) error {
 	// disable registry cache for precaution, if called from service context, it's recommended by MSFT
 	err := regDisablePredefinedCache()
 	if err != nil {
-		// safe to ignore and go next
+		telemetry.CaptureMessage("ImpersonateInCurrentThread.RegDisablePredefinedCache", err.Error())
 		common.Logger.Warn("RegDisablePredefinedCacheEx returned err: " + err.Error())
+		return err
+	}
+	if hToken == 0 {
+		return customerrs.ErrInvalidInput
+	}
+	// start impersonate in current thread
+	err = impersonateLoggedOnUser(hToken)
+	if err != nil {
+		telemetry.CaptureException(err, "ImpersonateInCurrentThread.ImpersonateLoggedOnUser")
+		common.Logger.Warn("ImpersonateLoggedOnUser returned: " + err.Error())
 		return err
 	}
 	return nil
@@ -272,6 +285,25 @@ func regDisablePredefinedCacheEx() error {
 	ret, _, _ := procRegDisablePredefinedCacheEx.Call()
 	if LSTATUS(ret) != ERROR_SUCCESS {
 		common.Logger.Error(fmt.Sprintf("RegDisablePredefinedCache failed, with error code: %d", ret))
+		return syscall.Errno(ret)
+	}
+	return nil
+}
+
+// impersonateLoggedOnUser from MSDN
+// https://learn.microsoft.com/en-us/windows/win32/secauthz/client-impersonation
+// https://learn.microsoft.com/en-us/windows/win32/api/securitybaseapi/nf-securitybaseapi-impersonateloggedonuser
+// definition: BOOL ImpersonateLoggedOnUser(
+//
+//	[in] HANDLE hToken
+//
+// );
+// If the function succeeds, the return value is nonzero.
+func impersonateLoggedOnUser(hToken windows.Token) error {
+	ret, _, err := procImpersonateLoggedOnUser.Call(uintptr(hToken))
+	if ret == 0 {
+		common.Logger.Error(fmt.Sprintf("ImpersonateLoggedOnUser failed, with error code: %d", ret))
+		common.Logger.Error(fmt.Sprintf("ImpersonateLoggedOnUser failed, GetLastErr: %v", err))
 		return syscall.Errno(ret)
 	}
 	return nil

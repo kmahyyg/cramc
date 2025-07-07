@@ -64,12 +64,18 @@ func StartSanitizer() error {
 			// https://learn.microsoft.com/en-us/windows/console/creation-of-a-console
 			// https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
 			// /opt/homebrew/opt/go/libexec/src/os/exec/exec.go:703 go1.24.4
-			impTkn := (windows.Token)(userTkn)
-			defer impTkn.Close()
-			rpcSProcAddr.Sys.Token = syscall.Token(impTkn)
+			defer userTkn.Close()
+			rpcSProcAddr.Sys.Token = syscall.Token(userTkn)
+			// try to resolve issue #22
+			// possible solution: ImpersonateLoggedOnUser first.
+			err2 = windoge_utils.ImpersonateInCurrentThread(userTkn, false)
+			if err2 != nil {
+				telemetry.CaptureException(err2, "Main.StartSanitizer.StartRPCServer.ImpersonateInThread")
+				return err2
+			}
 			rpcProc, err2 = os.StartProcess(privHelperPath, nil, rpcSProcAddr)
 			if err2 != nil {
-				telemetry.CaptureException(err2, "Main.StartSanitizer.RPCServer.Impersonate")
+				telemetry.CaptureException(err2, "Main.StartSanitizer.StartRPCServer.CreateProcessAsUser")
 				return err2
 			}
 			common.Logger.Info("RPC Server Started with Impersonation.")
@@ -77,7 +83,7 @@ func StartSanitizer() error {
 			var err2 error
 			rpcProc, err2 = os.StartProcess(privHelperPath, nil, rpcSProcAddr)
 			if err2 != nil {
-				telemetry.CaptureException(err2, "Main.StartSanitizer.RPCServer.Normal")
+				telemetry.CaptureException(err2, "Main.StartSanitizer.StartRPCServer.Normal")
 				return err2
 			}
 			common.Logger.Info("RPC Server Started As Unprivileged User In General Way.")
@@ -87,6 +93,12 @@ func StartSanitizer() error {
 	}
 	// sleep 3 seconds for excel to startup
 	time.Sleep(3 * time.Second)
+	// revert to original security context
+	err = windoge_utils.ImpersonateInCurrentThread(0, true)
+	if err != nil {
+		common.Logger.Error("ImpersonateInCurrentThread.RevertToSelf: " + err.Error())
+		// safe to continue
+	}
 	// Connect to RPC Client and ping
 	rpCli, err := InitSimpleRPCClient(clientID.String(), clientConnPipeAddr)
 	if err != nil {
