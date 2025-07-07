@@ -109,11 +109,13 @@ func main() {
 	_, _ = windoge_utils.KillAllOfficeProcesses()
 	common.Logger.Info("Triggered M365 Office processes killer.")
 	// prepare to call ole
-	err = ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
+	err = ole.CoInitialize(0)
+	// err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
 	if err != nil {
 		common.Logger.Error(err.Error())
 		return
 	}
+	common.Logger.Info("OLE initialized.")
 	defer ole.CoUninitialize()
 	// new approach: bundled
 	inDebugging := false
