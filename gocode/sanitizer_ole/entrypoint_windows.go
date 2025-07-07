@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	// modOle32                 = syscall.NewLazyDLL("ole32.dll")
+	// modOle32                 = windows.NewLazyDLL("ole32.dll")
 	// procCoInitializeSecurity = modOle32.NewProc("CoInitializeSecurity")
 	// nullptr            = uintptr(0)
 	rpcHelperExe       = "privhelper.exe"
