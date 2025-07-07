@@ -112,7 +112,7 @@ func main() {
 	// prepare to call ole
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
-	err = ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
+	err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
 	if err != nil {
 		common.Logger.Error(err.Error())
 		return
