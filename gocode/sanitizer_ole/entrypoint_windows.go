@@ -42,6 +42,15 @@ func StartSanitizer() error {
 	privHelperPath := filepath.Join(filepath.Dir(exePath), rpcHelperExe)
 
 	var rpcProc *os.Process
+	var rpcSProcAddr *os.ProcAttr
+	rpcSProcAddr = &os.ProcAttr{
+		// if you set token and leave `Env` empty, it will auto create.
+		Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
+		Sys: &syscall.SysProcAttr{
+			HideWindow:    true,
+			CreationFlags: windows.CREATE_NEW_PROCESS_GROUP, // detach from original proc group
+		},
+	}
 	if os.Getenv("RunEnv") != "NOSPAWN" {
 		// check if run as system
 		runAsSystem, _ := windoge_utils.CheckRunningUnderSYSTEM()
@@ -52,20 +61,12 @@ func StartSanitizer() error {
 			if err2 != nil {
 				return err2
 			}
-			impTkn := (windows.Token)(userTkn)
-			defer impTkn.Close()
 			// https://learn.microsoft.com/en-us/windows/console/creation-of-a-console
 			// https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
 			// /opt/homebrew/opt/go/libexec/src/os/exec/exec.go:703 go1.24.4
-			rpcSProcAddr := &os.ProcAttr{
-				// if you set token and leave `Env` empty, it will auto create.
-				Files: []*os.File{os.Stdin, os.Stdout, os.Stderr},
-				Sys: &syscall.SysProcAttr{
-					HideWindow:    true,
-					CreationFlags: windows.CREATE_NEW_PROCESS_GROUP, // detach from original proc group
-					Token:         syscall.Token(impTkn),
-				},
-			}
+			impTkn := (windows.Token)(userTkn)
+			defer impTkn.Close()
+			rpcSProcAddr.Sys.Token = syscall.Token(impTkn)
 			rpcProc, err2 = os.StartProcess(privHelperPath, nil, rpcSProcAddr)
 			if err2 != nil {
 				telemetry.CaptureException(err2, "Main.StartSanitizer.RPCServer.Impersonate")
@@ -74,12 +75,6 @@ func StartSanitizer() error {
 			common.Logger.Info("RPC Server Started with Impersonation.")
 		} else {
 			var err2 error
-			rpcSProcAddr := &os.ProcAttr{
-				Sys: &syscall.SysProcAttr{
-					HideWindow:    true,
-					CreationFlags: windows.CREATE_NEW_PROCESS_GROUP,
-				},
-			}
 			rpcProc, err2 = os.StartProcess(privHelperPath, nil, rpcSProcAddr)
 			if err2 != nil {
 				telemetry.CaptureException(err2, "Main.StartSanitizer.RPCServer.Normal")

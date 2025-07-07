@@ -17,7 +17,6 @@ import (
 	"cramc_go/telemetry"
 	"errors"
 	"github.com/Microsoft/go-winio"
-	"github.com/go-ole/go-ole"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/reflection"
@@ -97,25 +96,20 @@ func main() {
 	// kill all office processes, to avoid any potential file lock.
 	_, _ = windoge_utils.KillAllOfficeProcesses()
 	common.Logger.Info("Triggered M365 Office processes killer.")
-	// prepare to call ole
-	err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
-	if err != nil {
-		common.Logger.Error(err.Error())
-		return
-	}
-	defer ole.CoUninitialize()
 	// new approach: bundled
 	inDebugging := false
 	if data := os.Getenv("RunEnv"); data == "DEBUG" || data == "NOSPAWN" {
 		inDebugging = true
 	}
 	eWorker := &sanitizer_ole.ExcelWorker{}
-	err = eWorker.Init(inDebugging)
+	// ole preparation is also done here
+	err = eWorker.Init(inDebugging, true)
 	if err != nil {
 		common.Logger.Error("Failed to initialize excel worker:" + err.Error())
 		return
 	}
-	defer eWorker.Quit(false)
+	// defer call CoUninitialize of OLE
+	defer eWorker.Quit(false, true)
 	err = eWorker.GetWorkbooks()
 	if err != nil {
 		common.Logger.Error("Failed to get workbooks:" + err.Error())

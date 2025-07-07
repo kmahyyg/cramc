@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -96,8 +97,16 @@ type ExcelWorker struct {
 	inDbg           bool
 }
 
-func (w *ExcelWorker) Init(inDbg bool) error {
+func (w *ExcelWorker) Init(inDbg bool, callOLEInit bool) error {
 	var err error
+	if callOLEInit {
+		runtime.LockOSThread()
+		err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
+		if err != nil {
+			common.Logger.Error(err.Error())
+			return err
+		}
+	}
 	w.currentExcelObj, err = createExcelInstance()
 	if err != nil {
 		telemetry.CaptureException(err, "Excel.Application.Create")
@@ -111,7 +120,7 @@ func (w *ExcelWorker) Init(inDbg bool) error {
 	return nil
 }
 
-func (w *ExcelWorker) Quit(isForced bool) {
+func (w *ExcelWorker) Quit(isForced bool, callOLEDeInit bool) {
 	_, _ = w.currentExcelObj.CallMethod("Quit")
 	w.workbooksHandle.Release()
 	w.currentExcelObj.Release()
@@ -121,6 +130,10 @@ func (w *ExcelWorker) Quit(isForced bool) {
 	}
 	w.currentExcelObj = nil
 	w.workbooksHandle = nil
+	if callOLEDeInit {
+		ole.CoUninitialize()
+		runtime.UnlockOSThread()
+	}
 	common.Logger.Info("ExcelWorker Quit.")
 	return
 }
