@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
-	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -100,7 +99,6 @@ type ExcelWorker struct {
 func (w *ExcelWorker) Init(inDbg bool, callOLEInit bool) error {
 	var err error
 	if callOLEInit {
-		runtime.LockOSThread()
 		err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
 		if err != nil {
 			common.Logger.Error(err.Error())
@@ -132,7 +130,6 @@ func (w *ExcelWorker) Quit(isForced bool, callOLEDeInit bool) {
 	w.workbooksHandle = nil
 	if callOLEDeInit {
 		ole.CoUninitialize()
-		runtime.UnlockOSThread()
 	}
 	common.Logger.Info("ExcelWorker Quit.")
 	return
