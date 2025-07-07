@@ -75,6 +75,7 @@ func main() {
 	// panic capture
 	defer func() {
 		if r := recover(); r != nil {
+			debug.PrintStack()
 			telemetry.CaptureMessage("panic", fmt.Sprintf("%v", r))
 			telemetry.CaptureMessage("panic-stack", string(debug.Stack()))
 			os.Exit(1)
