@@ -5,9 +5,11 @@ import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
 	"cramc_go/sanitizer_ole/pbrpc"
+	"cramc_go/telemetry"
 	"fmt"
 	"path/filepath"
 	"sync"
+	"time"
 )
 
 type SimpleRPCServer struct {
@@ -97,7 +99,7 @@ func (s *SimpleRPCServer) SanitizeDocument(_ context.Context, inObj *pbrpc.Sanit
 	common.Logger.Info("Original file backup succeeded: " + inObj.GetPath())
 	// just processing with sending files to queue.
 	newTsk := &common.IPCSingleDocToBeSanitized{
-		Path:          inObj.GetPath(),
+		Path:          fPathNonVariant, // WARNING!!! YOU MUST USE THIS PATH!
 		Action:        inObj.GetAction(),
 		DetectionName: inObj.GetDetectionName(),
 		DestModule:    inObj.GetDestModule(),
@@ -110,102 +112,102 @@ func (s *SimpleRPCServer) SanitizeDocument(_ context.Context, inObj *pbrpc.Sanit
 	return uniResp, nil
 }
 
-//func (s *SimpleRPCServer) excelFileCleanProcedure(ctx context.Context, fPath string, targetOp string, targetMod string) error {
-//	errC := make(chan error, 1)
-//	// start actual processing
-//	s.wg.Add(1)
-//	defer close(errC)
-//	// mark
-//	err = func() error {
-//		ctxForSani, cancelF := context.WithTimeout(context.TODO(), 180*time.Second)
-//		defer cancelF()
-//		common.Logger.Info("Waiting for file to be cleaned up: " + fPathNonVariant)
-//		errN := s.excelFileCleanProcedure(ctxForSani, fPathNonVariant, inObj.GetAction(), inObj.GetDestModule())
-//		if errN != nil {
-//			common.Logger.Error("excelFileCleanProcedure Reported Error: " + errN.Error())
-//			return errN
-//		}
-//		common.Logger.Info("Sanitized workbook: " + fPathNonVariant)
-//		common.Logger.Info("excelFileCleanProcedure finished.")
-//		return nil
-//	}()
-//	if err != nil {
-//		uniResp.SetResultCode(422)
-//		uniResp.SetAdditionalMsg("excelFileCleanProcedure Reported Error:  " + err.Error())
-//		return uniResp, nil
-//	}
-//	// get lock first, locker can't be released after either rebuilt or save to ensure subsiding requests with usable RPC server.
-//	s.eWorker.Lock()
-//	defer s.eWorker.Unlock()
-//	go func() {
-//		defer s.wg.Done()
-//		// open workbook
-//		common.Logger.Info("Opening workbook in sanitizer: " + fPath)
-//		err3 := s.eWorker.OpenWorkbook(fPath)
-//		if err3 != nil {
-//			common.Logger.Error("Failed to open workbook in sanitizer: " + err3.Error())
-//			errC <- err3
-//			return
-//		}
-//		common.Logger.Debug("Workbook opened: " + fPath)
-//		// defer save and close
-//		defer func() {
-//			err4 := s.eWorker.SaveAndCloseWorkbook()
-//			if err4 != nil {
-//				common.Logger.Error("Failed to save and close workbook in defer Sanitizer: " + err4.Error())
-//			}
-//			// sleep for 2 seconds to let excel save before rename
-//			time.Sleep(2 * time.Second)
-//			// rename file and save to clean state cache of cloud-storage provider
-//			err4 = renameFileAndSave(fPath)
-//			if err4 != nil {
-//				common.Logger.Error("Rename file failed in sanitizer: " + err4.Error())
-//			}
-//			common.Logger.Info("Workbook Sanitized: " + fPath)
-//		}()
-//		// sanitize
-//		common.Logger.Debug("Sanitize Workbook VBA Module now.")
-//		err3 = s.eWorker.SanitizeWorkbook(targetOp, targetMod)
-//		if err3 != nil {
-//			common.Logger.Error("Failed to sanitize workbook: " + err3.Error())
-//			errC <- err3
-//			return
-//		}
-//		common.Logger.Info("Finished Sanitizing Workbook: " + fPath)
-//		common.Logger.Debug("Sanitize Workbook VBA Module finished, doneC returned.")
-//		errC <- nil
-//	}()
-//	select {
-//	case err := <-errC:
-//		if err != nil {
-//			common.Logger.Error(fmt.Sprintf("Failed to sanitize workbook %s, errC returned: %s", fPath, err.Error()))
-//			telemetry.CaptureException(err, "RPCServer.excelFileCleanProcedure.ErrC")
-//			telemetry.CaptureMessage("error", "RPCServer.excelFileCleanProcedure.ErrC: "+fPath)
-//			return err
-//		}
-//		// properly remediated
-//		// go ahead
-//		common.Logger.Debug("Sanitize workbook finished, doneC returned correctly.")
-//		return nil
-//	case <-ctx.Done():
-//		// timed out or error
-//		err5 := ctx.Err()
-//		if err5 != nil {
-//			telemetry.CaptureException(err5, "RPCServer.excelFileCleanProcedure.CtxTimedOut")
-//			telemetry.CaptureMessage("error", "RPCServer.excelFileCleanProcedure.CtxTimedOut: "+fPath)
-//			common.Logger.Error(fmt.Sprintf("Failed to sanitize workbook %s, timed out: %s", fPath, err5.Error()))
-//		}
-//		common.Logger.Info("Sanitize workbook timed out, ctx.Done() returned, go to force clean.")
-//		// set mark for recreation
-//		s.eWorkerSet.Store(false)
-//		// for GC, cleanup and rebuild excel instance
-//		originalDbgStatus := s.eWorker.inDbg
-//		s.eWorker.Quit(true)
-//		// safely ignore errors as it's already built correctly before
-//		_ = s.eWorker.Init(originalDbgStatus)
-//		_ = s.eWorker.GetWorkbooks()
-//		// set mark again for ready to use
-//		s.eWorkerSet.Store(true)
-//		return err5
-//	}
-//}
+func (s *SimpleRPCServer) excelFileCleanProcedure(ctx context.Context, fPath string, targetOp string, targetMod string) error {
+	errC := make(chan error, 1)
+	// start actual processing
+	s.wg.Add(1)
+	defer close(errC)
+	// mark from parent process
+	//err = func() error {
+	//	ctxForSani, cancelF := context.WithTimeout(context.TODO(), 180*time.Second)
+	//	defer cancelF()
+	//	common.Logger.Info("Waiting for file to be cleaned up: " + fPathNonVariant)
+	//	errN := s.excelFileCleanProcedure(ctxForSani, fPathNonVariant, inObj.GetAction(), inObj.GetDestModule())
+	//	if errN != nil {
+	//		common.Logger.Error("excelFileCleanProcedure Reported Error: " + errN.Error())
+	//		return errN
+	//	}
+	//	common.Logger.Info("Sanitized workbook: " + fPathNonVariant)
+	//	common.Logger.Info("excelFileCleanProcedure finished.")
+	//	return nil
+	//}()
+	//if err != nil {
+	//	uniResp.SetResultCode(422)
+	//	uniResp.SetAdditionalMsg("excelFileCleanProcedure Reported Error:  " + err.Error())
+	//	return uniResp, nil
+	//}
+	// get lock first, locker can't be released after either rebuilt or save to ensure subsiding requests with usable RPC server.
+	s.eWorker.Lock()
+	defer s.eWorker.Unlock()
+	go func() {
+		defer s.wg.Done()
+		// open workbook
+		common.Logger.Info("Opening workbook in sanitizer: " + fPath)
+		err3 := s.eWorker.OpenWorkbook(fPath)
+		if err3 != nil {
+			common.Logger.Error("Failed to open workbook in sanitizer: " + err3.Error())
+			errC <- err3
+			return
+		}
+		common.Logger.Debug("Workbook opened: " + fPath)
+		// defer save and close
+		defer func() {
+			err4 := s.eWorker.SaveAndCloseWorkbook()
+			if err4 != nil {
+				common.Logger.Error("Failed to save and close workbook in defer Sanitizer: " + err4.Error())
+			}
+			// sleep for 2 seconds to let excel save before rename
+			time.Sleep(2 * time.Second)
+			// rename file and save to clean state cache of cloud-storage provider
+			err4 = renameFileAndSave(fPath)
+			if err4 != nil {
+				common.Logger.Error("Rename file failed in sanitizer: " + err4.Error())
+			}
+			common.Logger.Info("Workbook Sanitized: " + fPath)
+		}()
+		// sanitize
+		common.Logger.Debug("Sanitize Workbook VBA Module now.")
+		err3 = s.eWorker.SanitizeWorkbook(targetOp, targetMod)
+		if err3 != nil {
+			common.Logger.Error("Failed to sanitize workbook: " + err3.Error())
+			errC <- err3
+			return
+		}
+		common.Logger.Info("Finished Sanitizing Workbook: " + fPath)
+		common.Logger.Debug("Sanitize Workbook VBA Module finished, doneC returned.")
+		errC <- nil
+	}()
+	select {
+	case err := <-errC:
+		if err != nil {
+			common.Logger.Error(fmt.Sprintf("Failed to sanitize workbook %s, errC returned: %s", fPath, err.Error()))
+			telemetry.CaptureException(err, "RPCServer.excelFileCleanProcedure.ErrC")
+			telemetry.CaptureMessage("error", "RPCServer.excelFileCleanProcedure.ErrC: "+fPath)
+			return err
+		}
+		// properly remediated
+		// go ahead
+		common.Logger.Debug("Sanitize workbook finished, doneC returned correctly.")
+		return nil
+	case <-ctx.Done():
+		// timed out or error
+		err5 := ctx.Err()
+		if err5 != nil {
+			telemetry.CaptureException(err5, "RPCServer.excelFileCleanProcedure.CtxTimedOut")
+			telemetry.CaptureMessage("error", "RPCServer.excelFileCleanProcedure.CtxTimedOut: "+fPath)
+			common.Logger.Error(fmt.Sprintf("Failed to sanitize workbook %s, timed out: %s", fPath, err5.Error()))
+		}
+		common.Logger.Info("Sanitize workbook timed out, ctx.Done() returned, go to force clean.")
+		// set mark for recreation
+		s.eWorkerSet.Store(false)
+		// for GC, cleanup and rebuild excel instance
+		originalDbgStatus := s.eWorker.inDbg
+		s.eWorker.Quit(true)
+		// safely ignore errors as it's already built correctly before
+		_ = s.eWorker.Init(originalDbgStatus)
+		_ = s.eWorker.GetWorkbooks()
+		// set mark again for ready to use
+		s.eWorkerSet.Store(true)
+		return err5
+	}
+}

@@ -1,6 +1,7 @@
 package sanitizer_ole
 
 import (
+	"context"
 	"cramc_go/common"
 	"cramc_go/customerrs"
 	"cramc_go/telemetry"
@@ -27,6 +28,7 @@ type ExcelWorker struct {
 	mu              *sync.Mutex
 	curFilePath     string
 	inDbg           bool
+	workerSet       atomic.Bool
 	ctrlChan        chan struct{}
 }
 
@@ -43,6 +45,7 @@ func (w *ExcelWorker) Init(inDbg bool, cChan chan struct{}) error {
 	common.Logger.Info("Excel.Application object initialized.")
 	w.mu = &sync.Mutex{}
 	w.ctrlChan = cChan
+	w.workerSet.Store(true)
 	return nil
 }
 
@@ -114,6 +117,7 @@ func (w *ExcelWorker) excelInstanceStartupConfig() {
 
 func (w *ExcelWorker) Quit() {
 	_, _ = w.currentExcelObj.CallMethod("Quit")
+	w.workerSet.Store(false)
 	w.workbooksHandle.Release()
 	w.currentExcelObj.Release()
 	// since there're multiple objects alive in parallel, there's no reason to use `isForced`, commented
@@ -345,4 +349,76 @@ func (w *ExcelWorker) Lock() {
 
 func (w *ExcelWorker) Unlock() {
 	w.mu.Unlock()
+}
+
+func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSanitized) {
+	// long run in loop function
+	errC := make(chan error)
+	go func() {
+		if e, ok := <-errC; ok {
+			telemetry.CaptureException(e, "ExcelWorker.HandleIncomingTasks.errC")
+			common.Logger.Error("HandleJob.CleanupProcedure returned: " + e.Error())
+		}
+	}()
+	common.Logger.Error("Starting workbook handle incoming tasks")
+	for {
+		select {
+		case <-w.ctrlChan:
+			close(errC)
+			common.Logger.Info("Received SIGKILL from ctrlChan, exit now.")
+			return
+		case job := <-jobQ:
+			common.Logger.Info("Received new task from job queue.")
+			func() {
+				ctxForSani, cancelF := context.WithTimeout(context.Background(), 180*time.Second)
+				defer cancelF()
+				common.Logger.Info("Waiting for file to be cleaned up: " + job.Path)
+				select {
+				case <-ctxForSani.Done():
+					telemetry.CaptureMessage("error", "Timed out for cleaning up file: "+job.Path)
+					common.Logger.Error("Timed out for cleaning up file: " + job.Path)
+					// TODO: start rebuilt
+					return
+				case errC <- w.CleanupProcedure(ctxForSani, job):
+
+				}
+			}()
+		}
+	}
+}
+
+func (w *ExcelWorker) CleanupProcedure(ctx context.Context, job *common.IPCSingleDocToBeSanitized) error {
+	w.Lock()
+	defer w.Unlock()
+	//TODO: check if workerSet is true before doing next job to prevent conflict for using a recycled instance
+	common.Logger.Info("Opening workbook in sanitizer: " + job.Path)
+	err3 := w.OpenWorkbook(job.Path)
+	if err3 != nil {
+		common.Logger.Error("Failed to open workbook in sanitizer: " + err3.Error())
+		return err3
+	}
+	common.Logger.Debug("Workbook opened: " + job.Path)
+	defer func() {
+		err3 = w.SaveAndCloseWorkbook()
+		if err3 != nil {
+			common.Logger.Error("Failed to save and close workbook in defer Sanitizer: " + err3.Error())
+		}
+		// sleep for 2 seconds to let excel save before rename
+		time.Sleep(2 * time.Second)
+		// rename file and save to clean state cache of cloud-storage provider
+		err3 = renameFileAndSave(job.Path)
+		if err3 != nil {
+			common.Logger.Error("Rename file failed in sanitizer: " + err3.Error())
+		}
+		common.Logger.Info("Workbook Sanitized and Saved: " + job.Path)
+	}()
+	common.Logger.Debug("Sanitize Workbook VBA Module now.")
+	err3 = w.SanitizeWorkbook(job.Action, job.DestModule)
+	if err3 != nil {
+		common.Logger.Error("Failed to sanitize workbook: " + err3.Error())
+		return err3
+	}
+	common.Logger.Info("Finished Sanitizing Workbook: " + job.Path)
+	common.Logger.Debug("Sanitize Workbook VBA Module finished, returned.")
+	return nil
 }

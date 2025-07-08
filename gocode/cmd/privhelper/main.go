@@ -66,6 +66,12 @@ func main() {
 		}
 	}()
 
+	// check if debug
+	inDebugging := false
+	if data := os.Getenv("RunEnv"); data == "DEBUG" || data == "NOSPAWN" {
+		inDebugging = true
+	}
+
 	// detect if started as SYSTEM, if yes, abort
 	runAsSys, err := windoge_utils.CheckRunningUnderSYSTEM()
 	if err != nil {
@@ -109,40 +115,53 @@ func main() {
 	// kill all office processes, to avoid any potential file lock.
 	_, _ = windoge_utils.KillAllOfficeProcesses()
 	common.Logger.Info("Triggered M365 Office processes killer.")
-	// prepare to call ole
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-	err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
-	if err != nil {
-		common.Logger.Error(err.Error())
-		return
+	// call killer in defer again to avoid locking with existing file
+	defer func() { _, _ = windoge_utils.KillAllOfficeProcesses() }()
+
+	var parentWg = &sync.WaitGroup{}
+	var workerTrack = &sync.Map{}
+	var workerCtrlChan = make(chan struct{}, 3)
+	var jobQueue = make(chan *common.IPCSingleDocToBeSanitized, 50)
+	for i := 0; i < 3; i++ {
+		// spawn 3 workers maximum to avoid race condition
+		parentWg.Add(1)
+		go func() {
+			// worker done
+			defer parentWg.Done()
+			// handling thread-local state issue
+			runtime.LockOSThread()
+			defer runtime.UnlockOSThread()
+			err = ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED|ole.COINIT_DISABLE_OLE1DDE)
+			if err != nil {
+				telemetry.CaptureException(err, "ole.CoInitializeEx.WorkerThread")
+				panic(err)
+			}
+			defer ole.CoUninitialize()
+			// build worker and save to tracker map
+			eWorker := &sanitizer_ole.ExcelWorker{}
+			workerTrack.Store(i, eWorker)
+			// common initialization
+			err = eWorker.Init(inDebugging, workerCtrlChan)
+			if err != nil {
+				telemetry.CaptureException(err, "eWorkerInit.WorkerThread")
+				panic(err)
+			}
+			err = eWorker.GetWorkbooks()
+			if err != nil {
+				common.Logger.Error("Failed to get workbooks:" + err.Error())
+				return
+			}
+			common.Logger.Info("Excel.Application worker initialized.")
+			defer eWorker.Quit()
+			// start processing and wait for termination signal
+			eWorker.HandleIncomingTasks(jobQueue)
+		}()
 	}
-	common.Logger.Info("OLE initialized.")
-	defer ole.CoUninitialize()
-	// new approach: bundled
-	inDebugging := false
-	if data := os.Getenv("RunEnv"); data == "DEBUG" || data == "NOSPAWN" {
-		inDebugging = true
-	}
-	eWorker := &sanitizer_ole.ExcelWorker{}
-	err = eWorker.Init(inDebugging)
-	if err != nil {
-		common.Logger.Error("Failed to initialize excel worker:" + err.Error())
-		return
-	}
-	defer eWorker.Quit(false)
-	err = eWorker.GetWorkbooks()
-	if err != nil {
-		common.Logger.Error("Failed to get workbooks:" + err.Error())
-		return
-	}
-	common.Logger.Info("Excel.Application worker initialized.")
 
 	// prepare for simpleGRPC
 	quitMsgChan := make(chan struct{}, 1)
 	quitMsgOnce := &sync.Once{}
-	extWgWorkerGroup := &sync.WaitGroup{}
-	sGRPCsrv, err := sanitizer_ole.InitSimpleRPCServer(eWorker, quitMsgChan, quitMsgOnce, extWgWorkerGroup)
+	sGRPCsrv, err := sanitizer_ole.InitSimpleRPCServer(jobQueue, quitMsgChan, quitMsgOnce, workerCtrlChan)
 	if err != nil {
 		common.Logger.Error("Failed to initialize simple RPC server:" + err.Error())
 		return
@@ -202,17 +221,24 @@ func main() {
 	exitCleanupF := func() {
 		go func() {
 			gRSrv.GracefulStop()
-			extWgWorkerGroup.Wait()
+			for {
+				if len(jobQueue) > 0 {
+					common.Logger.Info("There's still jobs in queue waiting to be processed.")
+					time.Sleep(5 * time.Second)
+				} else {
+					break
+				}
+			}
+			// wait for group process
+			parentWg.Wait()
+			workerTrack.Clear()
 			close(waitDChan)
 		}()
-		select {
-		case <-waitDChan:
-			common.Logger.Info("All goroutines stopped gracefully")
-		case <-time.After(210 * time.Second):
-			common.Logger.Warn("Timed out for 210 seconds, directly exit.")
-			gRSrv.Stop()
-			common.Logger.Warn("Forced Stop GRPC Server.")
-		}
+		// always wait, no timeout
+		<-waitDChan
+		// wait done, safe to terminate grpc coroutine
+		gRSrv.Stop()
+		common.Logger.Info("All goroutines stopped correctly. Now exit.")
 	}
 
 	signal.Notify(osSignals, os.Interrupt, os.Kill, syscall.SIGTERM)
@@ -222,7 +248,9 @@ func main() {
 	case <-osSignals:
 		common.Logger.Info("Received OS Signal, shutting down")
 		quitMsgOnce.Do(func() {
+			close(jobQueue)
 			close(quitMsgChan)
+			close(workerCtrlChan)
 		})
 		exitCleanupF()
 	case <-quitMsgChan:
