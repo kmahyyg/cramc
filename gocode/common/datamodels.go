@@ -33,6 +33,9 @@ type IPCSingleDocToBeSanitized struct {
 	Action        string `json:"action"`
 	DetectionName string `json:"detectionName"`
 	DestModule    string `json:"module"`
+
+	// additional optional field for grpc
+	MessageID uint64 `json:"messageID,omitempty"`
 }
 
 type HardeningAction struct {
