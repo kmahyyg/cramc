@@ -375,7 +375,7 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 				taskMutex.Lock()
 				defer taskMutex.Unlock()
 				// build timeout context
-				ctxForSani, cancelF := context.WithTimeout(context.Background(), 210*time.Second)
+				ctxForSani, cancelF := context.WithTimeout(context.Background(), 150*time.Second)
 				defer cancelF()
 				common.Logger.Info("Waiting for file to be cleaned up: " + job.Path)
 				select {
@@ -384,6 +384,7 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 					err5 := ctxForSani.Err()
 					if err5 != nil {
 						telemetry.CaptureException(err5, "ExcelWorker.HandleIncomingTasks.CtxDone")
+						common.Logger.Error("Error returned in ExcelWorker.HandleIncomingTasks.CtxDone: " + err5.Error())
 					}
 					telemetry.CaptureMessage("error", "Timed out for cleaning up file: "+job.Path)
 					common.Logger.Error("Timed out for cleaning up file: " + job.Path)
