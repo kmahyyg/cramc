@@ -132,7 +132,7 @@ func main() {
 	// output error to channel async
 	var retErrCh = make(chan error, 50)
 	go func() {
-		if e, ok := <-retErrCh; ok {
+		for e := range retErrCh {
 			if e != nil {
 				telemetry.CaptureException(e, "ExcelWorker.HandleIncomingTasks.errC")
 				common.Logger.Error("HandleJob.CleanupProcedure returned: " + e.Error())
