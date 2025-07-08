@@ -133,7 +133,7 @@ func main() {
 			// handling thread-local state issue
 			runtime.LockOSThread()
 			defer runtime.UnlockOSThread()
-			err = ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED|ole.COINIT_DISABLE_OLE1DDE)
+			err = ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
 			if err != nil {
 				telemetry.CaptureException(err, "ole.CoInitializeEx.WorkerThread")
 				panic(err)
