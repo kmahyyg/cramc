@@ -356,8 +356,12 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 	errC := make(chan error)
 	go func() {
 		if e, ok := <-errC; ok {
-			telemetry.CaptureException(e, "ExcelWorker.HandleIncomingTasks.errC")
-			common.Logger.Error("HandleJob.CleanupProcedure returned: " + e.Error())
+			if e != nil {
+				telemetry.CaptureException(e, "ExcelWorker.HandleIncomingTasks.errC")
+				common.Logger.Error("HandleJob.CleanupProcedure returned: " + e.Error())
+			} else {
+				common.Logger.Info("HandleJob.CleanupProcedure successfully returned. ")
+			}
 		}
 	}()
 	common.Logger.Error("Starting workbook handle incoming tasks")
@@ -370,55 +374,77 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 		case job := <-jobQ:
 			common.Logger.Info("Received new task from job queue.")
 			func() {
+				w.Lock()
+				defer w.Unlock()
 				ctxForSani, cancelF := context.WithTimeout(context.Background(), 180*time.Second)
 				defer cancelF()
 				common.Logger.Info("Waiting for file to be cleaned up: " + job.Path)
 				select {
 				case <-ctxForSani.Done():
+					// timed out or unknown error
+					err5 := ctxForSani.Err()
+					if err5 != nil {
+						telemetry.CaptureException(err5, "ExcelWorker.HandleIncomingTasks.CtxDone")
+					}
 					telemetry.CaptureMessage("error", "Timed out for cleaning up file: "+job.Path)
 					common.Logger.Error("Timed out for cleaning up file: " + job.Path)
-					// TODO: start rebuilt
+					common.Logger.Info("Go to force termination and instance rebuilt.")
+					// start rebuilt instance of worker
+					w.workerSet.Store(false)
+					oriDbgSta := w.inDbg
+					// for gc, cleanup
+					w.Quit()
+					// safely ignore errors as it's already built correctly before
+					_ = w.Init(oriDbgSta, w.ctrlChan)
+					_ = w.GetWorkbooks()
+					// set mark again for ready to use
+					w.workerSet.Store(true)
 					return
 				case errC <- w.CleanupProcedure(ctxForSani, job):
-
+					// properly returned
+					// continue
+					common.Logger.Info("Sanitizer Job Finished by Claenup Procedure.")
+					return
 				}
 			}()
+			continue
 		}
 	}
 }
 
 func (w *ExcelWorker) CleanupProcedure(ctx context.Context, job *common.IPCSingleDocToBeSanitized) error {
-	w.Lock()
-	defer w.Unlock()
-	//TODO: check if workerSet is true before doing next job to prevent conflict for using a recycled instance
-	common.Logger.Info("Opening workbook in sanitizer: " + job.Path)
-	err3 := w.OpenWorkbook(job.Path)
-	if err3 != nil {
-		common.Logger.Error("Failed to open workbook in sanitizer: " + err3.Error())
-		return err3
-	}
-	common.Logger.Debug("Workbook opened: " + job.Path)
-	defer func() {
-		err3 = w.SaveAndCloseWorkbook()
+	if w.workerSet.Load() {
+		common.Logger.Info("Opening workbook in sanitizer: " + job.Path)
+		err3 := w.OpenWorkbook(job.Path)
 		if err3 != nil {
-			common.Logger.Error("Failed to save and close workbook in defer Sanitizer: " + err3.Error())
+			common.Logger.Error("Failed to open workbook in sanitizer: " + err3.Error())
+			return err3
 		}
-		// sleep for 2 seconds to let excel save before rename
-		time.Sleep(2 * time.Second)
-		// rename file and save to clean state cache of cloud-storage provider
-		err3 = renameFileAndSave(job.Path)
+		common.Logger.Debug("Workbook opened: " + job.Path)
+		defer func() {
+			err3 = w.SaveAndCloseWorkbook()
+			if err3 != nil {
+				common.Logger.Error("Failed to save and close workbook in defer Sanitizer: " + err3.Error())
+			}
+			// sleep for 2 seconds to let excel save before rename
+			time.Sleep(2 * time.Second)
+			// rename file and save to clean state cache of cloud-storage provider
+			err3 = renameFileAndSave(job.Path)
+			if err3 != nil {
+				common.Logger.Error("Rename file failed in sanitizer: " + err3.Error())
+			}
+			common.Logger.Info("Workbook Sanitized and Saved: " + job.Path)
+		}()
+		common.Logger.Debug("Sanitize Workbook VBA Module now.")
+		err3 = w.SanitizeWorkbook(job.Action, job.DestModule)
 		if err3 != nil {
-			common.Logger.Error("Rename file failed in sanitizer: " + err3.Error())
+			common.Logger.Error("Failed to sanitize workbook: " + err3.Error())
+			return err3
 		}
-		common.Logger.Info("Workbook Sanitized and Saved: " + job.Path)
-	}()
-	common.Logger.Debug("Sanitize Workbook VBA Module now.")
-	err3 = w.SanitizeWorkbook(job.Action, job.DestModule)
-	if err3 != nil {
-		common.Logger.Error("Failed to sanitize workbook: " + err3.Error())
-		return err3
+		common.Logger.Info("Finished Sanitizing Workbook: " + job.Path)
+		common.Logger.Debug("Sanitize Workbook VBA Module finished, returned.")
+		return nil
+	} else {
+		return customerrs.ErrExcelWorkerUninitialized
 	}
-	common.Logger.Info("Finished Sanitizing Workbook: " + job.Path)
-	common.Logger.Debug("Sanitize Workbook VBA Module finished, returned.")
-	return nil
 }

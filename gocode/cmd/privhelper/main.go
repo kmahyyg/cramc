@@ -61,7 +61,7 @@ func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			debug.PrintStack()
-			telemetry.CaptureMessage("panic", fmt.Sprintf("Panic on [%v], stacktrace:", r, string(debug.Stack())))
+			telemetry.CaptureMessage("panic", fmt.Sprintf("Panic on [%v], stacktrace: %s", r, string(debug.Stack())))
 			os.Exit(1)
 		}
 	}()
