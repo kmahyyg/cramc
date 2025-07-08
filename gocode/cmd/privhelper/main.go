@@ -124,7 +124,11 @@ func main() {
 	var stopSign = &atomic.Bool{}
 	stopSign.Store(false)
 	var jobQueue = make(chan *common.IPCSingleDocToBeSanitized, 50)
-	for i := 0; i < 3; i++ {
+
+	cpuCores := runtime.NumCPU()
+	maxWorker := int(cpuCores/2) + 1
+	common.Logger.Info(fmt.Sprintf("Detected %d CPU cores, will spawn %d workers. ", cpuCores, maxWorker))
+	for i := 0; i < maxWorker; i++ {
 		// spawn 3 workers maximum to avoid race condition
 		parentWg.Add(1)
 		go func() {
