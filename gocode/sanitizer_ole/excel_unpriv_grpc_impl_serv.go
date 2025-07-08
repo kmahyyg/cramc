@@ -8,27 +8,28 @@ import (
 	"fmt"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 )
 
 type SimpleRPCServer struct {
 	pbrpc.UnimplementedExcelSanitizerRPCServer
 
-	jobQueue       chan *common.IPCSingleDocToBeSanitized
-	quitOnce       *sync.Once
-	quitChan       chan struct{}
-	workerCtrlChan chan struct{}
+	jobQueue chan *common.IPCSingleDocToBeSanitized
+	quitOnce *sync.Once
+	quitChan chan struct{}
+	stopSign *atomic.Bool
 }
 
-func InitSimpleRPCServer(jchan chan *common.IPCSingleDocToBeSanitized, qchan chan struct{}, qchanOnce *sync.Once, workerCChan chan struct{}) (*SimpleRPCServer, error) {
+func InitSimpleRPCServer(jchan chan *common.IPCSingleDocToBeSanitized, qchan chan struct{}, qchanOnce *sync.Once, sSign *atomic.Bool) (*SimpleRPCServer, error) {
 	// eworker is always initialized, check if nil is sufficient
 	if jchan == nil || qchan == nil || qchanOnce == nil {
 		return nil, customerrs.ErrUnknownInternalError
 	}
 	srv := &SimpleRPCServer{
-		quitChan:       qchan,
-		quitOnce:       qchanOnce,
-		jobQueue:       jchan,
-		workerCtrlChan: workerCChan,
+		quitChan: qchan,
+		quitOnce: qchanOnce,
+		jobQueue: jchan,
+		stopSign: sSign,
 	}
 
 	return srv, nil
@@ -60,10 +61,10 @@ func (s *SimpleRPCServer) ControlServer(_ context.Context, cMsg *pbrpc.ControlMs
 		common.Logger.Info("Responded to quit from client: " + cMsg.GetMeta().GetClientID())
 		s.quitOnce.Do(func() {
 			s.quitChan <- struct{}{}
-			s.workerCtrlChan <- struct{}{}
+			s.stopSign.Store(true)
+			common.Logger.Info("stopSign set to true because of client: " + cMsg.GetMeta().GetClientID())
 			close(s.quitChan)
 			close(s.jobQueue)
-			close(s.workerCtrlChan)
 		})
 		return uniResp, nil
 	}

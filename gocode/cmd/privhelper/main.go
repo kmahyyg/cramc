@@ -29,6 +29,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -120,7 +121,8 @@ func main() {
 
 	var parentWg = &sync.WaitGroup{}
 	var workerTrack = &sync.Map{}
-	var workerCtrlChan = make(chan struct{}, 3)
+	var stopSign = &atomic.Bool{}
+	stopSign.Store(false)
 	var jobQueue = make(chan *common.IPCSingleDocToBeSanitized, 50)
 	for i := 0; i < 3; i++ {
 		// spawn 3 workers maximum to avoid race condition
@@ -141,7 +143,7 @@ func main() {
 			eWorker := &sanitizer_ole.ExcelWorker{}
 			workerTrack.Store(i, eWorker)
 			// common initialization
-			err = eWorker.Init(inDebugging, workerCtrlChan)
+			err = eWorker.Init(inDebugging, stopSign)
 			if err != nil {
 				telemetry.CaptureException(err, "eWorkerInit.WorkerThread")
 				panic(err)
@@ -161,7 +163,7 @@ func main() {
 	// prepare for simpleGRPC
 	quitMsgChan := make(chan struct{}, 1)
 	quitMsgOnce := &sync.Once{}
-	sGRPCsrv, err := sanitizer_ole.InitSimpleRPCServer(jobQueue, quitMsgChan, quitMsgOnce, workerCtrlChan)
+	sGRPCsrv, err := sanitizer_ole.InitSimpleRPCServer(jobQueue, quitMsgChan, quitMsgOnce, stopSign)
 	if err != nil {
 		common.Logger.Error("Failed to initialize simple RPC server:" + err.Error())
 		return
@@ -250,7 +252,6 @@ func main() {
 		quitMsgOnce.Do(func() {
 			close(jobQueue)
 			close(quitMsgChan)
-			close(workerCtrlChan)
 		})
 		exitCleanupF()
 	case <-quitMsgChan:

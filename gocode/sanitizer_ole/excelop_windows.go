@@ -29,10 +29,10 @@ type ExcelWorker struct {
 	curFilePath     string
 	inDbg           bool
 	workerSet       atomic.Bool
-	ctrlChan        chan struct{}
+	stopSign        *atomic.Bool
 }
 
-func (w *ExcelWorker) Init(inDbg bool, cChan chan struct{}) error {
+func (w *ExcelWorker) Init(inDbg bool, sSign *atomic.Bool) error {
 	var err error
 	w.currentExcelObj, err = createExcelInstance()
 	if err != nil {
@@ -44,7 +44,7 @@ func (w *ExcelWorker) Init(inDbg bool, cChan chan struct{}) error {
 	w.excelInstanceStartupConfig()
 	common.Logger.Info("Excel.Application object initialized.")
 	w.mu = &sync.Mutex{}
-	w.ctrlChan = cChan
+	w.stopSign = sSign
 	w.workerSet.Store(true)
 	return nil
 }
@@ -366,12 +366,8 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 	}()
 	common.Logger.Error("Starting workbook handle incoming tasks")
 	for {
-		select {
-		case <-w.ctrlChan:
-			close(errC)
-			common.Logger.Info("Received SIGKILL from ctrlChan, exit now.")
-			return
-		case job := <-jobQ:
+		job, qOpened := <-jobQ
+		if qOpened && job != nil {
 			common.Logger.Info("Received new task from job queue.")
 			func() {
 				// copy for current mu
@@ -392,13 +388,14 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 					telemetry.CaptureMessage("error", "Timed out for cleaning up file: "+job.Path)
 					common.Logger.Error("Timed out for cleaning up file: " + job.Path)
 					common.Logger.Info("Go to force termination and instance rebuilt.")
-					// start rebuilt instance of worker
+					// start rebuilding instances of worker
 					w.workerSet.Store(false)
 					oriDbgSta := w.inDbg
+					oriSSign := w.stopSign
 					// for gc, cleanup
 					w.Quit()
 					// safely ignore errors as it's already built correctly before
-					_ = w.Init(oriDbgSta, w.ctrlChan)
+					_ = w.Init(oriDbgSta, oriSSign)
 					_ = w.GetWorkbooks()
 					// set mark again for ready to use
 					w.workerSet.Store(true)
@@ -410,7 +407,12 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 					return
 				}
 			}()
-			continue
+		} else {
+			common.Logger.Info("Job queue closed or found nil job.")
+			if w.stopSign.Load() {
+				common.Logger.Info("received ctrl msg as StopSign marked to true.")
+				return
+			}
 		}
 	}
 }
