@@ -353,7 +353,7 @@ func (w *ExcelWorker) Unlock() {
 
 func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSanitized) {
 	// long run in loop function
-	errC := make(chan error)
+	errC := make(chan error, 50)
 	go func() {
 		if e, ok := <-errC; ok {
 			if e != nil {
@@ -375,7 +375,7 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 				taskMutex.Lock()
 				defer taskMutex.Unlock()
 				// build timeout context
-				ctxForSani, cancelF := context.WithTimeout(context.Background(), 150*time.Second)
+				ctxForSani, cancelF := context.WithTimeout(context.Background(), 180*time.Second)
 				defer cancelF()
 				common.Logger.Info("Waiting for file to be cleaned up: " + job.Path)
 				select {
