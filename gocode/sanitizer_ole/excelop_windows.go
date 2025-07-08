@@ -351,19 +351,8 @@ func (w *ExcelWorker) Unlock() {
 	w.mu.Unlock()
 }
 
-func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSanitized) {
+func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSanitized, errC chan error) {
 	// long run in loop function
-	errC := make(chan error, 50)
-	go func() {
-		if e, ok := <-errC; ok {
-			if e != nil {
-				telemetry.CaptureException(e, "ExcelWorker.HandleIncomingTasks.errC")
-				common.Logger.Error("HandleJob.CleanupProcedure returned: " + e.Error())
-			} else {
-				common.Logger.Info("HandleJob.CleanupProcedure successfully returned. ")
-			}
-		}
-	}()
 	common.Logger.Error("Starting workbook handle incoming tasks")
 	for {
 		job, qOpened := <-jobQ
@@ -404,7 +393,7 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 				case errC <- w.CleanupProcedure(ctxForSani, job):
 					// properly returned
 					// continue
-					common.Logger.Info("Sanitizer Job Finished by Claenup Procedure.")
+					common.Logger.Info("Sanitizer Job Finished by Cleanup Procedure.")
 					return
 				}
 			}()

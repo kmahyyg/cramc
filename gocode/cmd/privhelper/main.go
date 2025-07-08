@@ -119,15 +119,29 @@ func main() {
 	// call killer in defer again to avoid locking with existing file
 	defer func() { _, _ = windoge_utils.KillAllOfficeProcesses() }()
 
+	// prepare to spawn
 	var parentWg = &sync.WaitGroup{}
 	var workerTrack = &sync.Map{}
 	var stopSign = &atomic.Bool{}
 	stopSign.Store(false)
 	var jobQueue = make(chan *common.IPCSingleDocToBeSanitized, 50)
-
+	// determine worker number
 	cpuCores := runtime.NumCPU()
 	maxWorker := int(cpuCores/2) + 1
 	common.Logger.Info(fmt.Sprintf("Detected %d CPU cores, will spawn %d workers. ", cpuCores, maxWorker))
+	// output error to channel async
+	var retErrCh = make(chan error, 50)
+	go func() {
+		if e, ok := <-retErrCh; ok {
+			if e != nil {
+				telemetry.CaptureException(e, "ExcelWorker.HandleIncomingTasks.errC")
+				common.Logger.Error("HandleJob.CleanupProcedure returned: " + e.Error())
+			} else {
+				common.Logger.Info("HandleJob.CleanupProcedure successfully returned. ")
+			}
+		}
+	}()
+
 	for i := 0; i < maxWorker; i++ {
 		// spawn 3 workers maximum to avoid race condition
 		parentWg.Add(1)
@@ -160,7 +174,7 @@ func main() {
 			common.Logger.Info("Excel.Application worker initialized.")
 			defer eWorker.Quit()
 			// start processing and wait for termination signal
-			eWorker.HandleIncomingTasks(jobQueue)
+			eWorker.HandleIncomingTasks(jobQueue, retErrCh)
 		}()
 	}
 
@@ -238,6 +252,7 @@ func main() {
 			// wait for group process
 			parentWg.Wait()
 			workerTrack.Clear()
+			close(retErrCh)
 			close(waitDChan)
 		}()
 		// always wait, no timeout
