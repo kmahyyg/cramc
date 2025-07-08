@@ -25,9 +25,11 @@ var (
 )
 
 func StartSanitizer() error {
+	// commented to avoid killing spawned worker, responsibility hanaded over to RPC Server
 	// kill all office processes, to avoid any potential file lock.
-	_, _ = windoge_utils.KillAllOfficeProcesses()
-	common.Logger.Info("Triggered M365 Office processes killer.")
+	//
+	// _, _ = windoge_utils.KillAllOfficeProcesses()
+	// common.Logger.Info("Triggered M365 Office processes killer.")
 
 	// client id generation
 	clientID, err := uuid.NewUUID()
@@ -203,9 +205,6 @@ func StartSanitizer() error {
 		corWg.Wait()
 	}
 	common.Logger.Info("RPC Server terminated correctly.")
-	// kill all o365 processes for gc
-	_, _ = windoge_utils.KillAllOfficeProcesses()
-	common.Logger.Info("Triggered M365 Office processes killer.")
 	return nil
 }
 

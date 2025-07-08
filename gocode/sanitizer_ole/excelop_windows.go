@@ -3,7 +3,6 @@ package sanitizer_ole
 import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
-	"cramc_go/platform/windoge_utils"
 	"cramc_go/telemetry"
 	"fmt"
 	"github.com/go-ole/go-ole"
@@ -20,6 +19,32 @@ Private Sub CRAMCPlaceholder()
 End Sub
 `
 )
+
+type ExcelWorker struct {
+	currentExcelObj *ole.IDispatch
+	workbooksHandle *ole.IDispatch
+	currentWorkbook *ole.IDispatch
+	mu              *sync.Mutex
+	curFilePath     string
+	inDbg           bool
+	ctrlChan        chan struct{}
+}
+
+func (w *ExcelWorker) Init(inDbg bool, cChan chan struct{}) error {
+	var err error
+	w.currentExcelObj, err = createExcelInstance()
+	if err != nil {
+		telemetry.CaptureException(err, "Excel.Application.Create")
+		common.Logger.Error(err.Error())
+		return err
+	}
+	w.inDbg = inDbg
+	w.excelInstanceStartupConfig()
+	common.Logger.Info("Excel.Application object initialized.")
+	w.mu = &sync.Mutex{}
+	w.ctrlChan = cChan
+	return nil
+}
 
 func createExcelInstance() (*ole.IDispatch, error) {
 	// https://learn.microsoft.com/en-us/dotnet/api/microsoft.office.interop.excel?view=excel-pia
@@ -87,38 +112,15 @@ func (w *ExcelWorker) excelInstanceStartupConfig() {
 	return
 }
 
-type ExcelWorker struct {
-	currentExcelObj *ole.IDispatch
-	workbooksHandle *ole.IDispatch
-	currentWorkbook *ole.IDispatch
-	mu              *sync.Mutex
-	curFilePath     string
-	inDbg           bool
-}
-
-func (w *ExcelWorker) Init(inDbg bool) error {
-	var err error
-	w.currentExcelObj, err = createExcelInstance()
-	if err != nil {
-		telemetry.CaptureException(err, "Excel.Application.Create")
-		common.Logger.Error(err.Error())
-		return err
-	}
-	w.inDbg = inDbg
-	w.excelInstanceStartupConfig()
-	common.Logger.Info("Excel.Application object initialized.")
-	w.mu = &sync.Mutex{}
-	return nil
-}
-
-func (w *ExcelWorker) Quit(isForced bool) {
+func (w *ExcelWorker) Quit() {
 	_, _ = w.currentExcelObj.CallMethod("Quit")
 	w.workbooksHandle.Release()
 	w.currentExcelObj.Release()
-	if isForced {
-		_, _ = windoge_utils.KillAllOfficeProcesses()
-		common.Logger.Info("ExcelWorker Force Terminated.")
-	}
+	// since there're multiple objects alive in parallel, there's no reason to use `isForced`, commented
+	//if isForced {
+	//	_, _ = windoge_utils.KillAllOfficeProcesses()
+	//	common.Logger.Info("ExcelWorker Force Terminated.")
+	//}
 	w.currentExcelObj = nil
 	w.workbooksHandle = nil
 	common.Logger.Info("ExcelWorker Quit.")
