@@ -223,8 +223,8 @@ func main() {
 			gRSrv.GracefulStop()
 			for {
 				if len(jobQueue) > 0 {
-					common.Logger.Info("There's still jobs in queue waiting to be processed.")
-					time.Sleep(5 * time.Second)
+					common.Logger.Info("There's still jobs in queue waiting to be processed. Wait for 10 seconds.")
+					time.Sleep(10 * time.Second)
 				} else {
 					break
 				}
