@@ -375,7 +375,7 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 				taskMutex.Lock()
 				defer taskMutex.Unlock()
 				// build timeout context
-				ctxForSani, cancelF := context.WithTimeout(context.Background(), 180*time.Second)
+				ctxForSani, cancelF := context.WithTimeout(context.Background(), 210*time.Second)
 				defer cancelF()
 				common.Logger.Info("Waiting for file to be cleaned up: " + job.Path)
 				select {
