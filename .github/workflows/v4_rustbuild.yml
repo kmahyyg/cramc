@@ -177,7 +177,7 @@ jobs:
           merge-multiple: true
       - name: List all artifacts downloaded
         run: |
-          cd /tmp/relbuild
+          cd /tmp/relbuild/${{ github.repository_owner }}
           tree .
           sha256sum ./* > SHA256SUM
       - name: Craft release
