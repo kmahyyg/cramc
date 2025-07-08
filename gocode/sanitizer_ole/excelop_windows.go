@@ -374,8 +374,11 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 		case job := <-jobQ:
 			common.Logger.Info("Received new task from job queue.")
 			func() {
-				w.Lock()
-				defer w.Unlock()
+				// copy for current mu
+				taskMutex := w.mu
+				taskMutex.Lock()
+				defer taskMutex.Unlock()
+				// build timeout context
 				ctxForSani, cancelF := context.WithTimeout(context.Background(), 180*time.Second)
 				defer cancelF()
 				common.Logger.Info("Waiting for file to be cleaned up: " + job.Path)
