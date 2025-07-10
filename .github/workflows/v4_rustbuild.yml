@@ -186,9 +186,11 @@ jobs:
           artifactErrorsFailBuild: true
           body: |
             We recommend everyone stays on the latest version. 
-            To use, download `*.zip` and extract to a new empty folder and execute under that folder. 
+            To use, download `*.zip` and extract to a new empty folder and execute `cramc_aio.exe` under that folder. 
             Program will try auto-elevate based on your current privileges. 
             This version uses totally different scanner engine, please do not reuse rules from v0.4.x.
+            **For CrowdStrike User, please whitelist `privhelper.exe` if you plan to spawn it using SYSTEM context.**
+            PrivHelper logging and lock files are saved to: `%UserProfile%\.cramc\`
           allowUpdates: true
           prerelease: true
           artifacts: /tmp/relbuild/${{ github.repository_owner }}/*
