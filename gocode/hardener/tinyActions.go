@@ -33,6 +33,8 @@ func f_harden_replaceFileSetRO(aType string, filep string) {
 		common.Logger.Info(fmt.Sprintf("create file: %s, err: %v ", filep, err))
 		if err == nil {
 			_ = fd.Close()
+		} else {
+			common.Logger.Error("f_harden_replaceFileSetRO, dir err: " + err.Error())
 		}
 		f_harden_SetRO(filep, "file")
 	default:
