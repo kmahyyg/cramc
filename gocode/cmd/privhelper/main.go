@@ -26,6 +26,7 @@ import (
 	"os"
 	"os/signal"
 	"os/user"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"sync"
@@ -38,13 +39,25 @@ const (
 	betterStackURL         = "https://s1358347.eu-nbg-2.betterstackdata.com"
 	betterStackBearerToken = "26Y9ahkqDMsQgLN9yTb1JETU"
 
+	dataDir         = ".cramc"
 	lockFile        = "privhelper.lock"
 	listenWinIOPipe = `\\.\pipe\cramcPriv`
+	logFile         = "cramc_privhelper.log"
 )
 
 func main() {
+	// check current user context
+	cUser, err := user.Current()
+	if err != nil {
+		panic(err)
+	}
+	fLockPath := filepath.Join(cUser.HomeDir, dataDir, lockFile)
+	fLogPath := filepath.Join(cUser.HomeDir, dataDir, logFile)
+	fmt.Println("Current Lock File Path: ", fLockPath)
+	fmt.Println("Current Logging File Path: ", fLogPath)
+
 	// init logging
-	logger, logfd := logging.NewLogger("cramc_privhelper.log")
+	logger, logfd := logging.NewLogger(fLogPath)
 	common.Logger = logger
 	defer logfd.Close()
 	defer logfd.Sync()
@@ -57,6 +70,8 @@ func main() {
 	// startup behavior
 	common.Logger.Info("Welcome to CRAMC Privilege Helper RPC Server!")
 	common.Logger.Info("Current Version: " + common.VersionStr)
+	telemetry.CaptureMessage("info", "privHelper is running at user: "+cUser.Username)
+	telemetry.CaptureMessage("info", "privHelper logging path: "+fLogPath)
 
 	// panic capture
 	defer func() {
@@ -82,28 +97,22 @@ func main() {
 	if runAsSys {
 		panic(customerrs.ErrRunsOnSystemMachineAccount)
 	}
-	// check current user context
-	cUser, err := user.Current()
-	if err != nil {
-		panic(err)
-	}
-	telemetry.CaptureMessage("info", "privHelper is running at user: "+cUser.Username)
 
 	// detect lock file
-	if fileutils.CheckFileLogicalExists(lockFile) {
+	if fileutils.CheckFileLogicalExists(fLockPath) {
 		panic(customerrs.ErrPrivHelperLockExists)
 	}
 
 	// create lock and listener
 	func() {
-		lockFd, err2 := os.Create(lockFile)
+		lockFd, err2 := os.Create(fLockPath)
 		if err2 != nil {
 			panic(err2)
 		}
 		defer lockFd.Close()
 	}()
 	// cleanup
-	defer os.Remove(lockFile)
+	defer os.Remove(fLockPath)
 
 	// start initialization of server and excelWorker
 	// -------- initialize excel worker -------- //
