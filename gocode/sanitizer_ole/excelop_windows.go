@@ -402,6 +402,10 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 			if w.stopSign.Load() {
 				common.Logger.Info("received ctrl msg as StopSign marked to true.")
 				return
+			} else {
+				telemetry.CaptureMessage("error", "unknown exit situation: queue closed without stopSign.")
+				common.Logger.Info("Unknown error, should exit.")
+				return
 			}
 		}
 	}
