@@ -51,6 +51,13 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	// create datadir
+	err = os.MkdirAll(filepath.Join(cUser.HomeDir, dataDir), 0755)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Data Directory created.")
+	// create lock and log path
 	fLockPath := filepath.Join(cUser.HomeDir, dataDir, lockFile)
 	fLogPath := filepath.Join(cUser.HomeDir, dataDir, logFile)
 	fmt.Println("Current Lock File Path: ", fLockPath)
