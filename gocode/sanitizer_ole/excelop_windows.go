@@ -352,6 +352,7 @@ func (w *ExcelWorker) Unlock() {
 }
 
 func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSanitized, errC chan error) {
+	errloopCnt := 0
 	// long run in loop function
 	common.Logger.Error("Starting workbook handle incoming tasks")
 	for {
@@ -403,9 +404,12 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 				common.Logger.Info("received ctrl msg as StopSign marked to true.")
 				return
 			} else {
-				telemetry.CaptureMessage("error", "unknown exit situation: queue closed without stopSign.")
-				common.Logger.Info("Unknown error, should exit.")
-				return
+				errloopCnt += 1
+				if errloopCnt > 6 {
+					telemetry.CaptureMessage("error", "unknown exit situation: queue closed without stopSign.")
+					common.Logger.Info("Unknown error, should exit.")
+					return
+				}
 			}
 		}
 	}
