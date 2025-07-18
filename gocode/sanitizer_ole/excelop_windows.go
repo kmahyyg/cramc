@@ -153,7 +153,7 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 		// 120 seconds wait.
 		if wait4CloseCnt.Load() > 12 {
 			common.Logger.Error("Waiting for more than 120s to save previous workbook, cannot open.")
-			telemetry.CaptureException(customerrs.ErrExcelWaitingOpTimedOut, "Excel.Workbooks.Open.QueryCount")
+			telemetry.CaptureException(customerrs.ErrExcelWaitingOpTimedOut, "Excel.Workbooks.Open.Wait4CntMaxThan12")
 			return customerrs.ErrExcelWaitingOpTimedOut
 		}
 		// check count
@@ -251,7 +251,7 @@ func (w *ExcelWorker) SaveAndCloseWorkbook() error {
 	for {
 		if wait4CloseCnt.Load() > 12 {
 			common.Logger.Error("Waiting for more than 120s to save previous workbook, cannot close.")
-			telemetry.CaptureException(customerrs.ErrExcelWaitingOpTimedOut, "Excel.Workbooks.SaveAndClose.QueryCount")
+			telemetry.CaptureException(customerrs.ErrExcelWaitingOpTimedOut, "Excel.Workbooks.SaveAndClose.Wait4CntMaxThan12")
 			return customerrs.ErrExcelWaitingOpTimedOut
 		}
 		ret, err := oleutil.GetProperty(w.workbooksHandle, "Count")
