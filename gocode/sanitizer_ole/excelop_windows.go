@@ -354,7 +354,7 @@ func (w *ExcelWorker) Unlock() {
 func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSanitized, errC chan error) {
 	errloopCnt := 0
 	// long run in loop function
-	common.Logger.Error("Starting workbook handle incoming tasks")
+	common.Logger.Info("Starting workbook handle incoming tasks")
 	for {
 		job, qOpened := <-jobQ
 		if qOpened && job != nil {
