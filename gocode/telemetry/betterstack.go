@@ -57,7 +57,7 @@ func (bs *BetterStackSender) CaptureMessage(level string, message string) {
 	}
 	hReq.Header.Set("Content-Type", "application/json")
 	hReq.Header.Set("Authorization", "Bearer "+bs.bearerToken)
-	hReq.Header.Set("User-Agent", "Mozilla/5.0 Chrome/137.0.0.0 Go-CRAMC-Telemetry/1.0")
+	hReq.Header.Set("User-Agent", "Mozilla/5.0 Chrome/137.0.0.0 Go-CRAMC-Telemetry/1.1")
 	resp, err := http.DefaultClient.Do(hReq)
 	if err != nil {
 		common.Logger.Error(err.Error())
