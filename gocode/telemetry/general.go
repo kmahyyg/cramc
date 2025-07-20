@@ -37,6 +37,7 @@ type TSender interface {
 	CaptureMessage(level string, message string)
 	CaptureException(err error, source string)
 	SetDefaultSender()
+	CaptureExceptionWithPath(err error, source string, fpath string)
 }
 
 func Init(relVersion string) {
@@ -91,5 +92,14 @@ func CaptureException(err error, source string) {
 	}
 	if currentSender != nil {
 		currentSender.CaptureException(err, source)
+	}
+}
+
+func CaptureExceptionWithPath(err error, source string, fpath string) {
+	if !senderInited.Load() {
+		return
+	}
+	if currentSender != nil {
+		currentSender.CaptureExceptionWithPath(err, source, fpath)
 	}
 }

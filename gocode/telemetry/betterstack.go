@@ -23,6 +23,10 @@ func NewBetterStackSender(serverUrl string, authToken string) *BetterStackSender
 	return &BetterStackSender{sendURL: serverUrl, bearerToken: authToken}
 }
 
+func (bs *BetterStackSender) CaptureExceptionWithPath(err error, source string, fpath string) {
+	bs.CaptureMessage("error", "from: "+source+" , file: "+fpath+" , "+err.Error())
+}
+
 func (bs *BetterStackSender) CaptureException(err error, source string) {
 	bs.CaptureMessage("error", "from: "+source+", "+err.Error())
 }

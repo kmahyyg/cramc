@@ -153,13 +153,13 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 		// 120 seconds wait.
 		if wait4CloseCnt.Load() > 12 {
 			common.Logger.Error("Waiting for more than 120s to save previous workbook, cannot open.")
-			telemetry.CaptureException(customerrs.ErrExcelWaitingOpTimedOut, "Excel.Workbooks.Open.Wait4CntMaxThan12")
+			telemetry.CaptureExceptionWithPath(customerrs.ErrExcelWaitingOpTimedOut, "Excel.Workbooks.Open.Wait4CntMaxThan12", fPath)
 			return customerrs.ErrExcelWaitingOpTimedOut
 		}
 		// check count
 		ret, err := oleutil.GetProperty(w.workbooksHandle, "Count")
 		if err != nil {
-			telemetry.CaptureException(err, "Excel.Workbooks.Open.QueryCount")
+			telemetry.CaptureExceptionWithPath(err, "Excel.Workbooks.Open.QueryCount", fPath)
 			common.Logger.Error("Retrieving Count Error, most likely program in use, retry due to: " + err.Error())
 			wait4CloseCnt.Add(1)
 			time.Sleep(7 * time.Second)
@@ -186,7 +186,7 @@ func (w *ExcelWorker) OpenWorkbook(fPath string) error {
 	// https://stackoverflow.com/questions/14908372/how-to-suppress-update-links-warning
 	currentWorkbook, err := oleutil.CallMethod(w.workbooksHandle, "Open", fPath, 0)
 	if err != nil {
-		telemetry.CaptureException(err, "Excel.Application.Workbooks.Open: "+fPath)
+		telemetry.CaptureExceptionWithPath(err, "Excel.Application.Workbooks.Open", fPath)
 		return err
 	}
 	w.currentWorkbook = currentWorkbook.ToIDispatch()
@@ -251,12 +251,12 @@ func (w *ExcelWorker) SaveAndCloseWorkbook() error {
 	for {
 		if wait4CloseCnt.Load() > 12 {
 			common.Logger.Error("Waiting for more than 120s to save previous workbook, cannot close.")
-			telemetry.CaptureException(customerrs.ErrExcelWaitingOpTimedOut, "Excel.Workbooks.SaveAndClose.Wait4CntMaxThan12")
+			telemetry.CaptureExceptionWithPath(customerrs.ErrExcelWaitingOpTimedOut, "Excel.Workbooks.SaveAndClose.Wait4CntMaxThan12", w.curFilePath)
 			return customerrs.ErrExcelWaitingOpTimedOut
 		}
 		ret, err := oleutil.GetProperty(w.workbooksHandle, "Count")
 		if err != nil {
-			telemetry.CaptureException(err, "Excel.Workbooks.SaveAndClose.QueryCount")
+			telemetry.CaptureExceptionWithPath(err, "Excel.Workbooks.SaveAndClose.QueryCount", w.curFilePath)
 			common.Logger.Error("Retrieving Count Error, most likely program in use, retry due to: " + err.Error())
 			wait4CloseCnt.Add(1)
 			time.Sleep(8 * time.Second)
@@ -311,7 +311,7 @@ func (w *ExcelWorker) SanitizeWorkbook(targetOp string, destModuleName string) e
 					// remove all lines
 					_, err := codeMod.CallMethod("DeleteLines", 1, codeModLineCnt)
 					if err != nil {
-						telemetry.CaptureException(err, "Excel.WorkbookVBACodeModule.DeleteLines_"+w.curFilePath)
+						telemetry.CaptureExceptionWithPath(err, "Excel.WorkbookVBACodeModule.DeleteLines", w.curFilePath)
 						common.Logger.Error(err.Error())
 						return err
 					}
@@ -373,10 +373,9 @@ func (w *ExcelWorker) HandleIncomingTasks(jobQ chan *common.IPCSingleDocToBeSani
 					// timed out or unknown error
 					err5 := ctxForSani.Err()
 					if err5 != nil {
-						telemetry.CaptureException(err5, "ExcelWorker.HandleIncomingTasks.CtxDone")
+						telemetry.CaptureExceptionWithPath(err5, "ExcelWorker.HandleIncomingTasks.CtxDone", job.Path)
 						common.Logger.Error("Error returned in ExcelWorker.HandleIncomingTasks.CtxDone: " + err5.Error())
 					}
-					telemetry.CaptureMessage("error", "Timed out for cleaning up file: "+job.Path)
 					common.Logger.Error("Timed out for cleaning up file: " + job.Path)
 					common.Logger.Info("Go to force termination and instance rebuilt.")
 					// start rebuilding instances of worker
