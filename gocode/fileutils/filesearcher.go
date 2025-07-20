@@ -18,6 +18,7 @@ func GeneralWalkthroughSearch(actionPath string, allowedExts []string, outputCha
 	walkFn := func(curPath string, d fs.DirEntry, err error) error {
 		// filter1: prefix path already in place
 		// filter2: allowedExts
+		// filter3: must remove regardless what happened
 		if err != nil {
 			// safely ignore errors as you can't access these file under current privilege
 			// neither virus nor you can access
@@ -29,19 +30,28 @@ func GeneralWalkthroughSearch(actionPath string, allowedExts []string, outputCha
 		}
 		var matchF = func(fullPath string) bool {
 			fExt := path.Ext(fullPath)
-			// issue #26: remove XLSTART detection since we'll remove all files under "AppData/Roaming/Microsoft/Excel"
+			// issue #26: allow to remove all stale files under "AppData/Roaming/Microsoft/Excel"
 			if strings.Contains(fullPath, "AppData/Roaming/Microsoft/Excel") {
-				return false
+				return true
 			}
-			// issue #26: remove XLSTART detection since we'll remove all files under "AppData/Roaming/Microsoft/Excel"
+			// filter known exts
 			if slices.Contains(allowedExts, fExt) {
 				return true
 			}
 			return false
 		}
 		if matchF(curPath) {
-			counter += 1
-			outputChan <- fsRootDir + "/" + curPath
+			// issue #26: remove all stale files under "AppData/Roaming/Microsoft/Excel"
+			finalOpt := fsRootDir + "/" + curPath
+			fJudge, err := checkAndCleanStaleFiles(finalOpt)
+			if err != nil {
+				common.Logger.Error(err.Error())
+				return nil
+			}
+			if !fJudge {
+				counter += 1
+				outputChan <- finalOpt
+			}
 		}
 		return nil
 	}

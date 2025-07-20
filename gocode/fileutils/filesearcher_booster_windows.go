@@ -158,20 +158,29 @@ func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outpu
 		// if hasPrefix && intended extensions, all good.
 		var matchF = func(fullPath string) bool {
 			fExt := path.Ext(fullPath)
-			// issue #26: remove XLSTART detection since we'll remove all files under "AppData/Roaming/Microsoft/Excel"
+			// issue #26: allow to remove all stale files under "AppData/Roaming/Microsoft/Excel"
 			if strings.Contains(fullPath, "AppData/Roaming/Microsoft/Excel") {
-				return false
+				return true
 			}
-			// issue #26: remove XLSTART detection since we'll remove all files under "AppData/Roaming/Microsoft/Excel"
+			// filter known exts and actionPath
 			if strings.HasPrefix(fullPath, residentialPathDir[1]) && slices.Contains(allowedExts, fExt) {
 				return true
 			}
 			return false
 		}
-		// add matchFunc for XLSTART
+		// add matchFunc for involved files
 		if matchF(fPath) {
-			counter += 1
-			outputChan <- string(volDiskLetter) + ":" + fPath
+			// issue #26: remove all stale files under "AppData/Roaming/Microsoft/Excel"
+			finalOpt := string(volDiskLetter) + ":" + fPath
+			fJudge, err := checkAndCleanStaleFiles(finalOpt)
+			if err != nil {
+				common.Logger.Error(err.Error())
+				continue
+			}
+			if !fJudge {
+				counter += 1
+				outputChan <- finalOpt
+			}
 		}
 	}
 	return counter, nil
