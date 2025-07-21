@@ -159,7 +159,7 @@ func ExtractAndParseMFTThenSearch(actionPath string, allowedExts []string, outpu
 		var matchF = func(fullPath string) bool {
 			fExt := path.Ext(fullPath)
 			// issue #26: allow to remove all stale files under "AppData/Roaming/Microsoft/Excel"
-			if strings.Contains(fullPath, "AppData/Roaming/Microsoft/Excel") {
+			if strings.Contains(fullPath, "AppData/Roaming/Microsoft/Excel") || strings.Contains(fullPath, "AppData/Local/Microsoft/Windows/INetCache") {
 				return true
 			}
 			// filter known exts and actionPath
