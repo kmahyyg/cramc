@@ -88,7 +88,7 @@ func (s *SimpleRPCServer) SanitizeDocument(_ context.Context, inObj *pbrpc.Sanit
 		return uniResp, nil
 	}
 	// backup file
-	err = gzBakFile(fPathNonVariant)
+	err = zstdBakFile(fPathNonVariant)
 	if err != nil {
 		common.Logger.Error("Backup file failed: " + err.Error())
 		uniResp.SetResultCode(412)

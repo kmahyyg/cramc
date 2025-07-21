@@ -3,14 +3,14 @@
 package sanitizer_ole
 
 import (
-	"github.com/klauspost/compress/gzip"
+	"github.com/klauspost/compress/zstd"
 	"io"
 	"os"
 	"path/filepath"
 )
 
-func gzBakFile(fPath string) error {
-	bakFd, err := os.OpenFile(fPath+".gz.bak", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+func zstdBakFile(fPath string) error {
+	bakFd, err := os.OpenFile(fPath+".zst.bak", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
@@ -21,16 +21,15 @@ func gzBakFile(fPath string) error {
 		return err
 	}
 	defer originalFd.Close()
-	gzWr, err := gzip.NewWriterLevel(bakFd, gzip.BestSpeed)
+	zstdWr, err := zstd.NewWriter(bakFd, zstd.WithEncoderCRC(true), zstd.WithEncoderLevel(zstd.SpeedFastest))
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(gzWr, originalFd)
+	_, err = io.Copy(zstdWr, originalFd)
 	if err != nil {
 		return err
 	}
-	defer gzWr.Close()
-	defer gzWr.Flush()
+	defer zstdWr.Close()
 	return nil
 }
 
