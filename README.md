@@ -7,26 +7,23 @@ My Crappy Macro Cleaner - For Sanitizing Malicious Macro in Office Files when AV
 
 # Usage
 
-- At Least Windows 10.
-- To ensure availability, this program is recommended to run under Administrator and in path `%ProgramData%\CRAMC`  (optional)
-- Do not put this program in cloud-storage folder.
+- You must run at least Windows 10.
+- (optional) To ensure availability, this program is recommended to run under Administrator and in path `%ProgramData%\CRAMC` .
+- DO NOT put this program in cloud-storage folder.
+- Please whitelist its path in CrowdStrike due to false-positive ML detection.
+- It's designed to run under either privileged or unprivileged situation. You don't have to manually elevate.
+- Please always try to run the latest version of the program.
+- It's recommended to run [cleanup_stale.ps1](./assets/cleanup_stale.ps1) with unprivileged target user before starting the program.
+- Download `cramc_go_{numeric ID}.zip` and extract all files to a new empty folder, run `cramc_aio.exe`.
+- Files under `C:\TMP` and `%AppData%\Microsoft\Excel` and `%LocalAppData%\Microsoft\Windows\INetCache` will be removed.
 
 # Disclaimer
 
 Backup your data before you use it. No warranty at all.
 
-# Developer Notes
+# Compile
 
-- Only merged and compiled yara rules should be distributed
-- Yara-X is always bundled
-- `cramc_db.json` is k-v store, k should be rule name, v should be operation
-- Before remediation, original file should always be backed-up.
-- `databaseVersion` is for both cleanup db and yara rules.
-- [Figma](https://www.figma.com/board/DGvlxo4XXQTZ8skqmJFFUh/CRAMC) link to control flow.
-- Always assume users are unprivileged, auto-request elevation based on sys manifest.
-- `xl/vbaProject.bin` and `.xls` is OLE compound file (binary and proprietary format), format standard [here](https://learn.microsoft.com/en-us/openspecs/office_file_formats/MS-OFFFFLP/6ae2fd93-51fc-4e75-a54a-1b175c627b51) .
-- Unfortunately, due to cost-effectiveness consideration and I'm developing this alone, I had to take COM+ API approach to sanitize infected files, which made this software completely rely on MS Excel executable and broke its cross-platform ability.
-- Maybe worth a read: `https://attack.mitre.org/techniques/T1564/007/`
+- https://virustotal.github.io/yara-x/docs/api/c/c-/
 
 Since Yara-X introduced more strict rule syntax verifier, we use git pre-commit hook to format your rules:
 ```bash
@@ -35,9 +32,7 @@ cp ./assets/pre-commit-hooks.sh ./.git/hooks/pre-commit
 chmod +x ./.git/hooks/pre-commit
 ```
 
-# Compile
-
-- https://virustotal.github.io/yara-x/docs/api/c/c-/
+For more detailed instruction about compiling on Ubuntu (or any Debian-based distros), please refer to [CI configuration](./.github/workflows/v4_rustbuild.yml) .
 
 # License
 
