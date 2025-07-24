@@ -1,5 +1,5 @@
 {
-    "version": 20250701005,
+    "version": 20250724006,
     "solutions":[
         {
             "name": "VirusX97MSlackerF",
@@ -11,6 +11,7 @@
                 {"action": "rm_replaceDir_setRO", "type": "file", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1"},
                 {"action": "rm_replaceDir_setRO", "type": "file", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1.xlsm"},
                 {"action": "rm_replaceDir_setRO", "type": "file", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\Book1.xlsb"},
+                {"action": "replaceFile_setRO", "type": "dir", "dest": "C:\\TMP"},
                 {"action": "setRO", "type": "dir", "dest": "${HOME}\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART"}
             ]
         },

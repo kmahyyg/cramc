@@ -18,11 +18,8 @@ func checkAndCleanStaleFiles(fPath string) (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		err = os.RemoveAll(fAbsPath)
-		if err != nil {
-			return false, err
-		}
-		common.Logger.Info("Removed stale file under ExcelAppData: " + fAbsPath)
+		_ = os.RemoveAll(fAbsPath)
+		common.Logger.Info("Tried to remove stale file under: " + fAbsPath)
 		return true, nil
 	}
 	return false, nil
