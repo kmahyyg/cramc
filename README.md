@@ -42,8 +42,32 @@ For yara rules: Licensed under CC BY-NC-SA 4.0 International
 
 # Credit
 
-Thanks to:
-- https://github.com/VirusTotal/yara-x (BSD-3)
+Thanks to those libraries:
+
+BSD-3-Clause:
+- github.com/VirusTotal/yara-x
+- github.com/google/uuid
+- github.com/klauspost/compress/internal/snapref
+- github.com/shirou/gopsutil/v4
+- `golang.org/x/*`
+- google.golang.org/protobuf
+
+Apache-2.0:
+- github.com/klauspost/compress
+- google.golang.org/genproto/googleapis/rpc/status
+- google.golang.org/grpc
+- www.velocidex.com/golang/go-ntfs/parser
+
+MIT:
+- github.com/klauspost/compress/zstd/internal/xxhash
+- github.com/Microsoft/go-winio
+- github.com/yusufpapurcu/wmi
+
+Others:
+- github.com/davecgh/go-spew (ISC)
+
+Mixed:
+- github.com/microsoft/windows-rs (Apache-2.0, MIT)
 
 # Privacy Notice
 
