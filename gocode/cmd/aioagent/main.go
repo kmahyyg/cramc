@@ -38,10 +38,10 @@ const (
 )
 
 var (
-	flActionPath      = flag.String("actionPath", "C:\\Users", "The path to the files you want to scan. To balance scanning speed and false positive rate, we recommend to scan User profile only. By default, we use recursive search.")
+	flActionPath      = flag.String("actionPath", "C:\\Users", "The path to the files you want to scan. To balance scanning speed and false positive rate, we recommend to scan User Profile folder only. By default, we use recursive search.")
 	flDryRun          = flag.Bool("dryRun", false, "Scan only, take no action on files, record action to be taken in log.")
 	flEnableHardening = flag.Bool("enableHardening", true, "Enables hardening measure to prevent further infection. Windows OS only.")
-	flNoDiskScan      = flag.Bool("noDiskScan", false, "Do not scan files on disk, but supply file list. If platform is not Windows x86_64, yara won't work, you have to set this to true and then run Yara scanner against our rules and save output to ipt_yrscan.lst. Yara-X scanner is not supported yet.")
+	flNoDiskScan      = flag.Bool("noDiskScan", false, "Do not scan files on disk, but supply file list. If platform is not Windows x86_64, yara-x won't work, you have to set this to true and then run Yara-X scanner against our rules and save output to ipt_yrscan.lst.")
 	allowedExts       = []string{".xls", ".xlsx", ".xlsm", ".xlsb"}
 	flHelp            = flag.Bool("help", false, "Show help")
 	flNoPriv          = flag.Bool("noPriv", false, "Do not run as privileged user, even you are privileged.")
