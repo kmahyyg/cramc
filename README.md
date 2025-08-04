@@ -13,7 +13,7 @@ My Crappy Macro Cleaner - For Sanitizing Malicious Macro in Office Files when AV
 - Please whitelist its path in CrowdStrike due to false-positive ML detection.
 - It's designed to run under either privileged or unprivileged situation. You don't have to manually elevate.
 - Please always try to run the latest version of the program.
-- It's recommended to run [cleanup_stale.ps1](./assets/cleanup_stale.ps1) with unprivileged target user before starting the program.
+- It's recommended to run [cleanup_stale.ps1](assets/dist/cleanup_stale.ps1) or [1drv_desync_cleanup_stale.ps1](assets/dist/1drv_desync_cleanup_stale.ps1) with unprivileged target user before starting the program. **If your OneDrive process has already been killed, please use `1drv_desync_cleanup_stale.ps1` and REMOVE INFECTED FILES from web before you spawn OneDrive again.**
 - Download `cramc_go_{numeric ID}.zip` and extract all files to a new empty folder, run `cramc_aio.exe`.
 - Files under `C:\TMP` and `%AppData%\Microsoft\Excel` and `%LocalAppData%\Microsoft\Windows\INetCache` will be removed.
 
