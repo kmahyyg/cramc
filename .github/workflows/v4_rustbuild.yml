@@ -188,6 +188,7 @@ jobs:
           artifactErrorsFailBuild: true
           body: |
             We recommend everyone stays on the latest version. 
+            **PLEASE READ README FILE IN REPOSITORY BEFORE CONTINUE!**
             To use, download `*.zip` and extract to a new empty folder and execute `cramc_aio.exe` under that folder. 
             Program will try auto-elevate based on your current privileges. 
             This version uses totally different scanner engine, please do not reuse rules from v0.4.x.
