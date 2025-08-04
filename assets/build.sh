@@ -112,10 +112,13 @@ elif [[ "$1" == "windows" ]]; then
 
         GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
         -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\"" -o ../bin/privhelper.exe ./cmd/privhelper
+        GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
+        -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\"" -o ../bin/bakrestorer.exe ./cmd/bakrestorer
 
         # only compress in prod release
         upx -9 ../bin/cramc_aio.exe
         upx -9 ../bin/privhelper.exe
+        upx -9 ../bin/bakrestorer.exe
     elif [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
         GOOS=windows GOARCH=amd64 CGO_ENABLED=1 \
         PKG_CONFIG_PATH=${PROJ_PREFIX_WIN_AMD64}/lib/pkgconfig CC=x86_64-w64-mingw32-gcc \
@@ -124,6 +127,8 @@ elif [[ "$1" == "windows" ]]; then
 
         GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -gcflags 'all=-N -l' \
         -ldflags "-X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\"" -o ../bin/privhelper.exe ./cmd/privhelper
+        GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -gcflags 'all=-N -l' \
+        -ldflags "-X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\"" -o ../bin/bakrestorer.exe ./cmd/bakrestorer
     fi
 
     # check results for debug

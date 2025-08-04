@@ -150,14 +150,21 @@ jobs:
           cd ${GITHUB_WORKSPACE}/cramc/bin
           tree .
           sha256sum ./*
-          zip -r cramc_go_${GITHUB_RUN_ID}.zip privhelper.exe cramc_aio.exe cramc_db.bin unified.yar.bin *.ps1
-      - name: Upload All Artifacts
+          zip -r cramc_go_${GITHUB_RUN_ID}.zip privhelper.exe cramc_aio.exe *.bin *.ps1
+      - name: Upload necessary artifact 1 - cramc_aio
         uses: actions/upload-artifact@v4
         with:
           name: cramc_go
           retention-days: 30
           if-no-files-found: error
           path: ${{ github.workspace }}/cramc/bin/cramc_go_${{ github.run_id }}.zip
+      - name: Upload optional artifact 2 - bakrestorer
+        uses: actions/upload-artifact@v4
+        with:
+          name: bakrestorer
+          retention-days: 30
+          if-no-files-found: error
+          path: ${{ github.workspace }}/cramc/bin/bakrestorer.exe
 
   release-to-public:
     needs:
@@ -192,6 +199,7 @@ jobs:
             This version uses totally different scanner engine, please do not reuse rules from v0.4.x.
             **For CrowdStrike User, please whitelist `privhelper.exe` if you plan to spawn it using SYSTEM context.**
             PrivHelper logging and lock files are saved to: `%UserProfile%\.cramc\`
+            BakRestorer is built for restoring original file from encrypted zstd compression file.
           allowUpdates: true
           prerelease: true
           artifacts: /tmp/relbuild/${{ github.repository_owner }}/*
