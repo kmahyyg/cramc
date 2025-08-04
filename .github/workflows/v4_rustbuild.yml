@@ -140,6 +140,7 @@ jobs:
         run: |
           cd ${GITHUB_WORKSPACE}/cramc
           ./assets/build.sh windows amd64
+          cp -ar ./assets/dist/*.ps1 ./bin/
           tree ./bin
       - name: Download artifacts previously generated
         uses: actions/download-artifact@v4
@@ -151,7 +152,7 @@ jobs:
           cd ${GITHUB_WORKSPACE}/cramc/bin
           tree .
           sha256sum ./*
-          zip -r cramc_go_${GITHUB_RUN_ID}.zip privhelper.exe cramc_aio.exe cramc_db.bin unified.yar.bin
+          zip -r cramc_go_${GITHUB_RUN_ID}.zip privhelper.exe cramc_aio.exe cramc_db.bin unified.yar.bin *.ps1
       - name: Upload All Artifacts
         uses: actions/upload-artifact@v4
         with:
