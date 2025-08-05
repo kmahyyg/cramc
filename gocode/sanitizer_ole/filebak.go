@@ -1,8 +1,10 @@
-//go:build windows
-
 package sanitizer_ole
 
 import (
+	"bytes"
+	"cramc_go/common"
+	"cramc_go/cryptutils"
+	"encoding/hex"
 	"github.com/klauspost/compress/zstd"
 	"io"
 	"os"
@@ -21,7 +23,10 @@ func zstdBakFile(fPath string) error {
 		return err
 	}
 	defer originalFd.Close()
-	zstdWr, err := zstd.NewWriter(bakFd, zstd.WithEncoderLevel(zstd.SpeedFastest))
+
+	// buffer for further encryption
+	compressedBuf := bytes.NewBuffer(nil)
+	zstdWr, err := zstd.NewWriter(compressedBuf, zstd.WithEncoderLevel(zstd.SpeedFastest))
 	if err != nil {
 		return err
 	}
@@ -29,7 +34,21 @@ func zstdBakFile(fPath string) error {
 	if err != nil {
 		return err
 	}
-	defer zstdWr.Close()
+	zstdWr.Close()
+	// from buffer, implement encryption
+	keyBytes, err := hex.DecodeString(common.HexEncryptionPassword)
+	if err != nil {
+		return err
+	}
+	ctFull, err := cryptutils.XChacha20Encrypt(keyBytes, []byte(fPath), compressedBuf.Bytes())
+	if err != nil {
+		return err
+	}
+	_, err = bakFd.Write(ctFull)
+	if err != nil {
+		return err
+	}
+	compressedBuf.Reset()
 	return nil
 }
 
