@@ -19,6 +19,7 @@ var (
 	fDec     = flag.Bool("dec", false, "decrypt")
 	fInFile  = flag.String("in", "unset-placeholder", "input file")
 	fOutFile = flag.String("out", "unset-placeholder", "output file")
+	fCmpInfo = flag.Bool("cmpinfo", false, "show info of encrypted container")
 )
 
 const (
@@ -37,6 +38,22 @@ func main() {
 	common.Logger.Info("DevReleaser for CRAMC, Don't Forget to Bump Database/UpdateChecker Version!")
 	common.Logger.Info("Current Version: " + common.VersionStr)
 	common.Logger.Info("Please put this binary with the same folder of yrules/ and cramc_db.json before continue.")
+	if *fCmpInfo {
+		if !fileutils.CheckFileLogicalExists(*fInFile) {
+			common.Logger.Log(context.TODO(), logging.LevelFatal, "Input file not found: "+*fInFile)
+			panic(customerrs.ErrInvalidInput)
+		}
+		inData, err := os.ReadFile(*fInFile)
+		if err != nil {
+			panic(err)
+		}
+		fassoD, msgV, kCRC, amLen, amData, err := cryptutils.GetAssoData(inData)
+		if err != nil {
+			panic(err)
+		}
+		cryptutils.InterpreteAssoData(fassoD, msgV, kCRC, amLen, amData)
+		return
+	}
 	if *fComp {
 		err := os.MkdirAll("yrules/bin/", 0755)
 		if err != nil {
@@ -55,7 +72,7 @@ func main() {
 	}
 	if *fDec || *fEnc {
 		if !fileutils.CheckFileLogicalExists(*fInFile) {
-			common.Logger.Log(context.TODO(), logging.LevelFatal, "Input file not found"+*fInFile)
+			common.Logger.Log(context.TODO(), logging.LevelFatal, "Input file not found: "+*fInFile)
 			panic(customerrs.ErrInvalidInput)
 		}
 		inData, err := os.ReadFile(*fInFile)
@@ -76,13 +93,13 @@ func main() {
 		common.Logger.Info("Password Prepared.")
 		var outD []byte
 		if *fEnc {
-			outD, err = cryptutils.XChacha20Encrypt(passwd, inData)
+			outD, err = cryptutils.XChacha20Encrypt(passwd, []byte(*fInFile), inData)
 			if err != nil {
 				panic(err)
 			}
 			common.Logger.Info("Input file Encrypted.")
 		} else if *fDec {
-			outD, err = cryptutils.XChacha20Decrypt(passwd, inData)
+			_, outD, err = cryptutils.XChacha20Decrypt(passwd, inData)
 			if err != nil {
 				panic(err)
 			}
