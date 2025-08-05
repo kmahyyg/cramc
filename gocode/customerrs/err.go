@@ -14,6 +14,7 @@ var (
 	ErrDeviceInaccessible = errors.New("disk device is inaccessible")
 
 	ErrInvalidInput                 = errors.New("invalid input")
+	ErrOutputAlreadyExists          = errors.New("output file already exists, won't overwrite")
 	ErrFallbackToCompatibleSolution = errors.New("cannot using boosted solution, fallback")
 
 	ErrActionPathMustBeDir   = errors.New("actionPath must be a path to directory")
