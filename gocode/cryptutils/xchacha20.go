@@ -87,7 +87,7 @@ func XChacha20Decrypt(key []byte, mixedct []byte) (addimsg []byte, pt []byte, er
 
 	// plaintext length = all - IV size - AEAD Tag size - AEAD associated data size
 	pt = make([]byte, len(mixedct)-chacha20poly1305.NonceSizeX-chacha20poly1305.Overhead-len(fAssoData))
-	ptFinal, err := ciph.Open(nil, iv, mixedct[chacha20poly1305.NonceSizeX+crc32.Size:], fAssoData)
+	ptFinal, err := ciph.Open(nil, iv, mixedct[chacha20poly1305.NonceSizeX+len(fAssoData):], fAssoData)
 	if err != nil {
 		return nil, nil, err
 	}
