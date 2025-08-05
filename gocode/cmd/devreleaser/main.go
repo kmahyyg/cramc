@@ -51,7 +51,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		cryptutils.InterpreteAssoData(fassoD, msgV, kCRC, amLen, amData)
+		_ = cryptutils.InterpreteAssoData(fassoD, msgV, kCRC, amLen, amData)
 		return
 	}
 	if *fComp {
