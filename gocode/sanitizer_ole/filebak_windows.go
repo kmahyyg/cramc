@@ -21,7 +21,7 @@ func zstdBakFile(fPath string) error {
 		return err
 	}
 	defer originalFd.Close()
-	zstdWr, err := zstd.NewWriter(bakFd, zstd.WithEncoderCRC(true), zstd.WithEncoderLevel(zstd.SpeedFastest))
+	zstdWr, err := zstd.NewWriter(bakFd, zstd.WithEncoderLevel(zstd.SpeedFastest))
 	if err != nil {
 		return err
 	}
