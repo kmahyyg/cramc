@@ -20,8 +20,10 @@ For other files that are generated during runtime, file original path will be ap
 
 ### General layout
 
+layout version = 1 :
+
 ```
-|  24 bytes  |        4 bytes        |       4 bytes           |            X bytes             |     Y bytes     |  16 bytes |
-|     IV     |                                  Associated Data                                 |    Ciphertext   |  AEAD Tag |
-| IV (Nonce) |  KCRC32 of plaintext  | length of original path | original length (byte, UTF-8)  |  Encrypted data |  AEAD Tag |
+|  24 bytes  |           4 bytes         |  1 byte |       4 bytes           |            X bytes             |     Y bytes     |  16 bytes |
+|     IV     |  Associated Data (Part 1) |               Additional Message in Associated Data                |    Ciphertext   |  AEAD Tag |
+| IV (Nonce) |     KCRC32 of plaintext   | version | length of original path | original length (byte, UTF-8)  |  Encrypted data |  AEAD Tag |
 ```

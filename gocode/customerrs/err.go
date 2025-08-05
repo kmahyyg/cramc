@@ -38,4 +38,6 @@ var (
 
 	ErrRpcConnectionNotEstablished = errors.New("rpc connection not established")
 	ErrRpcResponseUnexpected       = errors.New("rpc response unexpected")
+
+	ErrEncSchemaMismatch = errors.New("file version does NOT match bundled encryption schema version")
 )
