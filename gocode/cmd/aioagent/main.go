@@ -118,7 +118,7 @@ func main() {
 		common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
 		os.Exit(-1)
 	}
-	originalCleanupDB, err := cryptutils.XChacha20Decrypt(hPwdBytes, databaseEncBin)
+	_, originalCleanupDB, err := cryptutils.XChacha20Decrypt(hPwdBytes, databaseEncBin)
 	if err != nil {
 		common.Logger.Info("Could not decrypt database.")
 		telemetry.CaptureException(err, "MainDecryptCleanupDB")
@@ -367,7 +367,7 @@ func main() {
 			os.Exit(-1)
 		}
 		common.Logger.Info("Compiled yara rules read.")
-		yrRuleBin, err := cryptutils.XChacha20Decrypt(hPwdBytes, yrRulesEncBin)
+		_, yrRuleBin, err := cryptutils.XChacha20Decrypt(hPwdBytes, yrRulesEncBin)
 		if err != nil {
 			common.Logger.Info("Could not decrypt yara compiled rules file.")
 			telemetry.CaptureException(err, "MainDecryptYaraRules")
