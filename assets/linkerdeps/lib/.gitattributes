@@ -1,1 +1,2 @@
 libwindows.0.52.0.a filter=lfs diff=lfs merge=lfs -text
+libwindows.0.53.0.a filter=lfs diff=lfs merge=lfs -text
