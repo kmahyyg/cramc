@@ -1,10 +1,10 @@
 {
   "depfiles": [
     {
-      "file": "lib/libwindows.0.52.0.a",
+      "file": "lib/libwindows.0.53.0.a",
       "comment": "x86_64-linux_host-windows_gnu",
-      "srcurl": "https://github.com/microsoft/windows-rs/raw/b62b802bae534fdaed3fa25b6838dc3001b6d084/crates/targets/x86_64_gnu/lib/libwindows.0.52.0.a",
-      "sha256": "111a6f2a6284312da2f2d6aba570e5c4f5c50e481203d67f5c7a018f7cf14c33"
+      "srcurl": "https://github.com/microsoft/windows-rs/raw/5888c8c472ab9b35c3159c2912bb045dc3020a82/crates/targets/x86_64_gnu/lib/libwindows.0.53.0.a",
+      "sha256": "95b200f691fd75e562be82c3c07feddc06d92bb093dbc396e2294fe8bfb84341"
     }
   ]
 }
