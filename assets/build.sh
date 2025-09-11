@@ -94,10 +94,10 @@ elif [[ "$1" == "windows" ]]; then
     # build yara-x for windows
     cd "${YARAX_SRC}"
     cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --target x86_64-pc-windows-gnu --prefix=${PROJ_PREFIX_WIN_AMD64}
-    # workaround for linker (windows-rs 0.52.0)
+    # workaround for linker (windows-rs 0.53.0)
     cd "${PROJ_PREFIX_WIN_AMD64}/lib"
-    cp -ar "${GITHUB_WORKSPACE}/cramc/assets/linkerdeps/lib/libwindows.0.52.0.a" .
-    # curl -L -O https://github.com/microsoft/windows-rs/raw/b62b802bae534fdaed3fa25b6838dc3001b6d084/crates/targets/x86_64_gnu/lib/libwindows.0.52.0.a
+    cp -ar "${GITHUB_WORKSPACE}/cramc/assets/linkerdeps/lib/libwindows.0.53.0.a" .
+    # curl -L -O https://github.com/microsoft/windows-rs/raw/COMMIT HASH/crates/targets/x86_64_gnu/lib/libwindows.0.VERSION.0.a
     # generate exe winres
     cd ${GITHUB_WORKSPACE}/cramc/gocode/cmd/aioagent
     GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go-winres make --product-version=git-tag --file-version=git-tag
