@@ -40,7 +40,7 @@ type TSender interface {
 	CaptureExceptionWithPath(err error, source string, fpath string)
 }
 
-func Init(relVersion string) {
+func Init(relVersion string, acquireHII bool) {
 	var err error
 	currentRelVersion = relVersion
 	currentHostname, err = os.Hostname()
@@ -56,7 +56,11 @@ func Init(relVersion string) {
 	} else {
 		currentUsername = "unknown-user"
 	}
-	currentIP = getCurrentPublicIP()
+	if acquireHII {
+		currentIP = getCurrentPublicIP()
+	} else {
+		currentIP = "not-acquired"
+	}
 	hostInited.Store(true)
 }
 

@@ -64,9 +64,11 @@ func main() {
 	defer logfd.Sync()
 
 	// init telemetry
-	telemetry.Init(common.VersionStr)
-	bsSender := telemetry.NewBetterStackSender(betterStackURL, betterStackBearerToken)
-	bsSender.SetDefaultSender()
+	telemetry.Init(common.VersionStr, false)
+	teleNoOpS := telemetry.NewNoOpSender()
+	teleNoOpS.SetDefaultSender()
+	//bsSender := telemetry.NewBetterStackSender(betterStackURL, betterStackBearerToken)
+	//bsSender.SetDefaultSender()
 
 	// startup behavior
 	common.Logger.Info("Welcome to CRAMC!")
