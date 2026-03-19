@@ -32,8 +32,6 @@ var (
 
 	ErrYaraXCompilationFailure = errors.New("yara-x rule compilation failed")
 
-	ErrTelemetryMustBeInitedFirst = errors.New("telemetry sender must be initialized first")
-
 	ErrRunsOnSystemMachineAccount = errors.New("runs under NT AUTHORITY\\SYSTEM account, refuse to continue")
 	ErrPrivHelperLockExists       = errors.New("privhelper lock exists, if you believe it's wrong, please delete lock file")
 

@@ -4,7 +4,6 @@ import (
 	"archive/zip"
 	"bytes"
 	"cramc_go/common"
-	"cramc_go/telemetry"
 	yarax "github.com/VirusTotal/yara-x/go"
 	"io"
 	"os"
@@ -18,7 +17,6 @@ func LoadRuleAndCreateYaraScanner(rules []byte) (*yarax.Scanner, error) {
 	yrrRd := bytes.NewReader(rules)
 	yrRules, err := yarax.ReadFrom(yrrRd)
 	if err != nil {
-		telemetry.CaptureException(err, "LoadRuleAndCreateYaraScanner")
 		return nil, err
 	}
 	yrs := yarax.NewScanner(yrRules)

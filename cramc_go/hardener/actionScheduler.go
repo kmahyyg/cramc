@@ -3,7 +3,6 @@ package hardener
 import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
-	"cramc_go/telemetry"
 	"fmt"
 )
 
@@ -62,8 +61,7 @@ func takeProperHardenAction(hAction *common.HardeningAction) {
 		case "setRO":
 			f_harden_SetRO(act.Type, fStr)
 		default:
-			telemetry.CaptureMessage("error", "Unsupported hardening action type: "+act.Action)
-			common.Logger.Warn("Unsupported action type: " + act.Action)
+			common.Logger.Warn("Unsupported hardening action type: " + act.Action)
 		}
 	}
 	return

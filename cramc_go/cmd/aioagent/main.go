@@ -11,8 +11,6 @@ import (
 	"cramc_go/hardener"
 	"cramc_go/logging"
 	"cramc_go/platform/windoge_utils"
-	"cramc_go/sanitizer_ole"
-	"cramc_go/telemetry"
 	"cramc_go/updchecker"
 	"cramc_go/yarax_scanner"
 	"encoding/hex"
@@ -63,13 +61,6 @@ func main() {
 	defer logfd.Close()
 	defer logfd.Sync()
 
-	// init telemetry
-	// telemetry.Init(common.VersionStr, false)
-	// teleNoOpS := telemetry.NewNoOpSender()
-	// teleNoOpS.SetDefaultSender()
-	//bsSender := telemetry.NewBetterStackSender(betterStackURL, betterStackBearerToken)
-	//bsSender.SetDefaultSender()
-
 	// startup behavior
 	common.Logger.Info("Welcome to CRAMC!")
 	common.Logger.Info("Current Version: " + common.VersionStr)
@@ -78,7 +69,7 @@ func main() {
 	defer func() {
 		if r := recover(); r != nil {
 			debug.PrintStack()
-			telemetry.CaptureMessage("panic", fmt.Sprintf("Panic on [%v], stacktrace: %s", r, string(debug.Stack())))
+			common.Logger.Log(context.TODO(), logging.LevelFatal, fmt.Sprintf("Panic on [%v], check stacktrace: %s.", r, string(debug.Stack())))
 			os.Exit(1)
 		}
 	}()
@@ -123,7 +114,6 @@ func main() {
 	_, originalCleanupDB, err := cryptutils.XChacha20Decrypt(hPwdBytes, databaseEncBin)
 	if err != nil {
 		common.Logger.Info("Could not decrypt database.")
-		telemetry.CaptureException(err, "MainDecryptCleanupDB")
 		common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
 		os.Exit(-1)
 	}
@@ -139,8 +129,6 @@ func main() {
 	// dry run is always handled by callee to make sure behavior consistent.
 	common.DryRunOnly = *flDryRun
 	common.EnableHardening = *flEnableHardening
-	// record start
-	telemetry.CaptureMessage("info", "Program successfully started.")
 	// kill M365 office processes on windows
 	_, _ = windoge_utils.KillAllOfficeProcesses()
 	common.Logger.Info("Triggered M365 Office processes killer.")
@@ -223,7 +211,6 @@ func main() {
 				}
 				if err != nil {
 					common.Logger.Error("Unknown error happened: " + err.Error())
-					telemetry.CaptureException(err, "MFTSearcher")
 					common.Logger.Log(context.TODO(), logging.LevelFatal, customerrs.ErrUnknownInternalError.Error())
 					os.Exit(2)
 				}
@@ -262,7 +249,6 @@ func main() {
 				// should not encounter some unexpected error
 				if err != nil {
 					common.Logger.Error("Unwanted error in GeneralSearcher: " + err.Error())
-					telemetry.CaptureException(err, "GenrealWalkthroughSearcher")
 					common.Logger.Log(context.TODO(), logging.LevelFatal, customerrs.ErrUnknownInternalError.Error())
 					os.Exit(1)
 				}
@@ -281,7 +267,6 @@ func main() {
 		if errors.Is(err, customerrs.ErrUnsupportedPlatform) {
 			common.Logger.Info("Due to the nature of OLE, we can only support this on Windows. Aborting for sanitization.")
 		} else if err != nil {
-			telemetry.CaptureException(err, "MainStartSanitizer")
 			common.Logger.Error("Unknown Internal Error Happened in Sanitizer: " + err.Error())
 		}
 		common.Logger.Info("Sanitizer finished.")
@@ -372,7 +357,6 @@ func main() {
 		_, yrRuleBin, err := cryptutils.XChacha20Decrypt(hPwdBytes, yrRulesEncBin)
 		if err != nil {
 			common.Logger.Info("Could not decrypt yara compiled rules file.")
-			telemetry.CaptureException(err, "MainDecryptYaraRules")
 			common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
 			os.Exit(-1)
 		}
@@ -380,7 +364,6 @@ func main() {
 		yrScanner, err := yarax_scanner.LoadRuleAndCreateYaraScanner(yrRuleBin)
 		if err != nil {
 			common.Logger.Info("Unable to create yara scanner with provided rule.")
-			telemetry.CaptureException(err, "MainLoadRuleAndCreateYaraScanner")
 			common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
 			os.Exit(-1)
 		}
