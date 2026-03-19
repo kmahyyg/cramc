@@ -65,7 +65,6 @@ BSD-3-Clause:
 - github.com/klauspost/compress/internal/snapref
 - github.com/shirou/gopsutil/v4
 - `golang.org/x/*`
-- google.golang.org/protobuf
 
 Apache-2.0:
 - github.com/klauspost/compress
