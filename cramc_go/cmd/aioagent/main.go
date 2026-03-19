@@ -30,9 +30,6 @@ const (
 	databasePath  = "cramc_db.bin"
 	yaraRulesPath = "unified.yar.bin"
 	iptFileList   = "ipt_yrscan.lst"
-
-	betterStackURL         = "https://s1358347.eu-nbg-2.betterstackdata.com"
-	betterStackBearerToken = "26Y9ahkqDMsQgLN9yTb1JETU"
 )
 
 var (
@@ -42,7 +39,6 @@ var (
 	flNoDiskScan      = flag.Bool("noDiskScan", false, "Do not scan files on disk, but supply file list. If platform is not Windows x86_64, yara-x won't work, you have to set this to true and then run Yara-X scanner against our rules and save output to ipt_yrscan.lst.")
 	allowedExts       = []string{".xls", ".xlsx", ".xlsm", ".xlsb"}
 	flHelp            = flag.Bool("help", false, "Show help")
-	flNoPriv          = flag.Bool("noPriv", false, "Do not run as privileged user, even you are privileged.")
 	flSkipUpdChk      = flag.Bool("skipUpdChk", false, "Development only: set to true to skip update checker.")
 )
 
