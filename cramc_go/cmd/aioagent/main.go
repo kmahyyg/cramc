@@ -64,9 +64,9 @@ func main() {
 	defer logfd.Sync()
 
 	// init telemetry
-	telemetry.Init(common.VersionStr, false)
-	teleNoOpS := telemetry.NewNoOpSender()
-	teleNoOpS.SetDefaultSender()
+	// telemetry.Init(common.VersionStr, false)
+	// teleNoOpS := telemetry.NewNoOpSender()
+	// teleNoOpS.SetDefaultSender()
 	//bsSender := telemetry.NewBetterStackSender(betterStackURL, betterStackBearerToken)
 	//bsSender.SetDefaultSender()
 
