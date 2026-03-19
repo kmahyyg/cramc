@@ -19,7 +19,7 @@
         },
         "description": "CRAppy Macro Cleaner",
         "minimum-os": "win10",
-        "execution-level": "highest",
+        "execution-level": "",
         "ui-access": false,
         "auto-elevate": false,
         "dpi-awareness": "system",
