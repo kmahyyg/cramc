@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	updCheckerUrl = "https://github.com/kmahyyg/cramc/raw/refs/heads/v4_2_grpc/assets/latest_version.json"
+	updCheckerUrl = "https://github.com/kmahyyg/cramc/raw/refs/heads/v5_overhaul/assets/latest_version.json"
 )
 
 type LatestVersion struct {
@@ -25,7 +25,7 @@ func CheckUpdateFromInternet() (*LatestVersion, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36 Go-CRAMC-UpdateChecker/1.0")
+	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36 Go-CRAMC-UpdateChecker/1.0")
 	resp, err := hClient.Do(req)
 	if err != nil {
 		return nil, err
