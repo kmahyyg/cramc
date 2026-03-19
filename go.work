@@ -1,0 +1,6 @@
+go 1.26
+
+use (
+	cramc_go
+	vbaModifier
+)
