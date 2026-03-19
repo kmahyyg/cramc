@@ -11,8 +11,6 @@ rule VirusX97MSlackerF {
     $comment_m4           = "'OOO"
     $comment_m5           = ") = \"BOOK1\" Then"
     $code_takecare_of_mru = "AddToMru"
-    $file_head            = "Excel.Application"
-    $file_mod             = "ThisWorkbook"
 
   condition:
     all of them
