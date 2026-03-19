@@ -26,7 +26,7 @@ CGO_ENABLED=0 go install github.com/tc-hib/go-winres@latest
 # Dev Dependencies: go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 # prepare golang code
-cd ${GITHUB_WORKSPACE}/cramc/gocode
+cd ${GITHUB_WORKSPACE}/cramc/cramc_go
 mkdir -p ../bin
 
 # download yara-x
@@ -63,7 +63,7 @@ if [[ "$1" == "linux" ]]; then
     cd "${YARAX_SRC}"
     cargo cinstall -p yara-x-capi --release --crt-static --library-type staticlib --prefix=${PROJ_PREFIX_LINUX_GNU}
     # build golang code - devreleaser
-    cd ${GITHUB_WORKSPACE}/cramc/gocode
+    cd ${GITHUB_WORKSPACE}/cramc/cramc_go
 
     if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
         GOOS=linux GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_LINUX_GNU}/lib/x86_64-linux-gnu/pkgconfig \
@@ -99,10 +99,10 @@ elif [[ "$1" == "windows" ]]; then
     cp -ar "${GITHUB_WORKSPACE}/cramc/assets/linkerdeps/lib/libwindows.0.53.0.a" .
     # curl -L -O https://github.com/microsoft/windows-rs/raw/COMMIT HASH/crates/targets/x86_64_gnu/lib/libwindows.0.VERSION.0.a
     # generate exe winres
-    cd ${GITHUB_WORKSPACE}/cramc/gocode/cmd/aioagent
+    cd ${GITHUB_WORKSPACE}/cramc/cramc_go/cmd/aioagent
     GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go-winres make --product-version=git-tag --file-version=git-tag
     # build golang code - aioagent & privhelper rpc server
-    cd ${GITHUB_WORKSPACE}/cramc/gocode
+    cd ${GITHUB_WORKSPACE}/cramc/cramc_go
 
     if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
         GOOS=windows GOARCH=amd64 CGO_ENABLED=1 \

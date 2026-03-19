@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24.4'
-          cache-dependency-path: "gocode/go.sum"
+          cache-dependency-path: "cramc_go/go.sum"
       - name: Introduce Build Envvar
         run: |
           echo "YARA_SRC=${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}" >> $GITHUB_ENV
@@ -68,7 +68,7 @@ jobs:
           make -C ${YARA_BUILD_LINUX_MUSL} install
       - name: Build Golang Program
         run: |
-          cd ${GITHUB_WORKSPACE}/gocode
+          cd ${GITHUB_WORKSPACE}/cramc_go
           mkdir -p ../bin
           GOOS=linux GOARCH=amd64 CGO_ENABLED=1 CC=musl-gcc PKG_CONFIG_PATH=${PROJ_PREFIX_LINUX_MUSL}/lib/pkgconfig go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static\"" -tags yara_static -o ../bin/devreleaser ./cmd/devreleaser
       - name: Autoupdate of Yara Database and Cleanup Database
@@ -105,7 +105,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24.4'
-          cache-dependency-path: "gocode/go.sum"
+          cache-dependency-path: "cramc_go/go.sum"
       - name: Introduce Build Envvar
         run: |
           echo "YARA_SRC=${THIRD_PARTY_SRC}/yara/yara-${YARA_VER}" >> $GITHUB_ENV
@@ -139,11 +139,11 @@ jobs:
           make -C ${YARA_BUILD_WIN64} install
       - name: Golang Exe WinRES
         run: |
-          cd ${GITHUB_WORKSPACE}/gocode/cmd/aioagent
+          cd ${GITHUB_WORKSPACE}/cramc_go/cmd/aioagent
           GOOS=windows GOARCH=amd64 go-winres make --product-version=git-tag --file-version=git-tag
       - name: Build Golang Program
         run: |
-          cd ${GITHUB_WORKSPACE}/gocode
+          cd ${GITHUB_WORKSPACE}/cramc_go
           mkdir -p ../bin
           GOOS=windows GOARCH=amd64 CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc PKG_CONFIG_PATH=${PROJ_PREFIX_WIN64}/lib/pkgconfig go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static\"" -tags yara_static -o ../bin/cramc_aio.exe ./cmd/aioagent
       - name: Compress of Windows Executables

@@ -2,7 +2,7 @@
 
 ## Encryption Key
 
-Encryption Key = [here](gocode/common/shared.go#L29) , in hex: `1928da3545b48068e024d06f2f132c728eabcd933a8659e578d7a82fde0cd948`
+Encryption Key = [here](cramc_go/common/shared.go#L29) , in hex: `1928da3545b48068e024d06f2f132c728eabcd933a8659e578d7a82fde0cd948`
 
 This is only a weak protection to minimize possibility for being killed by antivirus in wrong way.
 
