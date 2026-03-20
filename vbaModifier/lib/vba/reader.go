@@ -16,6 +16,7 @@ type VBAReader struct {
 	vbaProject *VBAProjectStream
 	dirStream  *DirStream
 	password   string
+	isLegacy   bool
 }
 
 // VBAProject represents a fully parsed VBA project
@@ -28,7 +29,7 @@ type VBAProject struct {
 }
 
 // OpenVBAProject opens and parses a vbaProject.bin file
-func OpenVBAProject(filename string) (*VBAReader, error) {
+func OpenVBAProject(filename string, isLegacyFormat bool) (*VBAReader, error) {
 	// Open CFB file
 	cfbReader, err := cfbv3.Open(filename)
 	if err != nil {
@@ -38,11 +39,12 @@ func OpenVBAProject(filename string) (*VBAReader, error) {
 	return &VBAReader{
 		cfbReader: cfbReader,
 		password:  "", // Default to no password
+		isLegacy:  isLegacyFormat,
 	}, nil
 }
 
 // OpenVBAProjectBytes opens and parses a vbaProject.bin payload from memory.
-func OpenVBAProjectBytes(data []byte) (*VBAReader, error) {
+func OpenVBAProjectBytes(data []byte, isLegacyFormat bool) (*VBAReader, error) {
 	cfbReader, err := cfbv3.OpenBytes(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open CFB data: %w", err)
@@ -51,6 +53,7 @@ func OpenVBAProjectBytes(data []byte) (*VBAReader, error) {
 	return &VBAReader{
 		cfbReader: cfbReader,
 		password:  "", // Default to no password
+		isLegacy:  isLegacyFormat,
 	}, nil
 }
 
@@ -99,7 +102,7 @@ func (r *VBAReader) ParseAll() (*VBAProject, error) {
 	}
 
 	// Parse _VBA_PROJECT stream (optional - located in VBA storage)
-	vbaStorage, err := root.OpenStorage("VBA")
+	vbaStorage, err := r.openVBAStorage(root)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open VBA storage: %w", err)
 	}
@@ -138,6 +141,7 @@ func (r *VBAReader) ParseAll() (*VBAProject, error) {
 
 	// Add modules from PROJECT stream
 	for _, module := range project.Modules {
+		module.Path = r.normalizeModulePath(module.Path)
 		if !moduleMap[module.Name] {
 			modules = append(modules, module)
 			moduleMap[module.Name] = true
@@ -150,7 +154,7 @@ func (r *VBAReader) ParseAll() (*VBAProject, error) {
 			moduleInfo := ModuleInfo{
 				Name: dirModule.Name,
 				Type: ModuleTypeStandard, // Default type
-				Path: fmt.Sprintf("/VBA/%s", dirModule.StreamName),
+				Path: r.modulePath(dirModule.StreamName),
 			}
 			modules = append(modules, moduleInfo)
 			moduleMap[dirModule.Name] = true
@@ -178,7 +182,7 @@ func (r *VBAReader) GetModuleStream(moduleName string) (cfbv3.Stream, error) {
 		return nil, fmt.Errorf("failed to open root storage: %w", err)
 	}
 
-	vbaStorage, err := root.OpenStorage("VBA")
+	vbaStorage, err := r.openVBAStorage(root)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open VBA storage: %w", err)
 	}
@@ -271,7 +275,7 @@ func (r *VBAReader) ListVBAStreams() []string {
 		return []string{}
 	}
 
-	vbaStorage, err := root.OpenStorage("VBA")
+	vbaStorage, err := r.openVBAStorage(root)
 	if err != nil {
 		return []string{}
 	}
@@ -284,4 +288,37 @@ func (r *VBAReader) ListVBAStreams() []string {
 		}
 	}
 	return filtered
+}
+
+func (r *VBAReader) openVBAStorage(root *cfbv3.Storage) (*cfbv3.Storage, error) {
+	if !r.isLegacy {
+		return root.OpenStorage("VBA")
+	}
+
+	legacyRoot, err := root.OpenStorage("_VBA_PROJECT_CUR")
+	if err != nil {
+		return nil, fmt.Errorf("open _VBA_PROJECT_CUR: %w", err)
+	}
+	return legacyRoot.OpenStorage("VBA")
+}
+
+func (r *VBAReader) moduleRootPath() string {
+	if r.isLegacy {
+		return "/_VBA_PROJECT_CUR/VBA"
+	}
+	return "/VBA"
+}
+
+func (r *VBAReader) modulePath(streamName string) string {
+	return fmt.Sprintf("%s/%s", r.moduleRootPath(), streamName)
+}
+
+func (r *VBAReader) normalizeModulePath(path string) string {
+	if path == "/VBA" {
+		return r.moduleRootPath()
+	}
+	if strings.HasPrefix(path, "/VBA/") {
+		return fmt.Sprintf("%s%s", r.moduleRootPath(), path[len("/VBA"):])
+	}
+	return path
 }
