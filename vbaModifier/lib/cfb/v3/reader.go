@@ -101,15 +101,6 @@ func OpenBytes(data []byte) (*Reader, error) {
 	return reader, nil
 }
 
-// OpenBuffer opens and parses a CFB Version 3 file from a bytes.Buffer.
-func OpenBuffer(buf *bytes.Buffer) (*Reader, error) {
-	if buf == nil {
-		return nil, fmt.Errorf("buffer is nil")
-	}
-
-	return OpenBytes(buf.Bytes())
-}
-
 // Close closes the underlying file
 func (r *Reader) Close() error {
 	if r.file != nil {

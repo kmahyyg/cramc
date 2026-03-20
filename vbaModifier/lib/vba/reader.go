@@ -1,7 +1,6 @@
 package vba
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -45,19 +44,6 @@ func OpenVBAProject(filename string) (*VBAReader, error) {
 // OpenVBAProjectBytes opens and parses a vbaProject.bin payload from memory.
 func OpenVBAProjectBytes(data []byte) (*VBAReader, error) {
 	cfbReader, err := cfbv3.OpenBytes(data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open CFB data: %w", err)
-	}
-
-	return &VBAReader{
-		cfbReader: cfbReader,
-		password:  "", // Default to no password
-	}, nil
-}
-
-// OpenVBAProjectBuffer opens and parses a vbaProject.bin payload from bytes.Buffer.
-func OpenVBAProjectBuffer(buf *bytes.Buffer) (*VBAReader, error) {
-	cfbReader, err := cfbv3.OpenBuffer(buf)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open CFB data: %w", err)
 	}
