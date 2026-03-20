@@ -1,6 +1,7 @@
 package vba
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -10,21 +11,21 @@ import (
 
 // VBAReader provides a high-level interface for reading VBA projects
 type VBAReader struct {
-	cfbReader    *cfbv3.Reader
-	project      *Project
-	projectwm    *ProjectWM
-	vbaProject   *VBAProjectStream
-	dirStream    *DirStream
-	password     string
+	cfbReader  *cfbv3.Reader
+	project    *Project
+	projectwm  *ProjectWM
+	vbaProject *VBAProjectStream
+	dirStream  *DirStream
+	password   string
 }
 
 // VBAProject represents a fully parsed VBA project
 type VBAProject struct {
-	Project      *Project
-	ProjectWM    *ProjectWM
-	VBAProject   *VBAProjectStream
-	DirStream    *DirStream
-	Modules      []ModuleInfo
+	Project    *Project
+	ProjectWM  *ProjectWM
+	VBAProject *VBAProjectStream
+	DirStream  *DirStream
+	Modules    []ModuleInfo
 }
 
 // OpenVBAProject opens and parses a vbaProject.bin file
@@ -33,6 +34,32 @@ func OpenVBAProject(filename string) (*VBAReader, error) {
 	cfbReader, err := cfbv3.Open(filename)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open CFB file: %w", err)
+	}
+
+	return &VBAReader{
+		cfbReader: cfbReader,
+		password:  "", // Default to no password
+	}, nil
+}
+
+// OpenVBAProjectBytes opens and parses a vbaProject.bin payload from memory.
+func OpenVBAProjectBytes(data []byte) (*VBAReader, error) {
+	cfbReader, err := cfbv3.OpenBytes(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open CFB data: %w", err)
+	}
+
+	return &VBAReader{
+		cfbReader: cfbReader,
+		password:  "", // Default to no password
+	}, nil
+}
+
+// OpenVBAProjectBuffer opens and parses a vbaProject.bin payload from bytes.Buffer.
+func OpenVBAProjectBuffer(buf *bytes.Buffer) (*VBAReader, error) {
+	cfbReader, err := cfbv3.OpenBuffer(buf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open CFB data: %w", err)
 	}
 
 	return &VBAReader{
