@@ -1,6 +1,7 @@
 package v3
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 // Reader represents a CFB (Compound File Binary) file reader for Version 3
 type Reader struct {
 	file            *os.File
+	data            []byte
 	header          *Header
 	fat             []uint32          // File Allocation Table
 	miniFat         []uint32          // Mini FAT for small streams
@@ -63,6 +65,51 @@ func Open(filename string) (*Reader, error) {
 	return reader, nil
 }
 
+// OpenBytes opens and parses a CFB Version 3 file from raw bytes.
+func OpenBytes(data []byte) (*Reader, error) {
+	if len(data) < HEADER_SIZE {
+		return nil, fmt.Errorf("invalid CFB file: incomplete header read: got %d bytes, expected %d", len(data), HEADER_SIZE)
+	}
+
+	backing := make([]byte, len(data))
+	copy(backing, data)
+
+	readerAt := bytes.NewReader(backing)
+	header, err := readHeader(readerAt)
+	if err != nil {
+		return nil, fmt.Errorf("invalid CFB file: %w", err)
+	}
+
+	reader := &Reader{
+		data:            backing,
+		header:          header,
+		modifiedStreams: make(map[uint32][]byte),
+	}
+
+	if err := reader.initFAT(); err != nil {
+		return nil, fmt.Errorf("failed to initialize FAT: %w", err)
+	}
+
+	if err := reader.initDirectories(); err != nil {
+		return nil, fmt.Errorf("failed to initialize directories: %w", err)
+	}
+
+	if err := reader.initMiniFAT(); err != nil {
+		return nil, fmt.Errorf("failed to initialize MiniFAT: %w", err)
+	}
+
+	return reader, nil
+}
+
+// OpenBuffer opens and parses a CFB Version 3 file from a bytes.Buffer.
+func OpenBuffer(buf *bytes.Buffer) (*Reader, error) {
+	if buf == nil {
+		return nil, fmt.Errorf("buffer is nil")
+	}
+
+	return OpenBytes(buf.Bytes())
+}
+
 // Close closes the underlying file
 func (r *Reader) Close() error {
 	if r.file != nil {
@@ -89,20 +136,26 @@ func (r *Reader) findEntryID(entry *DirectoryEntry) uint32 {
 // WriteTo implements io.WriterTo interface, writing the modified CFB content to w
 func (r *Reader) WriteTo(w io.Writer) (int64, error) {
 	// 1. Get original file data
-	info, err := r.file.Stat()
-	if err != nil {
-		return 0, fmt.Errorf("failed to stat original file: %w", err)
-	}
-	size := info.Size()
+	var data []byte
+	if r.file != nil {
+		info, err := r.file.Stat()
+		if err != nil {
+			return 0, fmt.Errorf("failed to stat original file: %w", err)
+		}
+		size := info.Size()
 
-	// Read entire file into a buffer for patching
-	// This is safe for CFB Version 3 which is limited in size (max 2GB, usually much smaller for VBA)
-	data := make([]byte, size)
-	if _, err := r.file.Seek(0, 0); err != nil {
-		return 0, fmt.Errorf("failed to seek original file: %w", err)
-	}
-	if _, err := io.ReadFull(r.file, data); err != nil {
-		return 0, fmt.Errorf("failed to read original file: %w", err)
+		// Read entire file into a buffer for patching
+		// This is safe for CFB Version 3 which is limited in size (max 2GB, usually much smaller for VBA)
+		data = make([]byte, size)
+		if _, err := r.file.Seek(0, 0); err != nil {
+			return 0, fmt.Errorf("failed to seek original file: %w", err)
+		}
+		if _, err := io.ReadFull(r.file, data); err != nil {
+			return 0, fmt.Errorf("failed to read original file: %w", err)
+		}
+	} else {
+		data = make([]byte, len(r.data))
+		copy(data, r.data)
 	}
 
 	// 2. Patch modified Header at offset 0

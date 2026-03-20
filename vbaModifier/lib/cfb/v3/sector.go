@@ -2,6 +2,7 @@ package v3
 
 import (
 	"fmt"
+	"io"
 )
 
 // readSector reads a single sector from the file
@@ -18,7 +19,18 @@ func (r *Reader) readSector(sector uint32) ([]byte, error) {
 
 	// Read sector data
 	data := make([]byte, SECTOR_SIZE)
-	n, err := r.file.ReadAt(data, offset)
+	var (
+		n   int
+		err error
+	)
+	if r.file != nil {
+		n, err = r.file.ReadAt(data, offset)
+	} else {
+		if offset+SECTOR_SIZE > int64(len(r.data)) {
+			return nil, fmt.Errorf("failed to read sector %d at offset %d: %w", sector, offset, io.EOF)
+		}
+		n = copy(data, r.data[offset:offset+SECTOR_SIZE])
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to read sector %d at offset %d: %w", sector, offset, err)
 	}
@@ -48,13 +60,13 @@ func (r *Reader) getSectorChain(startSector uint32) ([]uint32, error) {
 	for current != ENDOFCHAIN && current < MAXREGSECT {
 		// Validate sector index
 		if current >= uint32(len(r.fat)) {
-			return nil, fmt.Errorf("%w: sector %d out of FAT bounds (FAT size: %d)", 
+			return nil, fmt.Errorf("%w: sector %d out of FAT bounds (FAT size: %d)",
 				ErrInvalidSector, current, len(r.fat))
 		}
 
 		// Detect circular references
 		if visited[current] {
-			return nil, fmt.Errorf("%w: sector %d appears twice in chain", 
+			return nil, fmt.Errorf("%w: sector %d appears twice in chain",
 				ErrCircularReference, current)
 		}
 		visited[current] = true
@@ -64,7 +76,7 @@ func (r *Reader) getSectorChain(startSector uint32) ([]uint32, error) {
 
 		// Prevent excessive chains
 		if len(chain) > MAX_SECTORS {
-			return nil, fmt.Errorf("%w: chain length exceeds %d sectors", 
+			return nil, fmt.Errorf("%w: chain length exceeds %d sectors",
 				ErrChainTooLong, MAX_SECTORS)
 		}
 
@@ -74,7 +86,7 @@ func (r *Reader) getSectorChain(startSector uint32) ([]uint32, error) {
 
 	// Validate chain termination
 	if current != ENDOFCHAIN && current >= MAXREGSECT {
-		return nil, fmt.Errorf("%w: chain terminated with invalid sector %d", 
+		return nil, fmt.Errorf("%w: chain terminated with invalid sector %d",
 			ErrInvalidSector, current)
 	}
 
@@ -91,7 +103,7 @@ func (r *Reader) readChain(startSector uint32, size uint64) ([]byte, error) {
 
 	// Validate size
 	if size > uint64(len(chain))*SECTOR_SIZE {
-		return nil, fmt.Errorf("size %d exceeds available sectors (%d sectors, %d bytes)", 
+		return nil, fmt.Errorf("size %d exceeds available sectors (%d sectors, %d bytes)",
 			size, len(chain), len(chain)*SECTOR_SIZE)
 	}
 
@@ -144,13 +156,13 @@ func (r *Reader) getMiniSectorChain(startSector uint32) ([]uint32, error) {
 	for current != ENDOFCHAIN && current < MAXREGSECT {
 		// Validate mini sector index
 		if current >= uint32(len(r.miniFat)) {
-			return nil, fmt.Errorf("%w: mini sector %d out of MiniFAT bounds (MiniFAT size: %d)", 
+			return nil, fmt.Errorf("%w: mini sector %d out of MiniFAT bounds (MiniFAT size: %d)",
 				ErrInvalidSector, current, len(r.miniFat))
 		}
 
 		// Detect circular references
 		if visited[current] {
-			return nil, fmt.Errorf("%w: mini sector %d appears twice in chain", 
+			return nil, fmt.Errorf("%w: mini sector %d appears twice in chain",
 				ErrCircularReference, current)
 		}
 		visited[current] = true
@@ -160,7 +172,7 @@ func (r *Reader) getMiniSectorChain(startSector uint32) ([]uint32, error) {
 
 		// Prevent excessive chains
 		if len(chain) > MAX_SECTORS {
-			return nil, fmt.Errorf("%w: mini chain length exceeds %d sectors", 
+			return nil, fmt.Errorf("%w: mini chain length exceeds %d sectors",
 				ErrChainTooLong, MAX_SECTORS)
 		}
 
@@ -170,7 +182,7 @@ func (r *Reader) getMiniSectorChain(startSector uint32) ([]uint32, error) {
 
 	// Validate chain termination
 	if current != ENDOFCHAIN && current >= MAXREGSECT {
-		return nil, fmt.Errorf("%w: mini chain terminated with invalid sector %d", 
+		return nil, fmt.Errorf("%w: mini chain terminated with invalid sector %d",
 			ErrInvalidSector, current)
 	}
 
@@ -189,7 +201,7 @@ func (r *Reader) readMiniChain(startSector uint32, size uint64) ([]byte, error) 
 
 	// Validate size
 	if size > uint64(len(chain))*uint64(miniSectorSize) {
-		return nil, fmt.Errorf("size %d exceeds available mini sectors (%d sectors, %d bytes)", 
+		return nil, fmt.Errorf("size %d exceeds available mini sectors (%d sectors, %d bytes)",
 			size, len(chain), len(chain)*miniSectorSize)
 	}
 
@@ -204,7 +216,7 @@ func (r *Reader) readMiniChain(startSector uint32, size uint64) ([]byte, error) 
 
 		// Validate mini stream bounds
 		if miniOffset+uint64(miniSectorSize) > uint64(len(r.miniStream)) {
-			return nil, fmt.Errorf("mini sector %d at offset %d exceeds mini stream size %d", 
+			return nil, fmt.Errorf("mini sector %d at offset %d exceeds mini stream size %d",
 				miniSector, miniOffset, len(r.miniStream))
 		}
 
