@@ -102,7 +102,7 @@ func (r *VBAReader) ParseAll() (*VBAProject, error) {
 	}
 
 	// Parse _VBA_PROJECT stream (optional - located in VBA storage)
-	vbaStorage, err := r.openVBAStorage(root)
+	vbaStorage, err := r.OpenVBAStorage(root)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open VBA storage: %w", err)
 	}
@@ -182,7 +182,7 @@ func (r *VBAReader) GetModuleStream(moduleName string) (cfbv3.Stream, error) {
 		return nil, fmt.Errorf("failed to open root storage: %w", err)
 	}
 
-	vbaStorage, err := r.openVBAStorage(root)
+	vbaStorage, err := r.OpenVBAStorage(root)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open VBA storage: %w", err)
 	}
@@ -275,7 +275,7 @@ func (r *VBAReader) ListVBAStreams() []string {
 		return []string{}
 	}
 
-	vbaStorage, err := r.openVBAStorage(root)
+	vbaStorage, err := r.OpenVBAStorage(root)
 	if err != nil {
 		return []string{}
 	}
@@ -290,7 +290,7 @@ func (r *VBAReader) ListVBAStreams() []string {
 	return filtered
 }
 
-func (r *VBAReader) openVBAStorage(root *cfbv3.Storage) (*cfbv3.Storage, error) {
+func (r *VBAReader) OpenVBAStorage(root *cfbv3.Storage) (*cfbv3.Storage, error) {
 	if !r.isLegacy {
 		return root.OpenStorage("VBA")
 	}
