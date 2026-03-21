@@ -22,10 +22,6 @@ var (
 	fCmpInfo = flag.Bool("cmpinfo", false, "show info of encrypted container")
 )
 
-const (
-	databaseName = "cramc_db.json"
-)
-
 func init() {
 	flag.Parse()
 }
@@ -37,7 +33,7 @@ func main() {
 	common.Logger = logger
 	common.Logger.Info("DevReleaser for CRAMC, Don't Forget to Bump Database/UpdateChecker Version!")
 	common.Logger.Info("Current Version: " + common.VersionStr)
-	common.Logger.Info("Please put this binary with the same folder of yrules/ and cramc_db.json before continue.")
+	common.Logger.Info("Please put this binary with the same folder of yrules/ before continue.")
 	if *fCmpInfo {
 		if !fileutils.CheckFileLogicalExists(*fInFile) {
 			common.Logger.Log(context.TODO(), logging.LevelFatal, "Input file not found: "+*fInFile)

@@ -1,6 +1,6 @@
 module cramc_go
 
-go 1.25.0
+go 1.26
 
 require (
 	github.com/VirusTotal/yara-x/go v1.14.0

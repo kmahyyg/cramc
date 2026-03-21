@@ -14,6 +14,10 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+const (
+	WELLKNOWN_SYSTEM_SID = "S-1-5-18"
+)
+
 func CheckProcessElevated() (bool, error) {
 	u, err := user.Current()
 	if err != nil {
@@ -32,4 +36,16 @@ func CheckProcessElevated() (bool, error) {
 	} else {
 		return false, customerrs.ErrInsufficientPrivilege
 	}
+}
+
+func CheckRunningBySYSTEM() (bool, error) {
+	curU, err := user.Current()
+	if err != nil {
+		common.Logger.Error(err.Error())
+		return false, err
+	}
+	if curU.Uid == WELLKNOWN_SYSTEM_SID {
+		return true, nil
+	}
+	return false, nil
 }

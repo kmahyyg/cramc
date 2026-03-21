@@ -51,7 +51,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VER }}
-          cache-dependency-path: 'cramc/cramc_go/go.sum'
+          cache-dependency-path: 'cramc/go.work.sum'
       - name: Setup Rust Toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -115,7 +115,7 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VER }}
-          cache-dependency-path: 'cramc/cramc_go/go.sum'
+          cache-dependency-path: 'cramc/go.work.sum'
       - name: Setup Rust Toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -154,7 +154,7 @@ jobs:
           cd ${GITHUB_WORKSPACE}/cramc/bin
           tree .
           sha256sum ./*
-          zip -r cramc_go_${GITHUB_RUN_ID}.zip privhelper.exe cramc_aio.exe *.bin *.ps1
+          zip -r cramc_go_${GITHUB_RUN_ID}.zip cramc_aio.exe *.bin *.ps1
       - name: Upload necessary artifact 1 - cramc_aio
         uses: actions/upload-artifact@v4
         with:
@@ -198,10 +198,8 @@ jobs:
           body: |
             We recommend everyone stays on the latest version. 
             **PLEASE READ README FILE IN REPOSITORY BEFORE CONTINUE!**
-            - To use, download `*.zip` and extract to a new empty folder and execute `cleanup_stale.ps1` then `cramc_aio.exe` under that folder. 
-            - Program will try auto-elevate based on your current privileges. 
+            - To use, download `*.zip` and extract to a new empty folder and execute `1drv_desync_cleanup_stale.ps1` then `cramc_aio.exe` under that folder. 
             This version uses totally different scanner engine, please do not reuse rules from v0.4.x.
-            PrivHelper logging and lock files are saved to: `%UserProfile%\.cramc\`
             BakRestorer is built for restoring original file from encrypted zstd compression file.
             **Crowdstrike users are NOT SUPPORTED.**
             **For files saved under shared storage (e.g. SharePoint), proceed with caution.**

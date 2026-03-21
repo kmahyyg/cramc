@@ -3,25 +3,18 @@ package common
 import (
 	"log/slog"
 	"runtime"
-	"sync"
 )
 
 var (
 	Logger *slog.Logger
 
-	CleanupDB *CRAMCCleanupDB
+	IsRunningOnWin    = runtime.GOOS == "windows"
+	IsElevated        bool
+	IsRunningBySYSTEM bool
 
-	IsRunningOnWin = runtime.GOOS == "windows"
-	IsElevated     bool
+	VersionStr string
 
-	VersionStr     string
-	SanitizerQueue = make(chan *SanitizeRequest, 50)
-
-	DryRunOnly                 bool
-	EnableHardening            bool
-	HardeningQueue             = make(chan *HardeningAction, 50)
-	HardenedDetectionTypesLock = &sync.Mutex{}
-	HardenedDetectionTypes     = make(map[string]bool)
+	DryRunOnly bool
 )
 
 const (

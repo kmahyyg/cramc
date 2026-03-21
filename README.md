@@ -6,7 +6,7 @@ My Crappy Macro Cleaner - For Sanitizing Malicious Macro in Office Files when AV
 >> Because some "AI-Native" and "Advanced" EDR/NGAV we use can't prevent infection. Then files got blocked by our storage service provider, which broke our operation.
 
 > [!WARNING]
-> This project is archived and only intended for personal usage since v0.5.7 (incl.).
+> This project is only intended for personal usage.
 
 # Usage
 
@@ -20,7 +20,7 @@ My Crappy Macro Cleaner - For Sanitizing Malicious Macro in Office Files when AV
 
 > [!NOTE]
 > - Save all your opened document and terminate all office processes before continue.
-> - It's recommended to run [cleanup_stale.ps1](assets/dist/cleanup_stale.ps1) or [1drv_desync_cleanup_stale.ps1](assets/dist/1drv_desync_cleanup_stale.ps1) with unprivileged target user before starting the program. **If your OneDrive process has already been killed, please use `1drv_desync_cleanup_stale.ps1` and REMOVE INFECTED FILES from web before you spawn OneDrive again.**
+> - It's recommended to run [1drv_desync_cleanup_stale.ps1](assets/dist/1drv_desync_cleanup_stale.ps1) with unprivileged user before starting the program. **If your OneDrive process has already been killed, please use `1drv_desync_cleanup_stale.ps1` and REMOVE INFECTED FILES from web before you spawn OneDrive again.**
 > - Download `cramc_go_{numeric ID}.zip` and extract all files to a new empty folder, run `cleanup_stale.ps1` then `cramc_aio.exe`.
 
 > [!TIP]
@@ -69,8 +69,6 @@ BSD-3-Clause:
 Apache-2.0:
 - github.com/klauspost/compress
 - google.golang.org/genproto/googleapis/rpc/status
-- google.golang.org/grpc
-- www.velocidex.com/golang/go-ntfs/parser
 
 MIT:
 - github.com/klauspost/compress/zstd/internal/xxhash

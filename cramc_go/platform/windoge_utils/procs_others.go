@@ -7,3 +7,7 @@ import "cramc_go/customerrs"
 func CheckProcessElevated() (bool, error) {
 	return false, customerrs.ErrUnsupportedPlatform
 }
+
+func CheckRunningUnderSYSTEM() (bool, error) {
+	return false, customerrs.ErrUnsupportedPlatform
+}

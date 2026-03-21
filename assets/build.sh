@@ -80,7 +80,6 @@ if [[ "$1" == "linux" ]]; then
     cd ${GITHUB_WORKSPACE}/cramc/assets
     ./devreleaser -compile
     ./devreleaser -enc=true -in=./yrules/bin/unified.yar -out=../bin/unified.yar.bin
-    ./devreleaser -enc=true -in=./cramc_db.json -out=../bin/cramc_db.bin
     # cleanup dev releaser
     rm -f ./devreleaser
     # prepare for uploading artifacts
@@ -101,7 +100,7 @@ elif [[ "$1" == "windows" ]]; then
     # generate exe winres
     cd ${GITHUB_WORKSPACE}/cramc/cramc_go/cmd/aioagent
     GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go-winres make --product-version=git-tag --file-version=git-tag
-    # build golang code - aioagent & privhelper rpc server
+    # build golang code - aioagent
     cd ${GITHUB_WORKSPACE}/cramc/cramc_go
 
     if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
@@ -111,13 +110,10 @@ elif [[ "$1" == "windows" ]]; then
         -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/cramc_aio.exe ./cmd/aioagent
 
         GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
-        -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\"" -o ../bin/privhelper.exe ./cmd/privhelper
-        GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath \
         -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\"" -o ../bin/bakrestorer.exe ./cmd/bakrestorer
 
         # only compress in prod release
         upx -9 ../bin/cramc_aio.exe
-        upx -9 ../bin/privhelper.exe
         upx -9 ../bin/bakrestorer.exe
     elif [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
         GOOS=windows GOARCH=amd64 CGO_ENABLED=1 \
@@ -125,8 +121,6 @@ elif [[ "$1" == "windows" ]]; then
         go build -gcflags 'all=-N -l' -ldflags "-X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" \
         -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/cramc_aio.exe ./cmd/aioagent
 
-        GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -gcflags 'all=-N -l' \
-        -ldflags "-X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\"" -o ../bin/privhelper.exe ./cmd/privhelper
         GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -gcflags 'all=-N -l' \
         -ldflags "-X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\"" -o ../bin/bakrestorer.exe ./cmd/bakrestorer
     fi
