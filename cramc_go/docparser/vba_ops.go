@@ -82,10 +82,12 @@ func ReplaceMaliciousCode(originalFilePath string, modulesLst []string, isLegacy
 	if err != nil {
 		return err
 	}
+	common.Logger.Info("Root storage opened successfully.")
 	vbaStorV3, err := vba.OpenVBAStorage(fileRootStor, isLegacyFormat)
 	if err != nil {
 		return err
 	}
+	common.Logger.Info("VBA storage opened successfully.")
 	rawDirStream, err := vbaStorV3.OpenStream("dir")
 	if err != nil {
 		return err
@@ -108,9 +110,10 @@ func ReplaceMaliciousCode(originalFilePath string, modulesLst []string, isLegacy
 		patchedDirStreamBuf.Reset()
 		patchedDirStreamBuf.Write(newDirStreamBytes)
 	}
+	common.Logger.Info(fmt.Sprintf("Patched module text offsets for %d modules, dir stream parsed succeeded.", len(modulesLst)))
 	// remove __SRP_* streams
 	removed := removeSRPStreams(vbaStorV3)
-	common.Logger.Info(fmt.Sprintf("Removed %d __SRP_* streams", removed))
+	common.Logger.Info(fmt.Sprintf("Removed %d __SRP_* streams.", removed))
 	// remove PerformanceCache from _VBA_PROJECT
 	if vbaStorV3.StreamExists("_VBA_PROJECT") {
 		stripped := vba.StripVBAProjectPerformanceCache()
@@ -119,7 +122,7 @@ func ReplaceMaliciousCode(originalFilePath string, modulesLst []string, isLegacy
 			return err
 		}
 	}
-	common.Logger.Info("PerformanceCache removed from _VBA_PROJECT")
+	common.Logger.Info("PerformanceCache removed from _VBA_PROJECT.")
 	// replace content to target
 	for _, mName2 := range modulesLst {
 		streamR, err := vbaStorV3.OpenStream(mName2)
@@ -150,6 +153,7 @@ func ReplaceMaliciousCode(originalFilePath string, modulesLst []string, isLegacy
 			if err != nil {
 				return err
 			}
+			common.Logger.Info(fmt.Sprintf("Replaced module %s with new code.", mName2))
 		} else {
 			return vba.ErrDecompressionFailed
 		}
@@ -159,6 +163,7 @@ func ReplaceMaliciousCode(originalFilePath string, modulesLst []string, isLegacy
 	if err != nil {
 		return err
 	}
+	common.Logger.Info("Modified dir stream replaced successfully.")
 	// write out to buf
 	finalBuf := &bytes.Buffer{}
 	defer finalBuf.Reset()
@@ -178,12 +183,14 @@ func ReplaceMaliciousCode(originalFilePath string, modulesLst []string, isLegacy
 		if err != nil {
 			return err
 		}
+		common.Logger.Info("Replaced file wrote to destination temporary location successfully.")
 	} else {
 		// if modern, replace xl/vbaProject.bin entry in zip
 		err = fileutils.ReplaceXLVBAProjectBin(originalFilePath, finalBuf.Bytes())
 		if err != nil {
 			return err
 		}
+		common.Logger.Info("Modified zip container wrote to destination temporary location successfully.")
 	}
 	return nil
 }
