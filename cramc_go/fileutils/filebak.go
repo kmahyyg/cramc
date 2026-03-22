@@ -12,7 +12,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 )
 
-func zstdBakFile(fPath string) error {
+func ZstdBakFile(fPath string) error {
 	bakFd, err := os.OpenFile(fPath+".zst.ebak", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
