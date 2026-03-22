@@ -58,12 +58,12 @@ func PatchModuleTextOffsetInDirStream(dirCompressed []byte, targetModule string,
 
 // StripVBAProjectPerformanceCache removes the PerformanceCache blob from _VBA_PROJECT.
 // Per MS-OVBA 2.3.4.1, bytes beyond offset 0x0007 MUST NOT be present on write.
-func StripVBAProjectPerformanceCache(raw []byte) ([]byte, error) {
+func StripVBAProjectPerformanceCache() []byte {
 	// directly hard-coded per standard
 	// https://attack.mitre.org/techniques/T1564/007/
 	// please do not directly copy first 7 bytes of P-code cache to prevent from executing
 	finalOut := []byte{0xCC, 0x61, 0xFF, 0xFF, 0x00, 0x01, 0x00}
-	return finalOut, nil
+	return finalOut
 }
 
 func collectModuleTextOffsetInfos(data []byte, offset int) ([]ModuleTextOffsetInfo, error) {
