@@ -20,6 +20,7 @@ var (
 	ErrNotLatestVersion = errors.New("not latest version, refuse to continue, please upgrade from https://github.com/kmahyyg/cramc")
 
 	ErrYaraXCompilationFailure = errors.New("yara-x rule compilation failed")
+	ErrReplaceCodeOverflow     = errors.New("in-place replacement would exceeds original size limit")
 
 	ErrEncSchemaMismatch = errors.New("file version does NOT match bundled encryption schema version")
 )
