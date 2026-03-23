@@ -13,9 +13,9 @@ func RetrieveOwnerOfFile(filep string) (any, error) {
 }
 
 func SetACLOfFile(filep string, acl any) error {
-	return nil, customerrs.ErrUnsupportedPlatform
+	return customerrs.ErrUnsupportedPlatform
 }
 
 func SetOwnerOfFile(filep string, owner any) error {
-	return nil, customerrs.ErrUnsupportedPlatform
+	return customerrs.ErrUnsupportedPlatform
 }
