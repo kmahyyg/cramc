@@ -9,3 +9,4 @@ devreleaser.bin
 *.log
 *.bin
 .venv/
+.jj/
