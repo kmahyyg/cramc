@@ -8,14 +8,11 @@ import (
 	"cramc_go/cryptutils"
 	"cramc_go/customerrs"
 	"cramc_go/fileutils"
-	"cramc_go/hardener"
 	"cramc_go/logging"
 	"cramc_go/platform/windoge_utils"
 	"cramc_go/updchecker"
 	"cramc_go/yarax_scanner"
 	"encoding/hex"
-	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -27,19 +24,15 @@ import (
 )
 
 const (
-	databasePath  = "cramc_db.bin"
 	yaraRulesPath = "unified.yar.bin"
-	iptFileList   = "ipt_yrscan.lst"
 )
 
 var (
-	flActionPath      = flag.String("actionPath", "C:\\Users", "The path to the files you want to scan. To balance scanning speed and false positive rate, we recommend to scan User Profile folder only. By default, we use recursive search.")
-	flDryRun          = flag.Bool("dryRun", false, "Scan only, take no action on files, record action to be taken in log.")
-	flEnableHardening = flag.Bool("enableHardening", true, "Enables hardening measure to prevent further infection. Windows OS only.")
-	flNoDiskScan      = flag.Bool("noDiskScan", false, "Do not scan files on disk, but supply file list. If platform is not Windows x86_64, yara-x won't work, you have to set this to true and then run Yara-X scanner against our rules and save output to ipt_yrscan.lst.")
-	allowedExts       = []string{".xls", ".xlsx", ".xlsm", ".xlsb"}
-	flHelp            = flag.Bool("help", false, "Show help")
-	flSkipUpdChk      = flag.Bool("skipUpdChk", false, "Development only: set to true to skip update checker.")
+	flActionPath = flag.String("actionPath", "C:\\", "The path to the files you want to scan. To balance scanning speed and false positive rate, we recommend to scan User Profile folder only. By default, we use recursive search on whole disk.")
+	flDryRun     = flag.Bool("dryRun", false, "Scan only, take no action on files, record action to be taken in log.")
+	allowedExts  = []string{".xls", ".xlsx", ".xlsm", ".xlsb"}
+	flHelp       = flag.Bool("help", false, "Show help")
+	flSkipUpdChk = flag.Bool("skipUpdChk", false, "Development only: set to true to skip update checker.")
 )
 
 func init() {
@@ -75,13 +68,6 @@ func main() {
 		common.Logger.Log(context.TODO(), logging.LevelFatal, customerrs.ErrActionPathMustBeDir.Error())
 		os.Exit(-1)
 	}
-	if *flNoDiskScan {
-		iptFinfo, err := os.Stat(iptFileList)
-		if err != nil || iptFinfo.IsDir() {
-			common.Logger.Log(context.TODO(), logging.LevelFatal, customerrs.ErrNoScanSetButNoListProvided.Error())
-			os.Exit(-1)
-		}
-	}
 	common.Logger.Info("Initial args-check passed.")
 	// read and decrypt config file
 	hPwdBytes, err := hex.DecodeString(common.HexEncryptionPassword)
@@ -90,7 +76,7 @@ func main() {
 		common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
 		os.Exit(-1)
 	}
-	// fix #9
+	// fix #9, unable to find database or yara rules
 	execPath, err := os.Executable()
 	if err != nil {
 		common.Logger.Info("Cannot get executable path.")
@@ -98,33 +84,8 @@ func main() {
 		os.Exit(-1)
 	}
 	execDir := filepath.Dir(execPath)
-	databaseAbsPath := filepath.Join(execDir, databasePath)
-	common.Logger.Debug("DEBUG: Database path: " + databaseAbsPath)
-	// read database
-	databaseEncBin, err := os.ReadFile(databaseAbsPath)
-	if err != nil {
-		common.Logger.Info("Could not read database from file.")
-		common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
-		os.Exit(-1)
-	}
-	_, originalCleanupDB, err := cryptutils.XChacha20Decrypt(hPwdBytes, databaseEncBin)
-	if err != nil {
-		common.Logger.Info("Could not decrypt database.")
-		common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
-		os.Exit(-1)
-	}
-	var cleanupDBObj = &common.CRAMCCleanupDB{}
-	err = json.Unmarshal(originalCleanupDB, cleanupDBObj)
-	if err != nil {
-		common.Logger.Info("Could not deserialize cleanup DB.")
-		common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
-		os.Exit(-1)
-	}
-	common.Logger.Info("Successfully loaded cleanup DB.")
-	common.CleanupDB = cleanupDBObj
 	// dry run is always handled by callee to make sure behavior consistent.
 	common.DryRunOnly = *flDryRun
-	common.EnableHardening = *flEnableHardening
 	// kill M365 office processes on windows
 	_, _ = windoge_utils.KillAllOfficeProcesses()
 	common.Logger.Info("Triggered M365 Office processes killer.")
@@ -141,259 +102,106 @@ func main() {
 				common.Logger.Log(context.TODO(), logging.LevelFatal, "Program UpdCheck: "+customerrs.ErrNotLatestVersion.Error())
 				os.Exit(-1)
 			}
-			if latestV.DatabaseVersion != common.CleanupDB.Version {
-				common.Logger.Log(context.TODO(), logging.LevelFatal, "Database UpdCheck: "+customerrs.ErrNotLatestVersion.Error())
-				os.Exit(-1)
-			}
 		}
 	}
 	// check privilege
-	isElevated, _ := fileutils.CheckProcessElevated()
+	isElevated, _ := windoge_utils.CheckProcessElevated()
+	isRunningBySYSTEM, _ := windoge_utils.CheckRunningBySYSTEM()
 	common.IsElevated = isElevated
-	isNTFS, _ := fileutils.IsDriveFileSystemNTFS(*flActionPath)
+	common.IsRunningBySYSTEM = isRunningBySYSTEM
 	common.Logger.Info("Privilege and platform check passed.")
 	// if noDiskScan set, directly go for yara scanner
 	var wg = &sync.WaitGroup{}
+
+	// --------- KEY SECTION: ASYNC PROCESS - MAIN PROCEDURE ---------
+	// SECTION 1: SEARCHER, SCAN INPUT PRODUCER
 	// searcher output channel
-	var searcherOptChan = make(chan string)
-	// to-process files list
-	var searcherFoundList = []string{}
-	var searcherFoundListRWLock = &sync.Mutex{}
+	var searcherOptChan = make(chan string, 50)
+	var scanIptChan = make(chan string, 50)
+	// searcher result consumer and scanner producer
 	var searchConsumer = func() {
+		defer func() {
+			// close channel on producer
+			close(scanIptChan)
+			common.Logger.Debug("Scan Input Channel Closed in SearchConsumer.")
+		}()
 		// search result process
 		for item := range searcherOptChan {
 			common.Logger.Info("Found file: " + item)
+			// check on disk size
 			fExistsOnDisk, fSize, _ := fileutils.CheckFileOnDiskSize(item)
 			if !fExistsOnDisk || fSize <= 0 {
 				common.Logger.Info("File Not On Local Disk, Ignore: " + item)
 				continue
+			} else {
+				// create producer for sending to yara scanner
+				scanIptChan <- item
+				common.Logger.Info("Send file for parsing and yara scan: " + item)
 			}
-			searcherFoundListRWLock.Lock()
-			searcherFoundList = append(searcherFoundList, item)
-			searcherFoundListRWLock.Unlock()
 		}
 		common.Logger.Info("searchConsumer finished.")
 	}
-	// matched files , aio output queue
-	var scanMatchedFiles = make(chan *common.YaraScanResult)
 	// searcher procedure
-	if !*flNoDiskScan {
-		triggeredErrFallback := false
-		goesForPrivileged := false
-		// check if booster could be used
-		if isElevated && isNTFS && !*flNoPriv {
-			goesForPrivileged = true
-			// prepare consumer, and check physically exists on disk
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				searchConsumer()
-			}()
-			// go for parse MFT
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				common.Logger.Info("Start MFTSearcher, BOOSTED!")
-				countedFile, err := fileutils.ExtractAndParseMFTThenSearch(*flActionPath, allowedExts, searcherOptChan)
-				if errors.Is(err, customerrs.ErrInvalidInput) {
-					common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
-					os.Exit(5)
-					return
-				}
-				if errors.Is(err, customerrs.ErrFallbackToCompatibleSolution) || errors.Is(err, customerrs.ErrUnsupportedPlatform) {
-					common.Logger.Error("Unwanted things happened using MFTSearcher, fallback.")
-					triggeredErrFallback = true
-					return
-				}
-				if err != nil {
-					common.Logger.Error("Unknown error happened: " + err.Error())
-					common.Logger.Log(context.TODO(), logging.LevelFatal, customerrs.ErrUnknownInternalError.Error())
-					os.Exit(2)
-				}
-				common.Logger.Info(fmt.Sprintf("MFTSearcher found %d applicable files.", countedFile))
-				return
-			}()
-		} else {
-			// unprivileged searcher
-			if common.IsRunningOnWin {
-				common.Logger.Info("Unprivileged scan, fallback.")
-				triggeredErrFallback = true
-			}
-		}
-		// must wait as you don't know when `triggeredErrFallback` will be modified
-		wg.Wait()
-
-		// unsupported platform OR MFTSearcher failed on windows
-		if !common.IsRunningOnWin || triggeredErrFallback || *flNoPriv {
-			// rebuild writer chan by closing and re-creating, to prevent writing on closed chan
-			if !goesForPrivileged {
-				close(searcherOptChan)
-			}
-			searcherOptChan = make(chan string)
-			// had to start consumer again, because that channel got recreated
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				searchConsumer()
-			}()
-			// init general searcher
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				common.Logger.Info("GenrealWalkthroughSearcher started.")
-				counted, err := fileutils.GeneralWalkthroughSearch(*flActionPath, allowedExts, searcherOptChan)
-				// should not encounter some unexpected error
-				if err != nil {
-					common.Logger.Error("Unwanted error in GeneralSearcher: " + err.Error())
-					common.Logger.Log(context.TODO(), logging.LevelFatal, customerrs.ErrUnknownInternalError.Error())
-					os.Exit(1)
-				}
-				common.Logger.Info(fmt.Sprintf("Found %d File using GeneralSearcher, proceed to next step.", counted))
-				return
-			}()
-		}
-		// wait until iteration finish
-		wg.Wait()
-	}
-	// implement sanitizer for windows only
+	// start search consumer
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err = sanitizer_ole.StartSanitizer()
-		if errors.Is(err, customerrs.ErrUnsupportedPlatform) {
-			common.Logger.Info("Due to the nature of OLE, we can only support this on Windows. Aborting for sanitization.")
-		} else if err != nil {
-			common.Logger.Error("Unknown Internal Error Happened in Sanitizer: " + err.Error())
-		}
-		common.Logger.Info("Sanitizer finished.")
+		searchConsumer()
 	}()
-	// start hardener server
-	if *flEnableHardening && common.IsRunningOnWin {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			common.Logger.Debug("DEBUG: Hardener goroutine started, waiting for HardeningQueue")
-			// hardener build
-			for tHarden := range common.HardeningQueue {
-				common.Logger.Debug("DEBUG: Hardener received request for: " + tHarden.Name)
-				err := hardener.DispatchHardenAction(tHarden)
-				if err != nil {
-					common.Logger.Error("While hardening: " + err.Error())
-				}
-				common.Logger.Debug("DEBUG: Hardener completed request for: " + tHarden.Name)
-			}
-			common.Logger.Debug("DEBUG: Hardener goroutine exiting - HardeningQueue closed")
-			common.Logger.Info("Hardening finished.")
-		}()
-	} else {
-		common.Logger.Info("Hardening server won't start as disabled by user/running on unsupported platform.")
-	}
-	// retrieving scanner result async, dispatch to hardener and sanitizer queue
+	// init general searcher
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		defer close(common.SanitizeQueue)
-		defer close(common.HardeningQueue)
-		// handle every ScanMatchedFile
-		for f := range scanMatchedFiles {
-			// unstable processing, if multiple detection happened on the same file
-			// this will lead to undetermined processing result, possibly conflict.
-			//
-			// dispatch to hardener and sanitizer
-			foundSolu := false
-			for _, solu := range cleanupDBObj.Solutions {
-				if solu.Name == f.DetectedRule {
-					foundSolu = true
-					tmpSanitz := &common.IPCSingleDocToBeSanitized{
-						Path:          f.FilePath,
-						Action:        solu.Action,
-						DestModule:    solu.DestModule,
-						DetectionName: f.DetectedRule,
-					}
-					common.SanitizeQueue <- tmpSanitz
-					common.Logger.Info("Sanitizer Req Sent: " + f.FilePath + " , Detection: " + f.DetectedRule)
-					if *flEnableHardening {
-						// dry run handled in callee
-						tmpHarden := &common.HardeningAction{
-							Name:                f.DetectedRule,
-							ActionLst:           solu.HardenMeasures,
-							AllowRepeatedHarden: solu.AllowRepeatedHarden,
-						}
-						common.Logger.Debug("DEBUG: About to send to HardeningQueue for: " + f.DetectedRule)
-						common.HardeningQueue <- tmpHarden //deadlock
-						common.Logger.Debug("DEBUG: Successfully sent to HardeningQueue for: " + f.DetectedRule)
-						common.Logger.Info("Hardener Req Sent: " + f.FilePath + " , Detection: " + f.DetectedRule)
-					} else {
-						common.Logger.Info("EnableHardening flag had been disabled by user.")
-					}
-				}
-				continue
-			}
-			// if not match, it's abandoned, warn.
-			if !foundSolu {
-				common.Logger.Warn("Can't find solution for rule: " + f.DetectedRule)
-			}
+		common.Logger.Info("GenrealWalkthroughSearcher started.")
+		counted, err := fileutils.GeneralWalkthroughSearch(*flActionPath, allowedExts, searcherOptChan)
+		// should not encounter some unexpected error
+		if err != nil {
+			common.Logger.Error("Unwanted error in GeneralSearcher: " + err.Error())
+			common.Logger.Log(context.TODO(), logging.LevelFatal, customerrs.ErrUnknownInternalError.Error())
+			os.Exit(1)
 		}
-		common.Logger.Info("Hardener&Sanitizer Request Sent finished.")
+		common.Logger.Info(fmt.Sprintf("Found %d File using GeneralSearcher, proceed to next step.", counted))
+		return
 	}()
+	// SECTION 2: YARA-X SCANNER, SCAN RESULTS PRODUCER, ALSO SANITIZE ON THE FLY
 	// searcher finished, go for yara scanner
 	// read yara rules and decrypt
-	if !*flNoDiskScan {
-		// if no diskscan, supplied output already included necessary detection information, directly go for sanitizer and hardener
-		// fix #9
-		yaraRulesAbsPath := filepath.Join(execDir, yaraRulesPath)
-		common.Logger.Debug("DEBUG: Yara Rules path: " + yaraRulesAbsPath)
-		yrRulesEncBin, err := os.ReadFile(yaraRulesAbsPath)
-		if err != nil {
-			common.Logger.Info("Could not read yara compiled rules file.")
-			common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
-			os.Exit(-1)
-		}
-		common.Logger.Info("Compiled yara rules read.")
-		_, yrRuleBin, err := cryptutils.XChacha20Decrypt(hPwdBytes, yrRulesEncBin)
-		if err != nil {
-			common.Logger.Info("Could not decrypt yara compiled rules file.")
-			common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
-			os.Exit(-1)
-		}
-		// build scanner instance
-		yrScanner, err := yarax_scanner.LoadRuleAndCreateYaraScanner(yrRuleBin)
-		if err != nil {
-			common.Logger.Info("Unable to create yara scanner with provided rule.")
-			common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
-			os.Exit(-1)
-		}
-		common.Logger.Info("Yara scanner loaded successfully.")
-		// producer set
-		// go to scan against rules
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			err = yarax_scanner.ScanFilesWithYara(yrScanner, searcherFoundList, scanMatchedFiles)
-			if err != nil {
-				common.Logger.Error("Yara scanner returned err when exit: " + err.Error())
-			}
-			common.Logger.Info("Yara scanner finished.")
-		}()
-	} else {
-		// iterate finished, searcher finished, now parse existing result.
-		//
-		// 000000b0: --0a 5669 7275 7358 3937 4d53 6c61 636b  -.VirusX97MSlack
-		// 000000c0: 6572 4620 2e2f 426f 6f6b 310a ---- ----  erF ./Book1.
-		// output as above: VirusX97MSlackerF ./Book1\n
-		// read iptYRList
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			err = yarax_scanner.ParseYaraScanResultText(iptFileList, scanMatchedFiles)
-			if err != nil {
-				common.Logger.Error(err.Error())
-				common.Logger.Log(context.TODO(), logging.LevelFatal, customerrs.ErrUnknownInternalError.Error())
-				os.Exit(1)
-			}
-			common.Logger.Info("Yara Result Processor finished.")
-		}()
+	// fix #9
+	yaraRulesAbsPath := filepath.Join(execDir, yaraRulesPath)
+	common.Logger.Debug("DEBUG: Yara Rules path: " + yaraRulesAbsPath)
+	yrRulesEncBin, err := os.ReadFile(yaraRulesAbsPath)
+	if err != nil {
+		common.Logger.Info("Could not read yara compiled rules file.")
+		common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
+		os.Exit(-1)
 	}
+	common.Logger.Info("Compiled yara rules read.")
+	_, yrRuleBin, err := cryptutils.XChacha20Decrypt(hPwdBytes, yrRulesEncBin)
+	if err != nil {
+		common.Logger.Info("Could not decrypt yara compiled rules file.")
+		common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
+		os.Exit(-1)
+	}
+	// build scanner instance
+	yrScanner, err := yarax_scanner.LoadRuleAndCreateYaraScanner(yrRuleBin)
+	if err != nil {
+		common.Logger.Info("Unable to create yara scanner with provided rule.")
+		common.Logger.Log(context.TODO(), logging.LevelFatal, err.Error())
+		os.Exit(-1)
+	}
+	// no need to call yaraX_Scanner.destroy() as GC will handle, this is documented in godoc.
+	common.Logger.Info("Yara scanner loaded successfully.")
+	// producer set
+	// go to scan against rules
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		err = yarax_scanner.SanitizeFilesWithYara(yrScanner, scanIptChan)
+		if err != nil {
+			common.Logger.Error("Yara scanner returned err when exit: " + err.Error())
+		}
+		common.Logger.Info("Yara scanner finished.")
+	}()
 	// wait for all procedures
 	wg.Wait()
 	// wait for 5 seconds for cleanup
