@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout CRAMC source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: true
           lfs: true
@@ -42,28 +42,29 @@ jobs:
           fetch-depth: 0
           path: 'cramc'
       - name: Checkout YARA-X source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: 'VirusTotal/yara-x'
           ref: ${{ env.YARAX_VER }}
           path: 'yara-x'
       - name: Setup Golang Toolchain
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VER }}
           cache-dependency-path: 'cramc/go.work.sum'
       - name: Setup Rust Toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: 'stable'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
-          default: true
+          cache: false
       - name: Caching with Cargo Dependencies And Yara-X build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
+            ~/.cargo/bin/
             ${{ github.workspace }}/yara-x/target
             ${{ env.PROJECT_DEST }}/${{ env.PROJECT_NAME }}/linux_amd64
           key: ${{ runner.os }}-cargo-rust-linuxbuild
@@ -80,16 +81,16 @@ jobs:
           sha256sum ./bin/*
           tree ./bin
       - name: Upload Runtime Artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: database_updates
-          retention-days: 30
+          retention-days: 15
           path: ${{ github.workspace }}/cramc/bin/*.bin
       - name: Upload DevReleaser Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: devreleaser
-          retention-days: 30
+          retention-days: 15
           path: ${{ github.workspace }}/cramc/bin/devreleaser_linux_amd64
 
   build-windows-amd64:
@@ -98,7 +99,7 @@ jobs:
       - build-linux-amd64
     steps:
       - name: Checkout CRAMC source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: true
           lfs: true
@@ -106,29 +107,30 @@ jobs:
           fetch-depth: 0
           path: 'cramc'
       - name: Checkout YARA-X source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: 'VirusTotal/yara-x'
           ref: ${{ env.YARAX_VER }}
           path: 'yara-x'
       - name: Setup Golang Toolchain
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VER }}
           cache-dependency-path: 'cramc/go.work.sum'
       - name: Setup Rust Toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: 'stable'   # this should be updated AT THE SAME TIME when bumping version of YARA-X
-          default: true
           target: 'x86_64-pc-windows-gnu'
+          cache: false
       - name: Caching with Cargo Dependencies And Yara-X Build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
+            ~/.cargo/bin/
             ${{ github.workspace }}/yara-x/target
             ${{ env.PROJECT_DEST }}/${{ env.PROJECT_NAME }}/win_amd64
           key: ${{ runner.os }}-cargo-rust-winbuild
@@ -145,7 +147,7 @@ jobs:
           cp -ar ./assets/dist/*.ps1 ./bin/
           tree ./bin
       - name: Download artifacts previously generated
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ${{ github.workspace }}/cramc/bin
           merge-multiple: true
@@ -156,17 +158,17 @@ jobs:
           sha256sum ./*
           zip -r cramc_go_${GITHUB_RUN_ID}.zip cramc_aio.exe *.bin *.ps1
       - name: Upload necessary artifact 1 - cramc_aio
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cramc_go
-          retention-days: 30
+          retention-days: 15
           if-no-files-found: error
           path: ${{ github.workspace }}/cramc/bin/cramc_go_${{ github.run_id }}.zip
       - name: Upload optional artifact 2 - bakrestorer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bakrestorer
-          retention-days: 30
+          retention-days: 15
           if-no-files-found: error
           path: ${{ github.workspace }}/cramc/bin/bakrestorer.exe
 
@@ -182,7 +184,7 @@ jobs:
           sudo apt install tree -y
           mkdir -p /tmp/relbuild/${{ github.repository_owner }}
       - name: Download artifacts previously generated
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: /tmp/relbuild/${{ github.repository_owner }}
           merge-multiple: true
