@@ -70,7 +70,7 @@ if [[ "$1" == "linux" ]]; then
         go build -trimpath -ldflags "-s -w -X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/devreleaser ./cmd/devreleaser
         upx -9 ../bin/devreleaser
     elif [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
-        GOOS=linux GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_LINUX_GNU}/lib/x86_64-linux-gnu/pkgconfig \
+        GOEXPERIMENT=goroutineleakprofile GOOS=linux GOARCH=amd64 CGO_ENABLED=1 PKG_CONFIG_PATH=${PROJ_PREFIX_LINUX_GNU}/lib/x86_64-linux-gnu/pkgconfig \
         go build -ldflags "-X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" \
         -tags static_link -gcflags 'all=-N -l' -o ../bin/devreleaser ./cmd/devreleaser
     fi
@@ -116,12 +116,12 @@ elif [[ "$1" == "windows" ]]; then
         upx -9 ../bin/cramc_aio.exe
         upx -9 ../bin/bakrestorer.exe
     elif [[ "$GITHUB_REF_TYPE" == "branch" ]]; then
-        GOOS=windows GOARCH=amd64 CGO_ENABLED=1 \
+        GOEXPERIMENT=goroutineleakprofile GOOS=windows GOARCH=amd64 CGO_ENABLED=1 \
         PKG_CONFIG_PATH=${PROJ_PREFIX_WIN_AMD64}/lib/pkgconfig CC=x86_64-w64-mingw32-gcc \
         go build -gcflags 'all=-N -l' -ldflags "-X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\" \
         -extldflags \"-static -lm -static-libgcc -static-libstdc++\"" -tags static_link -o ../bin/cramc_aio.exe ./cmd/aioagent
 
-        GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -gcflags 'all=-N -l' \
+        GOEXPERIMENT=goroutineleakprofile GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -gcflags 'all=-N -l' \
         -ldflags "-X \"cramc_go/common.VersionStr=$(git describe --long --dirty --tags)\"" -o ../bin/bakrestorer.exe ./cmd/bakrestorer
     fi
 
