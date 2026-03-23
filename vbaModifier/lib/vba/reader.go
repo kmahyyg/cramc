@@ -291,7 +291,7 @@ func (r *VBAReader) ListVBAStreams() []string {
 }
 
 func OpenVBAStorage(root *cfbv3.Storage, isLegacy bool) (*cfbv3.Storage, error) {
-	if isLegacy {
+	if !isLegacy {
 		return root.OpenStorage("VBA")
 	}
 
