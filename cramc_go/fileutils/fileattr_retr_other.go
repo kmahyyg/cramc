@@ -17,7 +17,3 @@ func CheckFileOnDiskSize(fpath string) (exist bool, logicalSize int64, err error
 	}
 	return true, fInfo.Size(), nil
 }
-
-func CheckRunningBySYSTEM() (bool, error) {
-	return false, customerrs.ErrUnsupportedPlatform
-}

@@ -8,6 +8,6 @@ func CheckProcessElevated() (bool, error) {
 	return false, customerrs.ErrUnsupportedPlatform
 }
 
-func CheckRunningUnderSYSTEM() (bool, error) {
+func CheckRunningBySYSTEM() (bool, error) {
 	return false, customerrs.ErrUnsupportedPlatform
 }

@@ -124,8 +124,8 @@ func ReplaceMaliciousCode(originalFilePath string, modulesLst []string, isLegacy
 	}
 	common.Logger.Info("PerformanceCache removed from _VBA_PROJECT.")
 	// replace content to target
-	err = func() error {
-		for _, mName2 := range modulesLst {
+	for _, mName2 := range modulesLst {
+		err = func() error {
 			streamR, err := vbaStorV3.OpenStream(mName2)
 			if err != nil {
 				return err
@@ -158,11 +158,11 @@ func ReplaceMaliciousCode(originalFilePath string, modulesLst []string, isLegacy
 			} else {
 				return vba.ErrDecompressionFailed
 			}
+			return nil
+		}()
+		if err != nil {
+			common.Logger.Error("During replacement process, encountered error: " + err.Error())
 		}
-		return nil
-	}()
-	if err != nil {
-		return err
 	}
 	// replace modified dir
 	err = vbaStorV3.ReplaceStream("dir", patchedDirStreamBuf.Bytes())
