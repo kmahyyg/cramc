@@ -124,39 +124,45 @@ func ReplaceMaliciousCode(originalFilePath string, modulesLst []string, isLegacy
 	}
 	common.Logger.Info("PerformanceCache removed from _VBA_PROJECT.")
 	// replace content to target
-	for _, mName2 := range modulesLst {
-		streamR, err := vbaStorV3.OpenStream(mName2)
-		if err != nil {
-			return err
-		}
-		defer streamR.Close()
-		rawStreamBytes, err := io.ReadAll(streamR)
-		if err != nil {
-			return err
-		}
-		targetOffset := findTargetModule(rawModOffset, mName2)
-		if targetOffset != nil {
-			extractRawSrc, err := vba.Decompress(rawStreamBytes[int(targetOffset.TextOffset):])
+	err = func() error {
+		for _, mName2 := range modulesLst {
+			streamR, err := vbaStorV3.OpenStream(mName2)
 			if err != nil {
 				return err
 			}
-			srcAttr, _ := splitVBASource(extractRawSrc)
-			newModuleRaw := buildModuleSource(srcAttr, REPLACED_VBA_SRC_CODE)
-			newModuleCompressed, err := vba.Compress(newModuleRaw)
+			defer streamR.Close()
+			rawStreamBytes, err := io.ReadAll(streamR)
 			if err != nil {
 				return err
 			}
-			if len(newModuleCompressed) > len(rawStreamBytes) {
-				return customerrs.ErrReplaceCodeOverflow
+			targetOffset := findTargetModule(rawModOffset, mName2)
+			if targetOffset != nil {
+				extractRawSrc, err := vba.Decompress(rawStreamBytes[int(targetOffset.TextOffset):])
+				if err != nil {
+					return err
+				}
+				srcAttr, _ := splitVBASource(extractRawSrc)
+				newModuleRaw := buildModuleSource(srcAttr, REPLACED_VBA_SRC_CODE)
+				newModuleCompressed, err := vba.Compress(newModuleRaw)
+				if err != nil {
+					return err
+				}
+				if len(newModuleCompressed) > len(rawStreamBytes) {
+					return customerrs.ErrReplaceCodeOverflow
+				}
+				err = vbaStorV3.ReplaceStream(mName2, newModuleCompressed)
+				if err != nil {
+					return err
+				}
+				common.Logger.Info(fmt.Sprintf("Replaced module %s with new code.", mName2))
+			} else {
+				return vba.ErrDecompressionFailed
 			}
-			err = vbaStorV3.ReplaceStream(mName2, newModuleCompressed)
-			if err != nil {
-				return err
-			}
-			common.Logger.Info(fmt.Sprintf("Replaced module %s with new code.", mName2))
-		} else {
-			return vba.ErrDecompressionFailed
 		}
+		return nil
+	}()
+	if err != nil {
+		return err
 	}
 	// replace modified dir
 	err = vbaStorV3.ReplaceStream("dir", patchedDirStreamBuf.Bytes())

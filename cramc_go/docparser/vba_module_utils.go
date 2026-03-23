@@ -74,8 +74,7 @@ func normalizeLineEndingsToCRLF(s string) string {
 }
 
 func writeModifiedCFBBytes(reader *cfbv3.Reader, outputBuf *bytes.Buffer) error {
-	buf := &bytes.Buffer{}
-	if _, err := reader.WriteTo(buf); err != nil {
+	if _, err := reader.WriteTo(outputBuf); err != nil {
 		return err
 	}
 	return nil

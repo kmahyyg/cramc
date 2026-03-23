@@ -76,6 +76,10 @@ func main() {
 	common.Logger.Debug("oriDstFileExistFlag: ", oriDstFileExistFlag)
 	// decompress next
 	zstdDec, err := zstd.NewReader(bytes.NewReader(pt))
+	if err != nil {
+		common.Logger.Error("unable to open reader of zstd with password: " + err.Error())
+		panic(err)
+	}
 	defer zstdDec.Close()
 	var curOutFPath string
 	if (*fOutFile) != "placeholder" {

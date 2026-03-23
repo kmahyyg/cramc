@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"io"
 	"os"
-	"path/filepath"
 
 	"github.com/klauspost/compress/zstd"
 )
@@ -31,11 +30,11 @@ func ZstdBakFile(fPath string) error {
 	if err != nil {
 		return err
 	}
+	defer zstdWr.Close()
 	_, err = io.Copy(zstdWr, originalFd)
 	if err != nil {
 		return err
 	}
-	zstdWr.Close()
 	// from buffer, implement encryption
 	keyBytes, err := hex.DecodeString(common.HexEncryptionPassword)
 	if err != nil {
@@ -51,11 +50,4 @@ func ZstdBakFile(fPath string) error {
 	}
 	compressedBuf.Reset()
 	return nil
-}
-
-func renameFileAndSave(fPath string) error {
-	fName := filepath.Base(fPath)
-	fDir := filepath.Dir(fPath)
-	newfPath := filepath.Join(fDir, "G-"+fName)
-	return os.Rename(fPath, newfPath)
 }

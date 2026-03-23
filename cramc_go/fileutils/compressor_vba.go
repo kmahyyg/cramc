@@ -37,9 +37,6 @@ func ReplaceXLVBAProjectBin(fPath string, modifiedBytes []byte) error {
 	}
 	defer zwf.Close()
 	zwr := zip.NewWriter(zwf)
-	if err != nil {
-		return err
-	}
 	defer zwr.Close()
 	defer zwr.Flush()
 
