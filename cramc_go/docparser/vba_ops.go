@@ -36,22 +36,22 @@ func ExtractVBACode(vbaProjectBin []byte, isLegacyFormat bool) (results common.E
 			ModuleName: m.Name,
 			TextOffset: m.TextOffset,
 		}
-		common.Logger.Info("Successfully identified module: %s", m.Name)
+		common.Logger.Info("Successfully identified module: %s" + m.Name)
 		// find raw module data bytes
 		rawModule, err := rdr.GetModuleContent(m.Name)
 		if err != nil {
 			return nil, err
 		}
-		common.Logger.Info("Successfully copied raw content for module: %s", m.Name)
+		common.Logger.Info("Successfully copied raw content for module: %s" + m.Name)
 		// find vba source code location and decompress for raw data
 		rawSRC, err := vba.Decompress(rawModule[int(m.TextOffset):])
 		if err != nil {
 			return nil, err
 		}
-		common.Logger.Info("Successfully extracted raw source code of vba module: %s", m.Name)
+		common.Logger.Info("Successfully extracted raw source code of vba module: %s" + m.Name)
 		results[i].SourceCode = rawSRC
 	}
-	common.Logger.Info("Successfully extracted %d modules from vbaProject.", len(results))
+	common.Logger.Info(fmt.Sprintf("Successfully extracted %d modules from vbaProject.", len(results)))
 	return
 }
 
