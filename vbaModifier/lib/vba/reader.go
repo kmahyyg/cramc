@@ -79,16 +79,17 @@ func (r *VBAReader) ParseAll() (*VBAProject, error) {
 	}
 
 	var legacyRoot *cfbv3.Storage
+	var exactRoot *cfbv3.Storage = root
 	if r.isLegacy {
 		legacyRoot, err = root.OpenStorage("_VBA_PROJECT_CUR")
 		if err != nil {
 			return nil, fmt.Errorf("open _VBA_PROJECT_CUR: %w", err)
 		}
-		root = legacyRoot
+		exactRoot = legacyRoot
 	}
 
 	// Parse PROJECT stream
-	projectStream, err := root.OpenStream("PROJECT")
+	projectStream, err := exactRoot.OpenStream("PROJECT")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open PROJECT stream: %w", err)
 	}
@@ -101,7 +102,7 @@ func (r *VBAReader) ParseAll() (*VBAProject, error) {
 	r.project = project
 
 	// Parse PROJECTwm stream (optional - may not exist)
-	projectwmStream, err := root.OpenStream("PROJECTwm")
+	projectwmStream, err := exactRoot.OpenStream("PROJECTwm")
 	if err == nil {
 		defer projectwmStream.Close()
 		projectwm, err := ParseProjectWM(projectwmStream)
