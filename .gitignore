@@ -10,3 +10,7 @@ devreleaser.bin
 *.bin
 .venv/
 .jj/
+*.xls
+*.xlsm
+*.xlsx
+*.xlsb

@@ -1,7 +1,7 @@
 # AGENTS.md — CRAMC Codebase Guide
 
 ## Overview
-CRAMC (CRAppy Macro Cleaner) is a Windows-only Office macro sanitizer. It scans Excel files with YARA-X rules, extracts/replaces malicious VBA code in-place, and backs up originals before remediation. The Go workspace (`go.work`) contains two modules: `cramc_go` (all binaries and logic) and `vbaModifier` (vendored OLE/CFB/VBA parsing library).
+CRAMC (CRAppy Macro Cleaner) is a Windows-only Office macro sanitizer. It scans Excel files with YARA-X rules, extracts/replaces malicious VBA code in-place, and backs up originals before remediation. The Go workspace (`go.work`) contains two modules: `cramc_go` (all binaries and logic) and `vbaModifier` (vendored CFB v3/VBA parsing library).
 
 ## Module & Binary Layout
 | Module | Binary | CGO | Target |
@@ -10,7 +10,9 @@ CRAMC (CRAppy Macro Cleaner) is a Windows-only Office macro sanitizer. It scans 
 | `cramc_go/cmd/bakrestorer` | `bakrestorer.exe` | No | Windows/amd64 |
 | `cramc_go/cmd/devreleaser` | `devreleaser` | Required (yara-x) | Linux/amd64 (build tool only) |
 
-`vbaModifier` is a local module; its library code lives under `vbaModifier/lib/cfb/v3` and `vbaModifier/lib/vba` (vendored, not on pkg.go.dev). `docparser` imports it directly as `vbaModifier/lib/cfb/v3` and `vbaModifier/lib/vba`.
+`vbaModifier` is a local module; its library code lives under `vbaModifier/lib/cfb/v3` and `vbaModifier/lib/vba` (vendored, not on pkg.go.dev). `docparser` imports it directly as `vbaModifier/lib/cfb/v3` and `vbaModifier/lib/vba`. 
+
+`vbaModifier/lib/vba` focused on parsing / extracting / replacing VBA binary data inside CFB stream, also support in-memory data as underlying data storage. This library relies on `vbaModifier/lib/cfb/v3` for reading and writing underlying CFB storage file. All `vbaModifier` code is pure Go without any CGo or non-official dependency.
 
 ## Build System
 All production builds run on Ubuntu via `assets/build.sh` (driven by GitHub Actions). Local builds on macOS are **not supported** for the Windows target.
@@ -80,13 +82,14 @@ All stages run concurrently under a single `sync.WaitGroup`. `DryRunOnly` is che
 - `common.Logger` is a package-level `*slog.Logger`; initialize it before calling any other package function.
 
 ## Key Files
-| Path | Purpose |
-|---|---|
-| `cramc_go/common/shared.go` | Global state, hardcoded encryption key, `ProgramRev` |
-| `cramc_go/common/datamodels.go` | `YaraScanResult`, `ExtractedVBAModule` shared structs |
-| `cramc_go/docparser/vba_ops.go` | VBA extract & replace logic, imports `vbaModifier` |
-| `cramc_go/cryptutils/xchacha20.go` | Encrypt/decrypt with embedded AMAD layout |
-| `assets/build.sh` | Authoritative build script; CI entry point |
-| `assets/crypt-bakrestorer.md` | Binary layout spec for `.zst.ebak` files |
-| `assets/latest_version.json` | Remote version manifest checked at startup |
+| Path | Purpose                                                |
+|---|--------------------------------------------------------|
+| `cramc_go/common/shared.go` | Global state, hardcoded encryption key, `ProgramRev`   |
+| `cramc_go/common/datamodels.go` | `YaraScanResult`, `ExtractedVBAModule` shared structs  |
+| `cramc_go/docparser/vba_ops.go` | VBA extract & replace logic, imports `vbaModifier`     |
+| `cramc_go/cryptutils/xchacha20.go` | Encrypt/decrypt with embedded AMAD layout              |
+| `assets/build.sh` | Authoritative build script; CI entry point             |
+| `assets/crypt-bakrestorer.md` | Binary layout spec for `.zst.ebak` files               |
+| `assets/latest_version.json` | Remote version manifest checked at startup             |
+| `assets/testdata/*.xl*` | Test files for various Excel formats, some with macros |
 
