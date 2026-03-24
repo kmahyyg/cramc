@@ -138,7 +138,8 @@ func SanitizeFilesWithYara(yrr *yarax.Scanner, inputChan chan string) error {
 		// finally replace temp file to original one
 		err = os.Rename(filep+".tmp", filep)
 		if err != nil {
-			return err
+			common.Logger.Error("Aborted, Renaming temporary file error: " + err.Error())
+			continue
 		}
 		common.Logger.Info("Malicious code successfully removed from file: " + filep)
 		// fix file owner and acl if elevated
@@ -146,6 +147,7 @@ func SanitizeFilesWithYara(yrr *yarax.Scanner, inputChan chan string) error {
 			if common.IsElevated || common.IsRunningBySYSTEM {
 				if aclErrOccurred {
 					common.Logger.Info("Skip fixing permissions for file: " + filep + " due to ACL retrieval error.")
+					continue
 				} else {
 					// try fix file acl
 					common.Logger.Info("Detected running elevated. Start Fixing.")
@@ -153,6 +155,7 @@ func SanitizeFilesWithYara(yrr *yarax.Scanner, inputChan chan string) error {
 						err = windoge_utils.SetACLOfFile(cleanedPath, acl_oriFile)
 						if err != nil {
 							common.Logger.Error("Failed to set ACL for file: " + cleanedPath + ", error: " + err.Error())
+							continue
 						}
 						common.Logger.Info("ACL fix completed for file: " + cleanedPath)
 					}
@@ -160,6 +163,7 @@ func SanitizeFilesWithYara(yrr *yarax.Scanner, inputChan chan string) error {
 						err = windoge_utils.SetOwnerOfFile(cleanedPath, ownerSID_oriFile)
 						if err != nil {
 							common.Logger.Error("Failed to set owner for file: " + cleanedPath + ", error: " + err.Error())
+							continue
 						}
 						common.Logger.Info("Owner fix completed for file: " + cleanedPath)
 					}
