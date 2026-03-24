@@ -150,8 +150,8 @@ func parseReferenceRecord(data []byte, offset int, outputCallback ParseOutputCal
 		}
 
 		// Sanity check: libidSize should be reasonable
-		if libidSize > uint32(len(data)-offset) || libidSize > 1000 {
-			return nil, offset, fmt.Errorf("invalid LibidTwiddled size: %d (exceeds remaining data or too large)", libidSize)
+		if libidSize > uint32(len(data)-offset) {
+			return nil, offset, fmt.Errorf("invalid LibidTwiddled size: %d (exceeds remaining data or too large, remaining data size should be at most %d)", libidSize, len(data)-offset)
 		}
 
 		// LibidTwiddled (variable)
