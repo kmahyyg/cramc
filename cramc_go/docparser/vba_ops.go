@@ -23,7 +23,7 @@ func ExtractVBACode(vbaProjectBin []byte, isLegacyFormat bool) (results common.E
 	defer rdr.Close()
 	common.Logger.Info("Successfully opened vbaProject.")
 	// parse dir stream
-	projectStreams, err := rdr.ParseAll()
+	projectStreams, err := rdr.ParseAllStreams()
 	if err != nil {
 		return nil, err
 	}
