@@ -17,6 +17,7 @@ type VBAReader struct {
 	dirStream  *DirStream
 	password   string
 	isLegacy   bool
+	vbaRoot    *cfbv3.Storage
 }
 
 // VBAProject represents a fully parsed VBA project
@@ -75,6 +76,15 @@ func (r *VBAReader) ParseAll() (*VBAProject, error) {
 	root, err := r.cfbReader.OpenRootStorage()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open root storage: %w", err)
+	}
+
+	var legacyRoot *cfbv3.Storage
+	if r.isLegacy {
+		legacyRoot, err = root.OpenStorage("_VBA_PROJECT_CUR")
+		if err != nil {
+			return nil, fmt.Errorf("open _VBA_PROJECT_CUR: %w", err)
+		}
+		root = legacyRoot
 	}
 
 	// Parse PROJECT stream
