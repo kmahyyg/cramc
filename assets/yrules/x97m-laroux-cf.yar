@@ -9,7 +9,6 @@ rule VirusX97MLarouxCF {
     $comment_m2 = "foxz@usa.net"
     $comment_m3 = "infected by NEG"
     $comment_m4 = "check_files"
-    $comment_m5 = "Module=foxz"
     $comment_m6 = "NEGS.XLS"
 
   condition:
