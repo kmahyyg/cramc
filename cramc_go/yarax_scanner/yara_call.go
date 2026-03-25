@@ -75,7 +75,7 @@ func SanitizeFilesWithYara(yrr *yarax.Scanner, inputChan chan string) error {
 			common.Logger.Info("Decompressed: " + filep)
 			vbas, err = docparser.ExtractVBACode(vbaP, legacyFlag)
 			if err != nil {
-				common.Logger.Error("Extract VBACode Error: " + err.Error())
+				common.Logger.Error("Extract VBACode Error: " + err.Error() + ", File: " + filep)
 				continue
 			}
 		} else {
@@ -91,7 +91,7 @@ func SanitizeFilesWithYara(yrr *yarax.Scanner, inputChan chan string) error {
 			}
 			vbas, err = docparser.ExtractVBACode(xlFile, legacyFlag)
 			if err != nil {
-				common.Logger.Error("Extract VBACode Error: " + err.Error())
+				common.Logger.Error("Extract VBACode Error: " + err.Error() + ", File: " + filep)
 				continue
 			}
 		}
