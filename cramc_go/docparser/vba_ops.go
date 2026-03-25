@@ -40,13 +40,13 @@ func ExtractVBACode(vbaProjectBin []byte, isLegacyFormat bool) (results common.E
 		// find raw module data bytes
 		rawModule, err := rdr.GetModuleContent(m.Name)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("get module %s content: %w", m.Name, err)
 		}
 		common.Logger.Info("Successfully copied raw content for module: " + m.Name)
 		// find vba source code location and decompress for raw data
 		rawSRC, err := vba.Decompress(rawModule[int(m.TextOffset):])
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("decompress module %s: %w", m.Name, err)
 		}
 		common.Logger.Info("Successfully extracted raw source code of vba module: " + m.Name)
 		results[i].SourceCode = rawSRC
@@ -116,7 +116,16 @@ func ReplaceMaliciousCode(originalFilePath string, modulesLst []string, isLegacy
 	common.Logger.Info(fmt.Sprintf("Removed %d __SRP_* streams.", removed))
 	// remove PerformanceCache from _VBA_PROJECT
 	if vbaStorV3.StreamExists("_VBA_PROJECT") {
-		stripped := vba.StripVBAProjectPerformanceCache()
+		streamR, err := vbaStorV3.OpenStream("_VBA_PROJECT")
+		if err != nil {
+			return err
+		}
+		rawProjectStream, err := io.ReadAll(streamR)
+		streamR.Close()
+		if err != nil {
+			return err
+		}
+		stripped := vba.StripVBAProjectPerformanceCache(rawProjectStream)
 		err = vbaStorV3.ReplaceStream("_VBA_PROJECT", stripped)
 		if err != nil {
 			return err
@@ -162,6 +171,7 @@ func ReplaceMaliciousCode(originalFilePath string, modulesLst []string, isLegacy
 		}()
 		if err != nil {
 			common.Logger.Error("During replacement process, encountered error: " + err.Error())
+			return err
 		}
 	}
 	// replace modified dir
