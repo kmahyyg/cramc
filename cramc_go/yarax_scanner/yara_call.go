@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"sync"
 
 	yarax "github.com/VirusTotal/yara-x/go"
 )
@@ -95,6 +96,7 @@ func SanitizeFilesWithYara(yrr *yarax.Scanner, inputChan chan string) error {
 				continue
 			}
 		}
+		var detectedListLock = &sync.Mutex{}
 		var detectedList []*common.YaraScanResult
 		for _, mod := range vbas {
 			mr, err = yrr.Scan(mod.SourceCode)
@@ -110,7 +112,9 @@ func SanitizeFilesWithYara(yrr *yarax.Scanner, inputChan chan string) error {
 					Module:       mod.ModuleName,
 				}
 				common.Logger.Info("Scan Found: " + m.Identifier() + " in Module: " + mod.ModuleName)
+				detectedListLock.Lock()
 				detectedList = append(detectedList, nDet)
+				detectedListLock.Unlock()
 			}
 		}
 		// send to replace-stream for modification
@@ -124,9 +128,12 @@ func SanitizeFilesWithYara(yrr *yarax.Scanner, inputChan chan string) error {
 			}
 			common.Logger.Info("Backup completed for: " + filep)
 			// start sanitize
+			var infectedModulesLock = &sync.Mutex{}
 			var infectedModules []string
 			for _, d := range detectedList {
+				infectedModulesLock.Lock()
 				infectedModules = append(infectedModules, d.Module)
+				infectedModulesLock.Unlock()
 			}
 			infectedModules = slices.Compact(infectedModules)
 			err = docparser.ReplaceMaliciousCode(filep, infectedModules, legacyFlag)
