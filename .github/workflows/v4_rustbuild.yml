@@ -6,6 +6,7 @@ on:
       - 'v4_yarax'
       - 'v4_2_grpc'
       - 'v5_overhaul'
+      - 'v5_2_rewrite2'
     tags:
       - 'v0.5.*'
       - 'v0.6.*'
@@ -14,6 +15,7 @@ on:
       - 'v4_yarax'
       - 'v4_2_grpc'
       - 'v5_overhaul'
+      - 'v5_2_rewrite2'
     types:
       - ready_for_review
       - opened
