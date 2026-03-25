@@ -19,7 +19,7 @@ func RetrieveACLOfFile(filep string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return dacl, nil
+	return *dacl, nil
 }
 
 func RetrieveOwnerOfFile(filep string) (any, error) {
@@ -33,12 +33,16 @@ func RetrieveOwnerOfFile(filep string) (any, error) {
 		return nil, err
 	}
 	// return *windows.SID, err
-	return ownerSID.Copy()
+	copiedOwner, err := ownerSID.Copy()
+	if err != nil {
+		return nil, err
+	}
+	return *copiedOwner, nil
 }
 
 func SetACLOfFile(filep string, acl any) error {
-	var daclSddl = acl.(*windows.ACL)
-	err := windows.SetNamedSecurityInfo(filep, windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION, nil, nil, daclSddl, nil)
+	var daclSddl = acl.(windows.ACL)
+	err := windows.SetNamedSecurityInfo(filep, windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION, nil, nil, &daclSddl, nil)
 	if err != nil {
 		return err
 	}
@@ -51,8 +55,8 @@ func SetOwnerOfFile(filep string, owner any) (err error) {
 		return err
 	}
 	common.Logger.Info("SeTakeOwnershipPrivilege enabled.")
-	var ownerSID = owner.(*windows.SID)
-	err = windows.SetNamedSecurityInfo(filep, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION, ownerSID, nil, nil, nil)
+	var ownerSID = owner.(windows.SID)
+	err = windows.SetNamedSecurityInfo(filep, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION, &ownerSID, nil, nil, nil)
 	if err != nil {
 		return err
 	}
