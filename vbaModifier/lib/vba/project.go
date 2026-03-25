@@ -3,6 +3,8 @@ package vba
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
+	"encoding/hex"
 	"io"
 	"strings"
 
@@ -88,9 +90,7 @@ func (r *Reader) ParseAllStreams() (*ProjectStreams, error) {
 		return nil, ErrProjectMetadataStreamMissing
 	}
 	projectMeta := parseProjectMetadata(projectBytes)
-	if r.projectRoot.StreamExists("PROJECTlk") {
-		projectMeta.Protection.PasswordProtected = true
-	}
+	projectMeta.Protection.PasswordProtected = detectPasswordProtectedProject(projectMeta, r.projectRoot)
 	if projectMeta.Protection.PasswordProtected {
 		return nil, ErrUnsupportedEncryptedProject
 	}
@@ -211,4 +211,63 @@ func mergeModuleTypes(modules []Module, projectTypes map[string]ModuleType) {
 			modules[idx].Type = moduleType
 		}
 	}
+}
+
+func detectPasswordProtectedProject(meta *ProjectMetadata, projectRoot *cfbv3.Storage) bool {
+	if meta != nil {
+		if protected, decided := decodeDPBProtectionState(meta.Protection.DPB); decided {
+			return protected
+		}
+	}
+	// Fallback for malformed/unsupported DPB values.
+	return projectRoot != nil && projectRoot.StreamExists("PROJECTlk")
+}
+
+func decodeDPBProtectionState(dpbHex string) (bool, bool) {
+	if strings.TrimSpace(dpbHex) == "" {
+		return false, false
+	}
+	decoded, err := decryptProjectPropertyHex(dpbHex)
+	if err != nil {
+		return false, false
+	}
+	if len(decoded) >= 4 && bytes.Equal(decoded[:4], []byte{0x1d, 0x00, 0x00, 0x00}) {
+		return true, true
+	}
+	if len(decoded) == 5 && bytes.Equal(decoded, []byte{0x01, 0x00, 0x00, 0x00, 0x00}) {
+		return false, true
+	}
+	if len(decoded) >= 4 {
+		length := int(binary.LittleEndian.Uint32(decoded[:4]))
+		if length == len(decoded)-4 {
+			return length > 0, true
+		}
+	}
+	return false, false
+}
+
+func decryptProjectPropertyHex(encodedHex string) ([]byte, error) {
+	encoded, err := hex.DecodeString(encodedHex)
+	if err != nil {
+		return nil, err
+	}
+	if len(encoded) < 3 {
+		return nil, ErrUnsupportedEncryptedProject
+	}
+	seed := encoded[0]
+	projectKey := encoded[2] ^ seed
+	ignore := int((seed & 0x06) / 2)
+
+	pb := projectKey
+	decoded := make([]byte, 0, len(encoded)-3)
+	for idx := 3; idx < len(encoded); idx++ {
+		value := (encoded[idx-2] + pb) ^ encoded[idx]
+		if ignore == 0 {
+			decoded = append(decoded, value)
+		} else {
+			ignore--
+		}
+		pb = value
+	}
+	return decoded, nil
 }
