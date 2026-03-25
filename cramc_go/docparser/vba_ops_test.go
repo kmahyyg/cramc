@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"vbaModifier/common"
-	"vbaModifier/fileutils"
+	"cramc_go/common"
+	"cramc_go/fileutils"
 	cfbv3 "vbaModifier/lib/cfb/v3"
 	"vbaModifier/lib/vba"
 )
