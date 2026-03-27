@@ -207,6 +207,7 @@ jobs:
             BakRestorer is built for restoring original file from encrypted zstd compression file.
             **Crowdstrike users are NOT SUPPORTED.**
             **For files saved under shared storage (e.g. SharePoint), proceed with caution.**
+            Since v0.6.0, Office installation is no longer required for the tool to work.
           allowUpdates: true
           prerelease: true
           artifacts: /tmp/relbuild/${{ github.repository_owner }}/*
