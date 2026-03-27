@@ -39,18 +39,10 @@ func SanitizeFilesWithYara(yrr *yarax.Scanner, inputChan chan string) error {
 		cleanedPath := filepath.Clean(filep)
 		// if on windows, try to retrieve file acl and owner
 		// record original DACL
-		var acl_oriFile any
 		var ownerSID_oriFile any
 		var aclErrOccurred bool
 		if common.IsRunningOnWin {
 			if common.IsElevated || common.IsRunningBySYSTEM {
-				acl_oriFile, err = windoge_utils.RetrieveACLOfFile(cleanedPath)
-				if err != nil {
-					aclErrOccurred = true
-					common.Logger.Error("Failed to retrieve ACL for file: " + cleanedPath + ", error: " + err.Error())
-				} else {
-					common.Logger.Info("ACL retrieval completed for file: " + cleanedPath)
-				}
 				ownerSID_oriFile, err = windoge_utils.RetrieveOwnerOfFile(cleanedPath)
 				if err != nil {
 					aclErrOccurred = true
@@ -158,14 +150,6 @@ func SanitizeFilesWithYara(yrr *yarax.Scanner, inputChan chan string) error {
 				} else {
 					// try fix file acl
 					common.Logger.Info("Detected running elevated. Start Fixing.")
-					if acl_oriFile != nil {
-						err = windoge_utils.SetACLOfFile(cleanedPath, acl_oriFile)
-						if err != nil {
-							common.Logger.Error("Failed to set ACL for file: " + cleanedPath + ", error: " + err.Error())
-							continue
-						}
-						common.Logger.Info("ACL fix completed for file: " + cleanedPath)
-					}
 					if ownerSID_oriFile != nil {
 						err = windoge_utils.SetOwnerOfFile(cleanedPath, ownerSID_oriFile)
 						if err != nil {

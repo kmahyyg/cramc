@@ -5,22 +5,13 @@ package windoge_utils
 import (
 	"cramc_go/common"
 	"cramc_go/customerrs"
+	"sync"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
 
-func RetrieveACLOfFile(filep string) (any, error) {
-	sddl, err := windows.GetNamedSecurityInfo(filep, windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION)
-	if err != nil {
-		return nil, err
-	}
-	dacl, _, err := sddl.DACL()
-	if err != nil {
-		return nil, err
-	}
-	return *dacl, nil
-}
+var privOnce = &sync.Once{}
 
 func RetrieveOwnerOfFile(filep string) (any, error) {
 	// return windows file object SDDL
@@ -37,16 +28,7 @@ func RetrieveOwnerOfFile(filep string) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	return *copiedOwner, nil
-}
-
-func SetACLOfFile(filep string, acl any) error {
-	var daclSddl = acl.(windows.ACL)
-	err := windows.SetNamedSecurityInfo(filep, windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION, nil, nil, &daclSddl, nil)
-	if err != nil {
-		return err
-	}
-	return nil
+	return copiedOwner, nil
 }
 
 func SetOwnerOfFile(filep string, owner any) (err error) {
@@ -54,9 +36,9 @@ func SetOwnerOfFile(filep string, owner any) (err error) {
 	if err != nil {
 		return err
 	}
-	common.Logger.Info("SeTakeOwnershipPrivilege enabled.")
-	var ownerSID = owner.(windows.SID)
-	err = windows.SetNamedSecurityInfo(filep, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION, &ownerSID, nil, nil, nil)
+	common.Logger.Info("required privilege for taking ownership enabled.")
+	var ownerSID = owner.(*windows.SID)
+	err = windows.SetNamedSecurityInfo(filep, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION, ownerSID, nil, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -64,6 +46,24 @@ func SetOwnerOfFile(filep string, owner any) (err error) {
 }
 
 func enableTakeOwnershipPrivilege() (err error) {
+	var requiredPrivileges = []string{"SeTakeOwnershipPrivilege", "SeRestorePrivilege", "SeSecurityPrivilege"}
+	var lastErr error
+	privOnce.Do(func() {
+		for _, priv := range requiredPrivileges {
+			err = enableSinglePrivilege(priv)
+			if err != nil {
+				lastErr = err
+				common.Logger.Error("Failed to enable privilege: " + priv + ", error: " + err.Error())
+				return
+			} else {
+				common.Logger.Info("Privilege enabled: " + priv)
+			}
+		}
+	})
+	return lastErr
+}
+
+func enableSinglePrivilege(privilegeName string) (err error) {
 	var curTkn windows.Token
 	err = windows.OpenProcessToken(windows.CurrentProcess(), windows.TOKEN_ADJUST_PRIVILEGES|windows.TOKEN_QUERY, &curTkn)
 	if err != nil {
@@ -71,22 +71,22 @@ func enableTakeOwnershipPrivilege() (err error) {
 	}
 	if curTkn.IsElevated() {
 		var luid windows.LUID
-		err = windows.LookupPrivilegeValue(nil, windows.StringToUTF16Ptr("SeTakeOwnershipPrivilege"), &luid)
+		err = windows.LookupPrivilegeValue(nil, windows.StringToUTF16Ptr(privilegeName), &luid)
 		if err != nil {
 			return err
 		}
-		var newTknPrivs windows.Tokenprivileges
-		newTknPrivs.PrivilegeCount = 1
-		newTknPrivs.Privileges[0] = windows.LUIDAndAttributes{
+		var ntkn windows.Tokenprivileges
+		ntkn.PrivilegeCount = 1
+		ntkn.Privileges[0] = windows.LUIDAndAttributes{
 			Luid:       luid,
 			Attributes: windows.SE_PRIVILEGE_ENABLED,
 		}
-		err = windows.AdjustTokenPrivileges(curTkn, false, &newTknPrivs, uint32(unsafe.Sizeof(newTknPrivs)), nil, nil)
+		err = windows.AdjustTokenPrivileges(curTkn, false, &ntkn, uint32(unsafe.Sizeof(ntkn)), nil, nil)
 		if err != nil {
 			return err
 		}
+		return nil
 	} else {
 		return customerrs.ErrInsufficientPrivilege
 	}
-	return nil
 }
