@@ -6,8 +6,8 @@ require (
 	github.com/VirusTotal/yara-x/go v1.14.0
 	github.com/klauspost/compress v1.18.4
 	github.com/shirou/gopsutil/v4 v4.26.2
-	golang.org/x/crypto v0.49.0
-	golang.org/x/sys v0.42.0
+	golang.org/x/crypto v0.52.0
+	golang.org/x/sys v0.45.0
 )
 
 require (
