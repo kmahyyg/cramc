@@ -28,6 +28,12 @@ func ExtractVBACode(vbaProjectBin []byte, isLegacyFormat bool) (results common.E
 		return nil, err
 	}
 	common.Logger.Info("Successfully parsed vbaProject.")
+	// experimental support for encrypted vbaProject
+	if projectStreams != nil && projectStreams.Project.Protection.PasswordProtected == true {
+		common.Logger.Info("vbaProject is Password-Protected, but it's not encrypted. ")
+		common.Logger.Info("You may try to replace string value directly in vbaProject.bin via any hex editor.")
+		common.Logger.Info("Run program with -showReplacement to see text used for replacement.")
+	}
 	// get module offest and names
 	results = make(common.ExtractedVBAModules, len(projectStreams.DirStream.Modules))
 	for i, m := range projectStreams.DirStream.Modules {

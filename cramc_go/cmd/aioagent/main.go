@@ -33,6 +33,7 @@ var (
 	allowedExts  = []string{".xls", ".xlsx", ".xlsm", ".xlsb"}
 	flHelp       = flag.Bool("help", false, "Show help")
 	flSkipUpdChk = flag.Bool("skipUpdChk", false, "Development only: set to true to skip update checker.")
+	flShowRep    = flag.Bool("showReplacement", false, "Set to true to display vbaProject.bin crack information.")
 )
 
 func init() {
@@ -53,6 +54,20 @@ func main() {
 	// startup behavior
 	common.Logger.Info("Welcome to CRAMC!")
 	common.Logger.Info("Current Version: " + common.VersionStr)
+
+	// show replacement check
+	if *flShowRep {
+		common.Logger.Info("-showReplacement flag detected.")
+		common.Logger.Info("You may find xl/vbaProject.bin inside any xlsm file, open it with a hex editor. ")
+		common.Logger.Info("WARNING: You now are going to replace the password to 123456. BACKUP file before proceed, it may corrupt your file!")
+		common.Logger.Info("Scroll to the bottom of the file, find and replace **ALL corresponding lines** with content listed below: ")
+		const pwd123456_vbaDPB = `ID="{00000000-0000-0000-0000-000000000000}"
+CMG="494BE5F3E9F3E9F6EEF6EE"
+DPB="92903E759A929A92656E9B927F122F41F7824078388BEF29D1B97742D7EEEDCC85786622A2"
+GC="DBD977CCC1CDC1CDC1"`
+		fmt.Println(pwd123456_vbaDPB)
+		return
+	}
 
 	// panic capture
 	defer func() {
