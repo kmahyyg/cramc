@@ -24,8 +24,8 @@ permissions:
   contents: write
 
 env:
-  GO_VER: '1.26.1'
-  YARAX_VER: 'v1.14.0'   # when upgrading, don't forget to upgrade go module dependency in go.mod
+  GO_VER: '1.27.1'
+  YARAX_VER: 'v1.20.0'   # when upgrading, don't forget to upgrade go module dependency in go.mod
   PROJECT_DEST: "/opt/buildtargets"
   PROJECT_NAME: "cramc_go"
   THIRD_PARTY_SRC: "/opt/softsrcs"
