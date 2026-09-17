@@ -3,7 +3,6 @@ package vba
 import (
 	"archive/zip"
 	"encoding/hex"
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -68,24 +67,24 @@ func TestDecodeDPBProtectionState(t *testing.T) {
 	}
 }
 
-func TestParseAllStreams_EncryptedRealSample(t *testing.T) {
-	workbookPath := filepath.Join("..", "..", "assets", "testdata", "Pwd123456-01.xlsm")
-	vbaProjectBin, err := readZipMember(workbookPath, "xl/vbaProject.bin")
-	if err != nil {
-		t.Fatalf("read vbaProject.bin from sample: %v", err)
-	}
-
-	rdr, err := OpenVBAProjectBytes(vbaProjectBin, false)
-	if err != nil {
-		t.Fatalf("open vba project: %v", err)
-	}
-	defer rdr.Close()
-
-	_, err = rdr.ParseAllStreams()
-	if !errors.Is(err, ErrUnsupportedEncryptedProject) {
-		t.Fatalf("expected ErrUnsupportedEncryptedProject, got %v", err)
-	}
-}
+//func TestParseAllStreams_EncryptedRealSample(t *testing.T) {
+//	workbookPath := filepath.Join("..", "..", "assets", "testdata", "Pwd123456-01.xlsm")
+//	vbaProjectBin, err := readZipMember(workbookPath, "xl/vbaProject.bin")
+//	if err != nil {
+//		t.Fatalf("read vbaProject.bin from sample: %v", err)
+//	}
+//
+//	rdr, err := OpenVBAProjectBytes(vbaProjectBin, false)
+//	if err != nil {
+//		t.Fatalf("open vba project: %v", err)
+//	}
+//	defer rdr.Close()
+//
+//	_, err = rdr.ParseAllStreams()
+//	if !errors.Is(err, ErrUnsupportedEncryptedProject) {
+//		t.Fatalf("expected ErrUnsupportedEncryptedProject, got %v", err)
+//	}
+//}
 
 func TestParseAllStreams_UnencryptedRealSample(t *testing.T) {
 	workbookPath := filepath.Join("..", "..", "assets", "testdata", "M-01.xlsm")

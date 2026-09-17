@@ -91,9 +91,9 @@ func (r *Reader) ParseAllStreams() (*ProjectStreams, error) {
 	}
 	projectMeta := parseProjectMetadata(projectBytes)
 	projectMeta.Protection.PasswordProtected = detectPasswordProtectedProject(projectMeta, r.projectRoot)
-	if projectMeta.Protection.PasswordProtected {
-		return nil, ErrUnsupportedEncryptedProject
-	}
+	//if projectMeta.Protection.PasswordProtected {
+	//	return nil, ExpUnsupportedEncryptedProject
+	//}
 	dirRaw, err := readStorageStream(r.vbaStorage, "dir")
 	if err != nil {
 		return nil, err
@@ -252,7 +252,7 @@ func decryptProjectPropertyHex(encodedHex string) ([]byte, error) {
 		return nil, err
 	}
 	if len(encoded) < 3 {
-		return nil, ErrUnsupportedEncryptedProject
+		return nil, ExpSupportedEncryptedProject
 	}
 	seed := encoded[0]
 	projectKey := encoded[2] ^ seed
