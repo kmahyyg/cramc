@@ -35,7 +35,7 @@ func ExtractVBACode(vbaProjectBin []byte, isLegacyFormat bool) (results common.E
 	if projectStreams.Project.Protection.PasswordProtected == true {
 		common.Logger.Info("vbaProject is Password-Protected, but it's not encrypted. ")
 		common.Logger.Info("You may try to replace string value directly in vbaProject.bin via any hex editor to view the content.")
-		common.Logger.Info("Check https://joetatusko.com/2023/01/19/unlocking-protected-vba-projects-in-excel/ .")
+		common.Logger.Info("Check https://joetatusko.com/2023/01/19/unlocking-protected-vba-projects-in-excel/ . replacement CMG/DPB/GC must be in the same length and their corresponding ID (which is all 0x00 here).")
 	}
 	// get module offest and names
 	results = make(common.ExtractedVBAModules, len(projectStreams.DirStream.Modules))
