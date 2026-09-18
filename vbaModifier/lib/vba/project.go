@@ -91,9 +91,6 @@ func (r *Reader) ParseAllStreams() (*ProjectStreams, error) {
 	}
 	projectMeta := parseProjectMetadata(projectBytes)
 	projectMeta.Protection.PasswordProtected = detectPasswordProtectedProject(projectMeta, r.projectRoot)
-	//if projectMeta.Protection.PasswordProtected {
-	//	return nil, ExpUnsupportedEncryptedProject
-	//}
 	dirRaw, err := readStorageStream(r.vbaStorage, "dir")
 	if err != nil {
 		return nil, err
