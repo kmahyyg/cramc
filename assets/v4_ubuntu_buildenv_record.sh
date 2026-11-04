@@ -1,4 +1,6 @@
 #!/bin/bash
+# Historical YARA-X v1.2.1 setup record; not the current build entry point.
+# Use assets/build.sh with .github/workflows/v4_rustbuild.yml for current SDK builds.
 
 export GO_VER="1.24.4"
 export YARAX_VER="1.2.1"

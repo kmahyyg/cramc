@@ -29,17 +29,7 @@ CGO_ENABLED=0 go install github.com/tc-hib/go-winres@latest
 cd ${GITHUB_WORKSPACE}/cramc/cramc_go
 mkdir -p ../bin
 
-# download yara-x
-#
-# already handled by CI (Github Action)
-#
-# mkdir -p ${THIRD_PARTY_SRC}/yara-x
-# cd ${THIRD_PARTY_SRC}
-# curl -L -O https://github.com/VirusTotal/yara-x/archive/refs/tags/v${YARAX_VER}.tar.gz
-# mv ./v${YARAX_VER}.tar.gz ./yara-x-v${YARAX_VER}.tar.gz
-# tar -xzvf yara-x-v${YARAX_VER}.tar.gz -C ${THIRD_PARTY_SRC}/yara-x
-# rm -rf ./yara-x-v${YARAX_VER}.tar.gz
-# cd ${THIRD_PARTY_SRC}/yara-x/yara-x-${YARAX_VER}
+# YARA-X source checkout and SDK version are managed by CI (YARAX_VER).
 
 # install cargo-c
 #
