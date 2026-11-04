@@ -12,20 +12,14 @@ rule VirusO97MTristateTriplicate {
     confidence  = "high"
 
   strings:
-    $family_marker = "<!--1nternal-->" ascii wide nocase
-    $family_banner = "Triplicate v0.21 /1nternal" ascii wide nocase
-    $family_module = "\"Triplicate\"" ascii wide nocase
-    $family_hook   = /\bSub[ \t]+actionhook[ \t]*\([ \t]*tristate[ \t]*\)/ ascii wide nocase
+    $family_marker = "<!--1nternal-->"
+    $family_banner = "Triplicate v0.21 /1nternal"
+    $family_module = "\"Triplicate\""
+    $family_hook   = /\bSub[ \t]+actionhook[ \t]*\([ \t]*tristate[ \t]*\)/
 
-    $inject = ".InsertLines" ascii wide nocase
-
-    $persist_excel      = "\\Book1." ascii wide nocase
-    $persist_powerpoint = "\\Templates\\Blank Presentation.pot" ascii wide nocase
-
-    $disable_word       = "Normal.ThisDocument.DisableAV" ascii wide nocase
-    $disable_powerpoint = "MacroVirusProtection" ascii wide nocase
+    $disable_word       = "Normal.ThisDocument.DisableAV"
+    $disable_powerpoint = "MacroVirusProtection"
 
   condition:
-    (any of ($family_marker, $family_banner) or ($family_module and $family_hook)) and
-    $inject and any of ($persist_*) and any of ($disable_*)
+    (any of ($family_marker, $family_banner) or ($family_module and $family_hook)) and any of ($disable_*)
 }
