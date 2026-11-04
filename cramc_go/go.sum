@@ -1,5 +1,5 @@
-github.com/VirusTotal/yara-x/go v1.20.0 h1:pfemcgfP1cF9IN9w9jODZSGhzpndZjAxLsYp0WDZucA=
-github.com/VirusTotal/yara-x/go v1.20.0/go.mod h1:VAytYJjaDJ6MTSty/n+uXT2W/QejPHRQECB0rgDGJN4=
+github.com/VirusTotal/yara-x/go v1.22.1-0.20261026122014-198fa48a5fba h1:XfT98cYMX4Kz96oF5J+bgaAsa8eRgN85Njf2GJEdlRc=
+github.com/VirusTotal/yara-x/go v1.22.1-0.20261026122014-198fa48a5fba/go.mod h1:VAytYJjaDJ6MTSty/n+uXT2W/QejPHRQECB0rgDGJN4=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/ebitengine/purego v0.11.0 h1:jhp/D+Nyv7UUW8HAcmcjt2N2rYrYi9m3SL21k0Ua/NI=

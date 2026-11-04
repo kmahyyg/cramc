@@ -3,7 +3,7 @@ module cramc_go
 go 1.26.0
 
 require (
-	github.com/VirusTotal/yara-x/go v1.20.0
+	github.com/VirusTotal/yara-x/go v1.22.1-0.20261026122014-198fa48a5fba
 	github.com/klauspost/compress v1.20.0
 	github.com/shirou/gopsutil/v4 v4.26.8
 	golang.org/x/crypto v0.57.0

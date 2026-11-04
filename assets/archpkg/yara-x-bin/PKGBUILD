@@ -2,7 +2,7 @@
 
 _gitname=yara-x
 pkgname=yara-x-bin
-pkgver=1.2.1
+pkgver=1.22.1
 pkgrel=1
 pkgdesc='A rewrite of YARA in Rust, Tool aimed at helping malware researchers to identify and classify malware samples.'
 url='https://github.com/VirusTotal/yara-x'
@@ -12,8 +12,8 @@ depends=('openssl' 'file' 'pacman' 'git')
 provides=('yara-x')
 conflicts=('yara-x')
 options=(!debug)
-source_x86_64=("https://github.com/VirusTotal/${_gitname}/releases/download/v${pkgver}/yara-x-v${pkgver}-x86_64-unknown-linux-gnu.gz")
-sha256sums_x86_64=('8f018934fe80a5428bca0fcb4778e188210e77f03b1507bbbfb4b1e30af3051f')
+source_x86_64=("https://github.com/VirusTotal/${_gitname}/releases/download/v${pkgver}/yara-x-v${pkgver}-x86_64-unknown-linux-gnu.tar.gz")
+sha256sums_x86_64=('c0ff80408d57b94f8348b9b19b5c70fb03e6471e7fdd761c97e0b4876804eecf')
 
 package() {
     install -Dm 755 "./yr" "${pkgdir}/usr/bin/yr"
