@@ -12,7 +12,7 @@ import (
 	"vbaModifier/lib/vba"
 )
 
-const REPLACED_VBA_SRC_CODE = "' Sanitized by CRAMC v0.6.0\r\n"
+const REPLACED_VBA_SRC_CODE = "' Sanitized by CRAMC v0.6.4\r\n"
 
 func ExtractVBACode(vbaProjectBin []byte, isLegacyFormat bool) (results common.ExtractedVBAModules, err error) {
 	// read vbaProject.bin
