@@ -33,8 +33,6 @@ Backup your data before you use it. No warranty at all.
 # Compile
 
 - https://virustotal.github.io/yara-x/docs/api/c/c-/
-- CI builds the YARA-X C library from [`v1.22.0`](https://github.com/VirusTotal/yara-x/releases/tag/v1.22.0), matching `github.com/VirusTotal/yara-x/go v1.22.0` in `cramc_go/go.mod`. Source builds require Rust 1.95.0 or newer; CI uses the stable toolchain. The separately installed `yr` CLI may remain at v1.22.1.
-- The [TriState/Triplicate rule](assets/yrules/o97m-tristate-triplicate.yar) scans extracted VBA source, not raw compressed Office files. [Research and validation notes](assets/dev-notes.md#triplicate--tristate-vba-rule-research) describe its indicators and scope.
 
 Since Yara-X introduced more strict rule syntax verifier, we use git pre-commit hook to format your rules:
 ```bash
